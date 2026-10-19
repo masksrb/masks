@@ -56,11 +56,11 @@ module Masks
       private
 
         def channel
-          params[:channel].to_s
+          @channel ||= Addresses::CHANNELS.keys.find { |known| known == params[:channel].to_s }
         end
 
         def known_channel
-          head :not_found unless Addresses::CHANNELS.key?(channel)
+          head :not_found if channel.nil?
         end
 
         def anchor
