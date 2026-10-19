@@ -61,6 +61,14 @@ module Masks
         assert_equal 0, scim(:get, "/Users?filter=#{CGI.escape('externalId eq "ENTRA-1"')}")["totalResults"], "externalId is case-exact"
       end
 
+      test "a filter longer than the server reads is refused before it is parsed" do
+        padding = " " * 600
+        answer = scim(:get, "/Users?filter=#{CGI.escape("userName#{padding}eq \"ada@example.com\"")}")
+
+        assert_response :bad_request
+        assert_equal "invalidFilter", answer["scimType"]
+      end
+
       test "a person is found by every comparison a filter reads" do
         provision
         provision(userName: "grace@example.com", externalId: "entra-2", displayName: "Grace Hopper",

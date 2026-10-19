@@ -2,6 +2,7 @@ module Masks
   module Server
     module Scim
       class Filter
+        LONGEST = 512
         COMPARISON = /\A\s*([A-Za-z][\w.:\[\]" -]*?)\s+(eq|ne|co|sw|ew|pr|gt|ge|lt|le)(?:\s+("(?:[^"\\]|\\.)*"|true|false|null|[\d.]+))?\s*\z/i
         ATTRIBUTES = {
           "id" => "actors.uuid",
@@ -30,6 +31,8 @@ module Masks
         end
 
         def apply(relation)
+          raise Error.new(:bad_request, "a filter is at most #{LONGEST} characters", scim_type: "invalidFilter") if @expression.length > LONGEST
+
           clauses = @expression.split(/\s+and\s+/i)
 
           raise Error.new(:bad_request, "at most four comparisons joined by and are understood", scim_type: "invalidFilter") if clauses.size > 4
