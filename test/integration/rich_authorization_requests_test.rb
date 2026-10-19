@@ -29,10 +29,10 @@ module Masks
         @actor = create_actor(email: "owner@probe.example.com", name: "Owner")
         create_client(@tenant, name: "Bank", approved_at: Time.current,
                                authorization_details_schemas: { TYPE => { "label" => "Send a payment", "schema" => SCHEMA } })
-        @registration = register(
+        @registration = approve!(register(
           grant_types: [ "authorization_code", "refresh_token", Exchange::GRANT_TYPE ],
           authorization_details_types: [ TYPE ]
-        )
+        ))
         host! host_for(@tenant)
       end
 
@@ -100,7 +100,7 @@ module Masks
       end
 
       test "a type the client did not register is refused" do
-        @registration = register(authorization_details_types: [])
+        @registration = approve!(register(authorization_details_types: []))
 
         asked
 

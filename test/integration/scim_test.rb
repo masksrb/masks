@@ -121,7 +121,7 @@ module Masks
       test "a suspended person cannot sign in, and their tokens stop working" do
         id = provision["id"]
         actor = within { Actor.find_by!(uuid: id).tap { |held| held.update!(nickname: "ada", password: "password") } }
-        registration = register
+        registration = approve!(register)
         granted = access_token_for(actor: actor, registration: registration)
 
         amend(id, { "op" => "replace", "path" => "active", "value" => false })

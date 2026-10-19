@@ -34,7 +34,7 @@ module Masks
         authorize(client_id: registration["client_id"], redirect_uri: hostile)
         post "/login", params: { event: "decline", rid: current_rid }, as: :json
 
-        assert_nil JSON.parse(response.body)["redirectTo"]
+        assert_match %r{\A/authorize/refused\?rid=}, JSON.parse(response.body)["redirectTo"]
       end
 
       [
