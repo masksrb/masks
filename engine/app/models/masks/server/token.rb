@@ -22,7 +22,8 @@ module Masks
         "pushed" => "PushedRequest",
         "approval" => "SignInApproval",
         "forward_code" => "ForwardCode",
-        "forward_session" => "ForwardSession"
+        "forward_session" => "ForwardSession",
+        "app_password" => "AppPassword"
       }.freeze
 
       self.inheritance_column = "kind"

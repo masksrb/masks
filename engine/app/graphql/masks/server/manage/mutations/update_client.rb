@@ -32,6 +32,8 @@ module Masks
           argument :saml_slo_url, String, required: false,
                    description: "The application's single logout URL, which receives masks' logout messages over HTTP-POST. Empty stops single logout."
           argument :consent_required, Boolean, required: false
+          argument :app_passwords, Boolean, required: false,
+                   description: "Whether people may make an app password for this client. An app password signs in over LDAP and forward auth without a second factor, for this client alone."
           argument :access_token_lifetime, Integer, required: false,
                    description: "Seconds an access token lasts, from 60 to a day. Zero goes back to an hour."
           argument :refresh_token_lifetime, Integer, required: false,

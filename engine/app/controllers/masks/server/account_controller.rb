@@ -9,6 +9,9 @@ module Masks
         return redirect_to login_path if @actor.nil?
 
         @apps = Apps.held_by(@actor)
+        @app_passwords = AppPassword.live.where(actor: @actor).includes(:client).newest_first.to_a
+        @app_password_clients = AppPassword.offered(@actor)
+        @app_password = flash[:app_password]
         @launchable = Apps.launchable(@actor)
         @invitations = @actor.memberships.outstanding.joins(:organization).merge(Organization.active)
                              .includes(:organization, :invited_by).order("organizations.name").to_a

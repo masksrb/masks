@@ -123,10 +123,12 @@ To give an app a credential:
 1. In `/manage`, open **Settings**, then **Directory**. The credential form appears once the
    directory is on.
 2. Enter a label, such as `jellyfin`.
-3. Choose **Issue a credential**. Only a manager holding `masks:manage` can issue one.
-4. Copy the bind DN and the secret. The secret is shown once, and masks keeps only a digest of it.
+3. Under **App**, choose the client the app is registered as, when its people sign in with
+   [app passwords](/guides/features/#app-passwords). Leave it as **No app** otherwise.
+4. Choose **Issue a credential**. Only a manager holding `masks:manage` can issue one.
+5. Copy the bind DN and the secret. The secret is shown once, and masks keeps only a digest of it.
    The bind DN is `cn=<label>,ou=services,dc=<subdomain>,dc=masks`.
-5. Give the app the bind DN, the secret, and the **Base DN** shown on the same page.
+6. Give the app the bind DN, the secret, and the **Base DN** shown on the same page.
 
 A credential searches only its own tenant.
 
@@ -159,6 +161,22 @@ LDAP cannot ask for a second factor. So masks refuses a password bind when:
 rules for the tenant. It is off by default. Turn it on only when every app that checks passwords
 over LDAP is worth less than the second factor it skips.
 
+### App passwords
+
+An [app password](/guides/features/#app-passwords) binds in place of the account password, for one
+app, with the second factor satisfied. It is the way to let one app in without lifting the rules
+for the whole tenant.
+
+masks accepts it on a connection that first bound with a credential issued for that app's client,
+under **App** on the credential form. That is how masks knows which app is asking. The bind is
+refused:
+
+- through a credential issued with no app, or for another app
+- on a direct bind with no credential before it
+- when the client no longer accepts app passwords, or the app password is revoked
+
+A successful bind records **Signed in over LDAP** with `factor` set to `app_password`.
+
 ### Refusals and activity
 
 A wrong password, an unknown name, and every rule above answer `invalidCredentials`. A bind with a
@@ -186,6 +204,9 @@ limit, within three minutes, masks answers `unwillingToPerform` without checking
 A wrong password, an unknown name, and a wrong credential secret count as failures. A refusal under
 the rules above does not count, and neither does a successful bind. So an app that checks many
 actors' passwords from one IP address is not slowed down.
+
+A wrong app password counts here and on the sign-in page both, so guessing over LDAP spends the
+account's budget for the sign-in page too.
 
 ## Searching
 

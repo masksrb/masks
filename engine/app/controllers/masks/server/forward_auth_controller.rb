@@ -15,6 +15,7 @@ module Masks
 
         client = Client.forwarding_to(target)
         return head(:forbidden) if client.nil?
+        return basic(client) if ActionController::HttpAuthentication::Basic.has_basic_credentials?(request)
 
         held = ForwardSession.held(cookies[ForwardSession::COOKIE], client)
         return admit(held.actor) if held
@@ -65,6 +66,16 @@ module Masks
           }
 
           redirect_to code.return_to, allow_other_host: true
+        end
+
+        def basic(client)
+          identifier, secret = ActionController::HttpAuthentication::Basic.user_name_and_password(request)
+          outcome = AppPasswords.authenticate(client: client, identifier: identifier, secret: secret, via: "forward_auth")
+
+          return head(:too_many_requests) if outcome.throttled?
+          return head(:unauthorized) if outcome.actor.nil?
+
+          admit(outcome.actor)
         end
 
         def admit(actor)

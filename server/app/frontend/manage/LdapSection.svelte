@@ -14,7 +14,8 @@
       ldapPort
       ldapTls
       ldapLocalOnly
-      ldapCredentials { id label bindDn usedAt createdAt issuedBy { identifier } }
+      ldapCredentials { id label bindDn usedAt createdAt issuedBy { identifier } client { clientId name } }
+      clients(limit: 200) { clientId name appPasswords }
       tenant { ldapEnabled ldapPasswordOnly }
     }
   `;
@@ -23,6 +24,7 @@
 
   let data = $state(null);
   let label = $state("");
+  let clientId = $state("");
   let issued = $state(null);
 
   async function load() {
@@ -38,10 +40,10 @@
   async function issue() {
     const done = await feedback.attempt(() =>
       api.query(
-        `mutation Issue($label: String!) {
-          issueLdapCredential(label: $label) { secret ldapCredential { bindDn } }
+        `mutation Issue($label: String!, $clientId: ID) {
+          issueLdapCredential(label: $label, clientId: $clientId) { secret ldapCredential { bindDn } }
         }`,
-        { label: label.trim() },
+        { label: label.trim(), clientId: clientId || null },
       ),
     );
 
@@ -49,6 +51,7 @@
 
     issued = done.issueLdapCredential;
     label = "";
+    clientId = "";
 
     await load();
   }
@@ -123,6 +126,9 @@
               <div class="min-w-0">
                 <div class="text-sm font-medium">{credential.label}</div>
                 <code class="hint font-mono text-xs break-all">{credential.bindDn}</code>
+                {#if credential.client}
+                  <div class="hint">{t("ldap.credentials.app", { name: credential.client.name })}</div>
+                {/if}
                 <div class="hint text-xs">
                   {t("ldap.credentials.used", { used: since(credential.usedAt, t("ldap.credentials.never")) })}
                 </div>
@@ -143,9 +149,16 @@
         }}
       >
         <input class="input input-sm join-item w-full max-w-48" aria-label={t("ldap.connect.label")} placeholder="jellyfin" bind:value={label} />
+        <select class="select select-sm join-item w-full max-w-48" aria-label={t("ldap.connect.app")} bind:value={clientId}>
+          <option value="">{t("ldap.connect.no_app")}</option>
+          {#each data.clients as client (client.clientId)}
+            <option value={client.clientId}>{client.name}</option>
+          {/each}
+        </select>
         <button type="submit" class="btn btn-sm join-item" disabled={!label.trim()}>{t("ldap.connect.issue")}</button>
       </form>
       <p class="hint">{t("ldap.connect.help")}</p>
+      <p class="hint">{t("ldap.connect.app_help")}</p>
 
       {#if issued}
         <div class="alert alert-warning alert-soft flex-col items-start gap-2" role="status">

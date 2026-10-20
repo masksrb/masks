@@ -7,6 +7,7 @@ module Masks
           field :label, String, null: false
           field :bind_dn, String, null: false, description: "The DN an app binds as, under ou=services in this tenant's directory."
           field :issued_by, ActorType
+          field :client, ClientType, description: "The client whose app passwords bind through this credential, when one was chosen."
           field :used_at, GraphQL::Types::ISO8601DateTime, description: "When an app last bound with it, to within five minutes."
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 

@@ -25,6 +25,7 @@ everywhere:
   - "Port %{port}, LDAPS"
   - "%{bits} bits"
 de:
+  - App
   - Code
   - Links
   - Name

@@ -5,7 +5,11 @@ module Masks
         WINDOW = 3.minutes
         VIA = "ldap".freeze
 
-        Bound = Data.define(:kind, :tenant, :dn, :subject) do
+        Bound = Data.define(:kind, :tenant, :dn, :subject, :client_id) do
+          def initialize(client_id: nil, **rest)
+            super(client_id: client_id, **rest)
+          end
+
           def service?
             kind == :service
           end
@@ -17,8 +21,9 @@ module Masks
 
         Outcome = Data.define(:code, :message, :bound)
 
-        def initialize(ip_address:)
+        def initialize(ip_address:, client_id: nil)
           @ip_address = ip_address
+          @client_id = client_id
         end
 
         def bind(name, password)
@@ -80,7 +85,8 @@ module Masks
 
             Outcome.new(
               code: Protocol::SUCCESS, message: "",
-              bound: Bound.new(kind: :service, tenant: tenant, dn: directory.service_dn(credential.label), subject: credential.id)
+              bound: Bound.new(kind: :service, tenant: tenant, dn: directory.service_dn(credential.label), subject: credential.id,
+                               client_id: credential.client_id)
             )
           end
 
@@ -93,6 +99,7 @@ module Masks
             end
 
             actor = Actor.authenticate(uid, password)
+            return app_password(tenant, directory, uid, password, account) if actor.nil? && app_password?(password)
 
             if actor.nil?
               failed!(ip_key, account)
@@ -103,8 +110,28 @@ module Masks
             return refuse(uid, reason, actor) if reason
 
             actor.active!
+            bound(tenant, directory, actor)
+          end
+
+          def app_password?(password)
+            @client_id && AppPassword.shaped?(password)
+          end
+
+          def app_password(tenant, directory, uid, password, account)
+            client = Client.active.find_by(id: @client_id)
+            outcome = AppPasswords.authenticate(client: client, identifier: uid, secret: password, via: VIA,
+                                                ip_address: @ip_address, tenant: tenant)
+
+            return throttled if outcome.throttled?
+            return bound(tenant, directory, outcome.actor, factor: AppPasswords::FACTOR) if outcome.actor
+
+            failed!(ip_key, account) if outcome.wrong?
+            invalid
+          end
+
+          def bound(tenant, directory, actor, factor: "password")
             dn = directory.person_dn(actor)
-            Event.record!(Event::LDAP_BOUND, actor: actor, dn: dn.to_s)
+            Event.record!(Event::LDAP_BOUND, actor: actor, dn: dn.to_s, factor: factor)
 
             Outcome.new(code: Protocol::SUCCESS, message: "", bound: Bound.new(kind: :person, tenant: tenant, dn: dn, subject: actor.id))
           end

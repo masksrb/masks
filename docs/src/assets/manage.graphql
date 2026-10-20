@@ -250,6 +250,12 @@ type Client {
   """
   allowedGroups: [String!]!
   allowedScopes: [String!]!
+
+  """
+  Whether people may make an app password for this client, which LDAP and
+  forward auth accept in place of their password and second factor.
+  """
+  appPasswords: Boolean!
   applicationType: String!
   approvedAt: ISO8601DateTime
   approvedBy: Actor
@@ -791,6 +797,11 @@ type LdapCredential {
   The DN an app binds as, under ou=services in this tenant's directory.
   """
   bindDn: String!
+
+  """
+  The client whose app passwords bind through this credential, when one was chosen.
+  """
+  client: Client
   createdAt: ISO8601DateTime!
   id: ID!
   issuedBy: Actor
@@ -1155,6 +1166,12 @@ type Mutation {
   """
   issueLdapCredential(
     """
+    The client this app is registered as. People who make an app password for
+    that client can bind with it on a connection that bound with this credential first.
+    """
+    clientId: ID
+
+    """
     Lowercase letters, digits, dots, dashes, and underscores. It becomes the cn of the bind DN.
     """
     label: String!
@@ -1258,6 +1275,12 @@ type Mutation {
     """
     allowedGroups: [String!]
     allowedScopes: [String!]
+
+    """
+    Whether people may make an app password for this client. An app password
+    signs in over LDAP and forward auth without a second factor, for this client alone.
+    """
+    appPasswords: Boolean
 
     """
     The types of authorization detail this client accepts as a resource, each

@@ -325,7 +325,8 @@ CREATE TABLE public.clients (
     saml_slo_url character varying,
     enrolled_by_id bigint,
     handshake_return_to character varying,
-    refresh_token_absolute_lifetime integer
+    refresh_token_absolute_lifetime integer,
+    app_passwords boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -4135,6 +4136,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261020150000'),
 ('20261020130000'),
+('20261020110000'),
 ('20261020100000'),
 ('20261019140000'),
 ('20261018110000'),

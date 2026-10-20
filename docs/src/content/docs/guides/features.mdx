@@ -699,6 +699,43 @@ The top of a person's account page shows **Your apps**. It lists the apps the pe
 Each one opens the app, or starts the SAML sign-in through masks. A client nobody approved never
 appears.
 
+### App passwords
+
+Some apps check a password and nothing more: a media server on a TV, a NAS, a calendar sync. They
+cannot ask for a second factor. An **app password** lets one of them sign in as a person who has a
+second factor, without turning the second factor off.
+
+A manager turns on **Accept app passwords** on the client's **Access** tab first. Then a person:
+
+1. Opens **App passwords** on their account page. The section appears once an app they may sign in
+   to accepts them.
+2. Enters a name, such as `Jellyfin on the TV`, and picks the app.
+3. Chooses **Make app password**. A sign-in older than 15 minutes is asked again first.
+4. Copies the password. masks shows it once and keeps only a digest, hashed as account passwords
+   are.
+
+An app password is 24 letters and digits in groups of four. Dashes and case do not matter when it is
+entered.
+
+What it does:
+
+- It signs in over [LDAP](/guides/ldap/#password-binds) and
+  [forward auth](/guides/forward-auth/#scripts-and-apps-without-a-browser), for the app it was made
+  for and no other.
+- It stands in for the password and the second factor together. That is the point: the app never
+  sees the account password, and the second factor stays on for everything else.
+- It never signs in on the sign-in page, at `/token`, or to `/manage`.
+- Wrong guesses count against the same limits as the sign-in page. See
+  [rate limits](/guides/security/#rate-limits).
+
+The list shows each app password's name, app, when it was made, and when it was last used. **Revoke**
+ends one on its own. The account password and passkeys stay as they are. An account holds up to 20.
+Suspending the account revokes them all.
+
+masks records **App password made**, **Signed in with an app password** once a day per app
+password, and **App password revoked**. The first and last are mailed under the
+[security emails](/guides/security/#security-emails) for second factors.
+
 ### Changing your own details
 
 A person changes their name and nickname under **Name** on their account page.

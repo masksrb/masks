@@ -58,7 +58,7 @@ module Masks
 
           def bind(message)
             request = message.operation
-            @bound = nil
+            previous, @bound = @bound, nil
 
             if request.version != 3
               return write(Protocol.bind_response(message.id, Protocol::PROTOCOL_ERROR, "only LDAPv3 is spoken here"))
@@ -68,7 +68,8 @@ module Masks
               return write(Protocol.bind_response(message.id, Protocol::AUTH_METHOD_NOT_SUPPORTED, "only simple binds are supported"))
             end
 
-            outcome = Gate.new(ip_address: @ip_address).bind(request.name, request.password)
+            outcome = Gate.new(ip_address: @ip_address, client_id: previous&.service? ? previous.client_id : nil)
+                          .bind(request.name, request.password)
             @bound = outcome.bound
 
             write(Protocol.bind_response(message.id, outcome.code, outcome.message))

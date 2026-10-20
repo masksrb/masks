@@ -102,6 +102,9 @@ module Masks
       LDAP_CREDENTIAL_ISSUED = "ldap_credential.issued".freeze
       LDAP_CREDENTIAL_REVOKED = "ldap_credential.revoked".freeze
       LDAP_BOUND = "ldap.bound".freeze
+      APP_PASSWORD_CREATED = "app_password.created".freeze
+      APP_PASSWORD_USED = "app_password.used".freeze
+      APP_PASSWORD_REVOKED = "app_password.revoked".freeze
 
       CLIENT_CREATED = "client.created".freeze
       CLIENT_REGISTERED = "client.registered".freeze

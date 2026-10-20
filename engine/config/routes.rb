@@ -79,6 +79,8 @@ Masks::Server::Engine.routes.draw do
   delete "/account/avatar", to: "avatars#destroy"
 
   delete "/account/apps/:client_id", to: "apps#destroy", as: :account_app
+  post "/account/app_passwords", to: "app_passwords#create", as: :account_app_passwords
+  delete "/account/app_passwords/:id", to: "app_passwords#destroy", as: :account_app_password
   post "/account/connections", to: "connections#create", as: :account_connections
   delete "/account/connections/:id", to: "connections#detach", as: :account_connection
   delete "/account/delegations/:id", to: "delegations#destroy", as: :account_delegation

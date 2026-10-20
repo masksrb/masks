@@ -55,6 +55,8 @@ module Masks
                 description: "Where masks posts a signed LogoutRequest when a person who signed in to this SAML application signs out, and its LogoutResponse when the application asks."
           field :require_signed_request_object, Boolean, null: false
           field :consent_required, Boolean, null: false
+          field :app_passwords, Boolean, null: false,
+                description: "Whether people may make an app password for this client, which LDAP and forward auth accept in place of their password and second factor."
           field :sign_in_policy, SignInPolicyType
           field :dynamic, Boolean, null: false
           field :approved_at, GraphQL::Types::ISO8601DateTime

@@ -7,12 +7,12 @@ module Masks
       class Refused < StandardError; end
 
       class << self
-        def issue!(label:, by:)
+        def issue!(label:, by:, client: nil)
           name = label.to_s.strip.downcase
           raise Refused, "a label is lowercase letters, digits, dots, dashes, and underscores" unless name.match?(LABEL)
           raise Refused, "a live LDAP credential is already labeled #{name}" if named(name)
 
-          mint!(payload: { "label" => name, "issued_by" => by&.uuid }.compact, expires_at: LIFETIME.from_now)
+          mint!(client: client, payload: { "label" => name, "issued_by" => by&.uuid }.compact, expires_at: LIFETIME.from_now)
         end
 
         def named(label)

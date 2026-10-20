@@ -31,6 +31,11 @@
 
   <%= render "masks/server/account/apps", apps: @apps, connections: @connections, linkable: @linkable %>
 
+  <% if @app_passwords.any? || @app_password_clients.any? %>
+    <%= render "masks/server/account/app_passwords", app_passwords: @app_passwords, offered: @app_password_clients,
+                                                     app_password: @app_password, fresh: @fresh %>
+  <% end %>
+
   <%= render "masks/server/account/info", actor: @actor, directed: @directed, fresh: @fresh %>
 
   <%= render "masks/server/account/activity", events: @events %>

@@ -122,6 +122,21 @@ location / {
 To pass `Remote-Email`, `Remote-Name`, or `Remote-Groups` too, add an `auth_request_set` and a
 `proxy_set_header` line for each one, as for `Remote-User`.
 
+## Scripts and apps without a browser
+
+A request that carries an `Authorization: Basic` header is answered from that header alone, with no
+cookie and no redirect. The name is the person's nickname or email address, and the password is an
+[app password](/guides/features/#app-passwords) made for this client. masks answers 200 with the
+same headers as a browser sign-in, or 401.
+
+```sh
+curl -u ada:xxxx-xxxx-xxxx-xxxx-xxxx-xxxx https://dash.example.com/reports
+```
+
+The account password is never accepted here, and neither is an app password made for another
+client. The client's **Accept app passwords** has to be on. A wrong app password counts against
+the account's sign-in limits, and masks answers 429 once they are reached.
+
 ## Headers the app can trust
 
 The app can trust `Remote-User` only because the proxy sets it. Set up two things:

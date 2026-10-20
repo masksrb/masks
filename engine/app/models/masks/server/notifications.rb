@@ -18,7 +18,9 @@ module Masks
           Event::TEXT_CODES_ENABLED,
           Event::TEXT_CODES_DISABLED,
           Event::RECOVERY_REQUESTED,
-          Event::SECOND_FACTORS_RESET
+          Event::SECOND_FACTORS_RESET,
+          Event::APP_PASSWORD_CREATED,
+          Event::APP_PASSWORD_REVOKED
         ],
         "sessions" => [
           Event::SESSION_STARTED,

@@ -33,7 +33,7 @@
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes allowedGroups
         backchannelLogoutUri backchannelLogoutSessionRequired
-        requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
+        requirePushedAuthorizationRequests requireSignedRequestObject consentRequired appPasswords jwks jwksUri
         authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
         accessTokenLifetime refreshTokenLifetime refreshTokenAbsoluteLifetime
         protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes samlSloUrl
@@ -940,6 +940,17 @@
               )}
           />
           {/if}
+
+          <Switch
+            checked={client.appPasswords}
+            label={t("client.sign_in.app_passwords")}
+            onchange={(on) =>
+              update(
+                { appPasswords: on },
+                on ? t("client.notices.app_passwords_on") : t("client.notices.app_passwords_off"),
+              )}
+          />
+          <p class="hint">{t("client.sign_in.app_passwords_help")}</p>
 
           {#if client.approvedAt}
             <Switch
