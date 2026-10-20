@@ -321,8 +321,12 @@ module Masks
         theirs = within { globex.memberships.create!(actor: stranger, role: "member") }
 
         sign_in_as(@owner)
+        mine = within { @acme.memberships.find_by!(actor: @member) }
+
         delete "/account/organizations/acme/members/#{theirs.id}"
         delete "/account/organizations/acme/members/#{@member.uuid}"
+        delete "/account/organizations/acme/members/#{mine.id}x"
+        delete "/account/organizations/acme/members/#{mine.id}%20"
 
         assert within { globex.memberships.exists?(theirs.id) }
         assert_equal "member", role_of(@member)

@@ -99,7 +99,9 @@ module Masks
         end
 
         def member!
-          @organization.memberships.includes(:actor).find_by(id: params[:id].to_s) ||
+          membership_id = params[:id].to_s[/\A\d+\z/]
+
+          (membership_id && @organization.memberships.includes(:actor).find_by(id: membership_id)) ||
             raise(Members::Refused, t("organization_members.not_a_member"))
         end
 
