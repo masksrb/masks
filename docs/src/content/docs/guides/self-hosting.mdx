@@ -397,6 +397,7 @@ file into the container and set `MASKS_CONFIG` to its path. Every boot applies i
 ```yaml
 name: Home
 accent_color: "#3355aa"
+password_reset_lifetime: 3600
 
 groups:
   admins:
@@ -421,6 +422,7 @@ apps:
 |                                                                                                        |                                                                                                                           |
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | `name`, `accent_color`                                                                                 | The tenant's name and color, as under **Branding** in `/manage`.                                                          |
+| `invitation_lifetime`, `organization_invitation_lifetime`, `password_reset_lifetime`, `email_verification_lifetime` | Seconds each [emailed link](/guides/features/#link-lifetimes) stays valid, as under **Links** in `/manage`. |
 | An app's key                                                                                           | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                           |
 | `preset`, `url`, `slug`                                                                                | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                  |
 | `redirect_uris`, `scopes`                                                                              | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                         |

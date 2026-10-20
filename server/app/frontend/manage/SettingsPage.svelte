@@ -21,7 +21,7 @@
     query Tenant {
       tenant {
         uuid subdomain name dynamicRegistration dynamicClientScopes createdAt mails accentColor logoUrl keyRotationDays
-        eventRetentionDays
+        eventRetentionDays invitationLifetime organizationInvitationLifetime passwordResetLifetime emailVerificationLifetime
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
@@ -41,6 +41,30 @@
     [1095, t("settings.retention.three_years")],
     [2555, t("settings.retention.seven_years")],
   ];
+
+  const MINUTE = 60;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+
+  const LINKS = [
+    ["invitationLifetime", "invitation", 7 * DAY, [DAY, 3 * DAY, 7 * DAY, 14 * DAY, 30 * DAY]],
+    ["organizationInvitationLifetime", "organization_invitation", 14 * DAY, [DAY, 3 * DAY, 7 * DAY, 14 * DAY, 30 * DAY]],
+    ["passwordResetLifetime", "password_reset", 30 * MINUTE, [15 * MINUTE, 30 * MINUTE, HOUR, 4 * HOUR, DAY]],
+    ["emailVerificationLifetime", "email_verification", 2 * DAY, [HOUR, DAY, 2 * DAY, 7 * DAY, 14 * DAY]],
+  ];
+
+  function lasting(seconds) {
+    if (seconds % DAY === 0) return t("links.days", { count: seconds / DAY });
+    if (seconds % HOUR === 0) return t("links.hours", { count: seconds / HOUR });
+
+    return t("links.minutes", { count: Math.round(seconds / MINUTE) });
+  }
+
+  const lifetimes = (presets, usual, held) =>
+    (presets.includes(held) ? presets : [...presets, held].sort((a, b) => a - b)).map((seconds) => [
+      String(seconds),
+      seconds === usual ? t("links.default", { length: lasting(seconds) }) : lasting(seconds),
+    ]);
 
   const choices = (listed, held) =>
     !held || listed.some(([days]) => days === held) ? listed : [...listed, [held, t("settings.after_days", { days: held })]];
@@ -79,7 +103,8 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $eventRetentionDays: Int, $accentColor: String, $keyRotationDays: Int
+            $eventRetentionDays: Int, $accentColor: String, $keyRotationDays: Int,
+            $invitationLifetime: Int, $organizationInvitationLifetime: Int, $passwordResetLifetime: Int, $emailVerificationLifetime: Int
           ) {
             updateTenant(
               name: $name
@@ -88,6 +113,10 @@
               eventRetentionDays: $eventRetentionDays
               accentColor: $accentColor
               keyRotationDays: $keyRotationDays
+              invitationLifetime: $invitationLifetime
+              organizationInvitationLifetime: $organizationInvitationLifetime
+              passwordResetLifetime: $passwordResetLifetime
+              emailVerificationLifetime: $emailVerificationLifetime
             ) { tenant { name } }
           }`,
           changes,
@@ -237,6 +266,19 @@
           options={choices(RETENTION, data.tenant.eventRetentionDays)}
           onchange={(days) => update({ eventRetentionDays: Number(days) }, t("settings.retention.updated"))}
         />
+      </Section>
+
+      <Section row title={t("links.title")} help={t("links.help")}>
+        <div class="grid gap-3 sm:grid-cols-2">
+          {#each LINKS as [field, key, usual, presets] (field)}
+            <Select
+              label={t(`links.${key}`)}
+              value={String(data.tenant[field])}
+              options={lifetimes(presets, usual, data.tenant[field])}
+              onchange={(seconds) => update({ [field]: Number(seconds) }, t("links.updated"))}
+            />
+          {/each}
+        </div>
       </Section>
 
       <Section

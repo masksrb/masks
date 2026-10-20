@@ -41,14 +41,14 @@ module Masks
         membership = invite!
 
         assert_in_delta Time.current, membership.invited_at, 5
-        assert_in_delta Membership.lifetime.from_now, membership.expires_at, 5
+        assert_in_delta Membership.lifetime(@tenant).from_now, membership.expires_at, 5
         refute membership.expired?
       end
 
       test "an expired invitation cannot be accepted, and the invitee no longer sees it" do
         membership = invite!
 
-        travel Membership.lifetime + 1.minute do
+        travel Membership.lifetime(@tenant) + 1.minute do
           as(@invitee)
           get "/"
 
@@ -64,7 +64,7 @@ module Masks
       test "an owner sees an expired invitation and sends it again, which starts its lifetime over" do
         membership = invite!
 
-        travel Membership.lifetime + 1.minute do
+        travel Membership.lifetime(@tenant) + 1.minute do
           as(@owner)
           get "/"
 
@@ -133,8 +133,8 @@ module Masks
         stale = invite!
         fresh = within { @acme.memberships.create!(actor: create_actor(nickname: "bo", email: "bo@acme.example"), role: "member", pending: true) }
 
-        within { stale.update_columns(invited_at: (Membership.lifetime * 2 + 1.day).ago) }
-        within { fresh.update_columns(invited_at: (Membership.lifetime + 1.day).ago) }
+        within { stale.update_columns(invited_at: (Membership.lifetime(@tenant) * 2 + 1.day).ago) }
+        within { fresh.update_columns(invited_at: (Membership.lifetime(@tenant) + 1.day).ago) }
 
         CleanupJob.perform_now
 
@@ -147,7 +147,7 @@ module Masks
       test "a sign-in through the organization's provider still joins after the invitation expired" do
         membership = invite!
 
-        travel Membership.lifetime + 1.minute do
+        travel Membership.lifetime(@tenant) + 1.minute do
           within { membership.accept!(vouched: true) }
 
           refute within { membership.reload.pending? }

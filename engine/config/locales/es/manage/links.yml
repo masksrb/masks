@@ -1,0 +1,20 @@
+es:
+  manage:
+    links:
+      title: "Enlaces"
+      help: "Cuánto tiempo es válido cada enlace que masks envía por correo. Un enlace ya enviado conserva la validez con la que se envió. Una invitación a una organización cuenta desde la última vez que se envió."
+      invitation: "Invitación a una cuenta"
+      organization_invitation: "Invitación a una organización"
+      password_reset: "Restablecer la contraseña"
+      email_verification: "Confirmación del correo"
+      default: "%{length} (predeterminado)"
+      updated: "Validez del enlace guardada."
+      minutes:
+        one: "%{count} minuto"
+        other: "%{count} minutos"
+      hours:
+        one: "%{count} hora"
+        other: "%{count} horas"
+      days:
+        one: "%{count} día"
+        other: "%{count} días"

@@ -3,7 +3,8 @@ module Masks
     class Declared
       class Invalid < StandardError; end
 
-      TENANT_KEYS = %w[name accent_color groups apps].freeze
+      TENANT_SETTINGS = (%w[name accent_color] + Tenant::LINK_LIFETIMES.keys.map(&:to_s)).freeze
+      TENANT_KEYS = (TENANT_SETTINGS + %w[groups apps]).freeze
       APP_KEYS = %w[preset url slug name client_id client_secret_env redirect_uris scopes allowed_groups
                     access_token_lifetime refresh_token_lifetime refresh_token_absolute_lifetime].freeze
 
@@ -47,10 +48,17 @@ module Masks
         def apply_tenant(tenant, declared)
           known!(declared, TENANT_KEYS, tenant.subdomain)
 
-          tenant.update!(declared.slice("name", "accent_color").compact) if declared.key?("name") || declared.key?("accent_color")
+          settings = declared.slice(*TENANT_SETTINGS).compact
+          apply_settings(tenant, settings) if settings.any?
 
           Array(declared["groups"]).each { |key, group| apply_group(key, group || {}) }
           Array(declared["apps"]).filter_map { |key, app| apply_app(tenant, key, app || {}) }
+        end
+
+        def apply_settings(tenant, settings)
+          tenant.update!(settings)
+        rescue ActiveRecord::RecordInvalid => e
+          raise Invalid, "#{tenant.subdomain}: #{e.record.errors.full_messages.to_sentence}"
         end
 
         def apply_group(key, declared)

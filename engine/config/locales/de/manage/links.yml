@@ -1,0 +1,20 @@
+de:
+  manage:
+    links:
+      title: "Links"
+      help: "Wie lange jeder Link gültig ist, den masks per E-Mail sendet. Ein bereits gesendeter Link behält die Gültigkeit, mit der er gesendet wurde. Eine Einladung in eine Organisation zählt ab dem letzten Senden."
+      invitation: "Einladung zu einem Konto"
+      organization_invitation: "Einladung in eine Organisation"
+      password_reset: "Passwort zurücksetzen"
+      email_verification: "E-Mail-Bestätigung"
+      default: "%{length} (Standard)"
+      updated: "Gültigkeit des Links gespeichert."
+      minutes:
+        one: "%{count} Minute"
+        other: "%{count} Minuten"
+      hours:
+        one: "%{count} Stunde"
+        other: "%{count} Stunden"
+      days:
+        one: "%{count} Tag"
+        other: "%{count} Tage"

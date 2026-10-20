@@ -30,13 +30,26 @@ module Masks
           argument :key_rotation_days, Integer, required: false,
                    description: "Days between scheduled signing key rotations, from 7 to 365. Zero leaves rotation to a manager."
 
+          argument :invitation_lifetime, Integer, required: false,
+                   description: "Seconds an invitation to an account stays valid, from an hour to 30 days. Zero goes back to 7 days."
+          argument :organization_invitation_lifetime, Integer, required: false,
+                   description: "Seconds an invitation to an organization stays open after it was last sent, from an hour to 30 days. Zero goes back to 14 days."
+          argument :password_reset_lifetime, Integer, required: false,
+                   description: "Seconds a password reset link stays valid, from 5 minutes to a day. Zero goes back to 30 minutes."
+          argument :email_verification_lifetime, Integer, required: false,
+                   description: "Seconds an email confirmation link stays valid, from an hour to 14 days. Zero goes back to 2 days."
+
           field :tenant, Types::TenantType, null: false
 
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
                       named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
                       suspend_after: nil, delete_after: nil, event_retention_days: nil, risky_networks: nil,
-                      accent_color: nil, key_rotation_days: nil, ldap_enabled: nil, ldap_password_only: nil)
+                      accent_color: nil, key_rotation_days: nil, ldap_enabled: nil, ldap_password_only: nil, **link_lifetimes)
             tenant = Current.tenant
+
+            link_lifetimes.compact.each do |name, seconds|
+              tenant[name] = seconds.zero? ? Masks::Server::Tenant.default_link_lifetime(name) : seconds
+            end
 
             tenant.name = name unless name.nil?
             tenant.accent_color = accent_color unless accent_color.nil?

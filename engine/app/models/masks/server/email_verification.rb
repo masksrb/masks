@@ -5,8 +5,8 @@ module Masks
 
       path "verify"
 
-      def self.lifetime
-        ::Rails.configuration.masks.email_verification_lifetime
+      def self.lifetime(tenant = Current.tenant)
+        Tenant.link_lifetime(:email_verification_lifetime, tenant)
       end
 
       def self.settle!(secret)

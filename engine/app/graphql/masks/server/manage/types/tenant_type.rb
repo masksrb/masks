@@ -31,6 +31,11 @@ module Masks
           def event_retention_days
             object.event_retention.in_days.round
           end
+          field :invitation_lifetime, Integer, null: false, description: "Seconds an invitation to an account stays valid."
+          field :organization_invitation_lifetime, Integer, null: false,
+                                                            description: "Seconds an invitation to an organization stays open after it was last sent."
+          field :password_reset_lifetime, Integer, null: false, description: "Seconds a password reset link stays valid."
+          field :email_verification_lifetime, Integer, null: false, description: "Seconds an email confirmation link stays valid."
           field :ldap_enabled, Boolean, null: false, description: "Whether the LDAP directory answers for this tenant.", method: :ldap?
           field :ldap_password_only, Boolean, null: false,
                                      description: "Whether a password alone binds to LDAP for an account that would otherwise need a second factor.",

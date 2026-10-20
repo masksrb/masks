@@ -256,7 +256,7 @@ module Masks
 
         assert_nil body["errors"]
         refute body.dig("data", "resendOrganizationInvitation", "membership", "expired")
-        assert_in_delta Membership.lifetime.from_now, Time.zone.parse(body.dig("data", "resendOrganizationInvitation", "membership", "expiresAt")), 5
+        assert_in_delta Membership.lifetime(@tenant).from_now, Time.zone.parse(body.dig("data", "resendOrganizationInvitation", "membership", "expiresAt")), 5
       end
 
       test "security creates an organization, and support fills it with people" do
@@ -392,6 +392,44 @@ module Masks
         body = export(bearer_for(@owner), from: 400.days.ago)
 
         assert_match "at most 366 days", refusal(body)
+      end
+
+      test "the owner sets how long each emailed link lasts, and zero goes back to the default" do
+        fields = "invitationLifetime organizationInvitationLifetime passwordResetLifetime emailVerificationLifetime"
+        body = ask(%(mutation { updateTenant(invitationLifetime: 86400, organizationInvitationLifetime: 259200,
+                                             passwordResetLifetime: 900, emailVerificationLifetime: 3600) { tenant { #{fields} } } }),
+                   bearer_for(@owner))
+
+        assert_equal({ "invitationLifetime" => 86_400, "organizationInvitationLifetime" => 259_200,
+                       "passwordResetLifetime" => 900, "emailVerificationLifetime" => 3600 },
+                     body.dig("data", "updateTenant", "tenant"))
+        assert_equal 15.minutes, PasswordReset.lifetime(@tenant.reload)
+
+        body = ask(%(mutation { updateTenant(passwordResetLifetime: 0) { tenant { passwordResetLifetime } } }), bearer_for(@owner))
+
+        assert_equal 1800, body.dig("data", "updateTenant", "tenant", "passwordResetLifetime")
+        assert_equal 30.minutes, PasswordReset.lifetime(@tenant.reload)
+      end
+
+      test "a link lifetime outside its bounds is refused" do
+        held = bearer_for(@owner)
+
+        body = ask(%(mutation { updateTenant(passwordResetLifetime: 60) { tenant { passwordResetLifetime } } }), held)
+        assert_match "Password reset lifetime must be from 5 minutes to 1 day", refusal(body)
+
+        body = ask(%(mutation { updateTenant(invitationLifetime: 3888000) { tenant { invitationLifetime } } }), held)
+        assert_match "Invitation lifetime must be from 1 hour to 30 days", refusal(body)
+
+        assert_equal 30.minutes.to_i, @tenant.reload.password_reset_lifetime
+        assert_equal 7.days.to_i, @tenant.invitation_lifetime
+      end
+
+      test "only an owner changes link lifetimes" do
+        body = ask(%(mutation { updateTenant(passwordResetLifetime: 900) { tenant { passwordResetLifetime } } }),
+                   bearer_for(manager(ManageRoles::READ)))
+
+        assert_match "needs masks:manage", refusal(body)
+        assert_equal 30.minutes.to_i, @tenant.reload.password_reset_lifetime
       end
 
       test "the owner sets how long events are kept, and the nightly sweep follows it" do

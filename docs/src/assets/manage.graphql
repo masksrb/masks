@@ -1293,9 +1293,19 @@ type Mutation {
     dynamicRegistration: String
 
     """
+    Seconds an email confirmation link stays valid, from an hour to 14 days. Zero goes back to 2 days.
+    """
+    emailVerificationLifetime: Int
+
+    """
     Days to keep events, from 30 to 2555. Zero keeps the default of 180.
     """
     eventRetentionDays: Int
+
+    """
+    Seconds an invitation to an account stays valid, from an hour to 30 days. Zero goes back to 7 days.
+    """
+    invitationLifetime: Int
 
     """
     Days between scheduled signing key rotations, from 7 to 365. Zero leaves rotation to a manager.
@@ -1313,6 +1323,17 @@ type Mutation {
     ldapPasswordOnly: Boolean
     name: String
     namedBy: String
+
+    """
+    Seconds an invitation to an organization stays open after it was last sent,
+    from an hour to 30 days. Zero goes back to 14 days.
+    """
+    organizationInvitationLifetime: Int
+
+    """
+    Seconds a password reset link stays valid, from 5 minutes to a day. Zero goes back to 30 minutes.
+    """
+    passwordResetLifetime: Int
 
     """
     Address ranges, one per line in CIDR form, that add to a sign-in's risk score.
@@ -2033,9 +2054,19 @@ type Tenant {
   dynamicRegistration: String!
 
   """
+  Seconds an email confirmation link stays valid.
+  """
+  emailVerificationLifetime: Int!
+
+  """
   Days events are kept before they are deleted.
   """
   eventRetentionDays: Int!
+
+  """
+  Seconds an invitation to an account stays valid.
+  """
+  invitationLifetime: Int!
 
   """
   Days between scheduled signing key rotations, or null when a manager rotates by hand.
@@ -2061,9 +2092,19 @@ type Tenant {
   namedBy: String!
 
   """
+  Seconds an invitation to an organization stays open after it was last sent.
+  """
+  organizationInvitationLifetime: Int!
+
+  """
   Every origin this tenant answers on, each its own issuer.
   """
   origins: [String!]!
+
+  """
+  Seconds a password reset link stays valid.
+  """
+  passwordResetLifetime: Int!
 
   """
   Address ranges that add to a sign-in's risk score, one per line.

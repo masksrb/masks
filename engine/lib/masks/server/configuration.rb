@@ -35,11 +35,6 @@ module Masks
         config.mail_from = ENV["MASKS_MAIL_FROM"].presence
         config.smtp_address = ENV["MASKS_SMTP_ADDRESS"].presence
         config.smtp_settings = smtp_settings(config.smtp_address)
-        config.invitation_lifetime = ENV.fetch("MASKS_INVITATION_LIFETIME", 7 * 24 * 60 * 60).to_i.seconds
-        config.organization_invitation_lifetime =
-          ENV.fetch("MASKS_ORGANIZATION_INVITATION_LIFETIME", 14 * 24 * 60 * 60).to_i.seconds
-        config.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
-        config.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
         config.outbound_allowed = outbound_allowed(ENV["MASKS_OUTBOUND_ALLOWED"])
         config.ldap_port = ENV.fetch("MASKS_LDAP_PORT", 3389).to_i
         config.on_demand_tls = ENV.fetch("MASKS_ON_DEMAND_TLS", "false")

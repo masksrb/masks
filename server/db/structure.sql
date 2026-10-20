@@ -1440,7 +1440,11 @@ CREATE TABLE public.tenants (
     logo_digest character varying,
     accent_color character varying,
     key_rotation_days integer,
-    keys_derived_at timestamp(6) without time zone
+    keys_derived_at timestamp(6) without time zone,
+    invitation_lifetime integer DEFAULT 604800 NOT NULL,
+    organization_invitation_lifetime integer DEFAULT 1209600 NOT NULL,
+    password_reset_lifetime integer DEFAULT 1800 NOT NULL,
+    email_verification_lifetime integer DEFAULT 172800 NOT NULL
 );
 
 
@@ -3979,6 +3983,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261020150000'),
 ('20261019140000'),
 ('20261018110000'),
 ('20261018100000'),

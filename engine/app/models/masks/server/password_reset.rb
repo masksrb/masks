@@ -5,8 +5,8 @@ module Masks
 
       path "reset"
 
-      def self.lifetime
-        ::Rails.configuration.masks.password_reset_lifetime
+      def self.lifetime(tenant = Current.tenant)
+        Tenant.link_lifetime(:password_reset_lifetime, tenant)
       end
 
       def self.settle!(secret, password)

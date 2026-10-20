@@ -18,8 +18,8 @@ module Masks
 
       before_create { self.invited_at ||= Time.current if pending? }
 
-      def self.lifetime
-        ::Rails.configuration.masks.organization_invitation_lifetime
+      def self.lifetime(tenant = Current.tenant)
+        Tenant.link_lifetime(:organization_invitation_lifetime, tenant)
       end
 
       normalizes :external_id, with: Actor::EXTERNAL_ID
@@ -35,7 +35,7 @@ module Masks
       end
 
       def expires_at
-        invited_at + self.class.lifetime if pending?
+        invited_at + self.class.lifetime(tenant) if pending?
       end
 
       def expired?

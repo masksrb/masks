@@ -1,0 +1,20 @@
+fr:
+  manage:
+    links:
+      title: "Liens"
+      help: "Durée de validité de chaque lien que masks envoie par e-mail. Un lien déjà envoyé garde la durée avec laquelle il a été envoyé. Une invitation dans une organisation compte depuis son dernier envoi."
+      invitation: "Invitation à un compte"
+      organization_invitation: "Invitation dans une organisation"
+      password_reset: "Réinitialisation du mot de passe"
+      email_verification: "Confirmation de l’e-mail"
+      default: "%{length} (par défaut)"
+      updated: "Durée du lien enregistrée."
+      minutes:
+        one: "%{count} minute"
+        other: "%{count} minutes"
+      hours:
+        one: "%{count} heure"
+        other: "%{count} heures"
+      days:
+        one: "%{count} jour"
+        other: "%{count} jours"

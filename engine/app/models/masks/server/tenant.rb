@@ -64,6 +64,12 @@ module Masks
 
       IDLE_DAYS = (60..3650)
       RETENTION_DAYS = (30..2555)
+      LINK_LIFETIMES = {
+        invitation_lifetime: (1.hour.to_i..30.days.to_i),
+        organization_invitation_lifetime: (1.hour.to_i..30.days.to_i),
+        password_reset_lifetime: (5.minutes.to_i..1.day.to_i),
+        email_verification_lifetime: (1.hour.to_i..14.days.to_i)
+      }.freeze
 
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
       validates :accent_color, format: { with: ACCENT }, allow_nil: true
@@ -71,6 +77,18 @@ module Masks
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
       validates :suspend_after, :delete_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
       validates :event_retention_days, numericality: { only_integer: true, in: RETENTION_DAYS }, allow_nil: true
+      def self.spoken(seconds)
+        unit, length = { "day" => 1.day, "hour" => 1.hour, "minute" => 1.minute }.find { |_, held| (seconds % held).zero? }
+        count = seconds / length
+
+        "#{count} #{unit.pluralize(count)}"
+      end
+
+      LINK_LIFETIMES.each do |name, range|
+        shortest, longest = [ range.begin, range.end ].map { |seconds| spoken(seconds) }
+
+        validates name, numericality: { only_integer: true, in: range, message: "must be from #{shortest} to #{longest}" }
+      end
       validates :delete_after, comparison: { greater_than: :suspend_after, message: "must be longer than suspend after" },
                                if: -> { suspend_after && delete_after }
 
@@ -102,6 +120,14 @@ module Masks
 
       def event_retention
         event_retention_days&.days || Event::RETENTION
+      end
+
+      def self.link_lifetime(name, tenant = Current.tenant)
+        (tenant ? tenant[name] : column_defaults.fetch(name.to_s)).seconds
+      end
+
+      def self.default_link_lifetime(name)
+        column_defaults.fetch(name.to_s)
       end
 
       def public_origin

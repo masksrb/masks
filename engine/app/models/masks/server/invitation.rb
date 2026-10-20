@@ -7,8 +7,8 @@ module Masks
 
       path "invite"
 
-      def self.lifetime
-        ::Rails.configuration.masks.invitation_lifetime
+      def self.lifetime(tenant = Current.tenant)
+        Tenant.link_lifetime(:invitation_lifetime, tenant)
       end
 
       def self.open!(actor:, by: nil)

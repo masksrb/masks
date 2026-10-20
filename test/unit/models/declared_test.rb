@@ -64,6 +64,17 @@ module Masks
         end
       end
 
+      test "a declared tenant sets how long its emailed links last" do
+        apply(single("password_reset_lifetime" => 900, "invitation_lifetime" => 86_400))
+
+        assert_equal 900, @tenant.reload.password_reset_lifetime
+        assert_equal 86_400, @tenant.invitation_lifetime
+        assert_equal 2.days.to_i, @tenant.email_verification_lifetime
+
+        error = assert_raises(Declared::Invalid) { apply(single("password_reset_lifetime" => 60)) }
+        assert_match "Password reset lifetime must be from 5 minutes to 1 day", error.message
+      end
+
       test "a mistake names where it is" do
         error = assert_raises(Declared::Invalid) { apply(single("apps" => { "x" => { "presett" => "grafana" } })) }
         assert_match "app x names presett", error.message

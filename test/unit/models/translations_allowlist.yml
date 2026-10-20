@@ -26,6 +26,7 @@ everywhere:
   - "%{bits} bits"
 de:
   - Code
+  - Links
   - Name
   - Details
   - Scopes

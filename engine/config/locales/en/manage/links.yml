@@ -1,0 +1,20 @@
+en:
+  manage:
+    links:
+      title: "Links"
+      help: "How long each link masks emails stays valid. A link already sent keeps the lifetime it was sent with. An invitation to an organization counts from when it was last sent."
+      invitation: "Invitation to an account"
+      organization_invitation: "Invitation to an organization"
+      password_reset: "Password reset"
+      email_verification: "Email confirmation"
+      default: "%{length} (default)"
+      updated: "Link lifetime saved."
+      minutes:
+        one: "%{count} minute"
+        other: "%{count} minutes"
+      hours:
+        one: "%{count} hour"
+        other: "%{count} hours"
+      days:
+        one: "%{count} day"
+        other: "%{count} days"

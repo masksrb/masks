@@ -615,6 +615,24 @@ When both are set, deleting comes later than suspending.
   accepted.
 - masks records each warning, suspension, and deletion as an event.
 
+### Link lifetimes
+
+masks emails a link to invite someone, to reset a password, and to confirm an email address. Under
+**Links** in `/manage`, an owner sets how long each one stays valid. A link already sent keeps the
+lifetime it was sent with, and the email that carries it says how long it lasts.
+
+| Link                          | Default    | Range               |
+| ----------------------------- | ---------- | ------------------- |
+| Invitation to an account      | 7 days     | 1 hour to 30 days   |
+| Invitation to an organization | 14 days    | 1 hour to 30 days   |
+| Password reset                | 30 minutes | 5 minutes to 1 day  |
+| Email confirmation            | 2 days     | 1 hour to 14 days   |
+
+An invitation to an organization counts from when it was last sent, so a change applies to open
+invitations too. masks removes an invitation nobody accepted once twice its lifetime has passed.
+Each tenant on a server keeps its own four values, and [`MASKS_CONFIG`](/guides/self-hosting/#declaring-apps-in-a-file)
+can declare them.
+
 ### Your apps
 
 The top of a person's account page shows **Your apps**. It lists the apps the person may sign in to:
