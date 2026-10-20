@@ -13,6 +13,8 @@ module Masks
         "approval_requested" => %w[tenant nickname],
         "recovery_requested" => %w[tenant nickname],
         "approved" => %w[tenant name nickname],
+        "access_granted" => %w[tenant name nickname app],
+        "access_declined" => %w[tenant name nickname app],
         SIGNATURE => %w[tenant]
       }.freeze
       SUBJECT_LIMIT = 150

@@ -1,0 +1,12 @@
+fr:
+  manage:
+    access_requests:
+      title: "Demandes d’accès"
+      lede: "Acteurs refusés par ce client qui ont demandé l’accès. Approuver les place dans l’un des groupes qu’il admet, et ils reçoivent un courriel dans tous les cas."
+      empty: "Personne n’attend d’accès."
+      asked: "Demandé %{day}"
+      as: "Groupe dans lequel les placer"
+      grant: "Approuver"
+      decline: "Refuser"
+      granted: "%{identifier} est maintenant dans %{label} et peut se connecter."
+      declined: "La demande de %{identifier} est refusée."

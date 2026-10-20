@@ -20,6 +20,7 @@ Masks::Server::Engine.routes.draw do
 
   match "/authorize", to: "authorize#show", via: %i[get post], as: :authorize
   get "/authorize/refused", to: "authorize#refused", as: :authorize_refused
+  post "/authorize/refused/access", to: "authorize#ask", as: :authorize_access_request
   post "/par", to: "pushed_authorizations#create", as: :pushed_authorization
   post "/device_authorization", to: "device_authorizations#create", as: :device_authorization
 
@@ -89,6 +90,8 @@ Masks::Server::Engine.routes.draw do
     post "/account/organizations/:key/members/:id/resend", to: "organization_members#resend",
                                                            as: :account_organization_member_resend
     post "/account/organizations/:key/accept", to: "organization_members#accept", as: :account_organization_acceptance
+    post "/account/organizations/:key/access/:id", to: "organization_access#create", as: :account_organization_access
+    delete "/account/organizations/:key/access/:id", to: "organization_access#destroy"
   end
 
   scope constraints: { style: Regexp.union(Masks::Server::Avatars::STYLES), digest: /[0-9a-f]{16}/ } do

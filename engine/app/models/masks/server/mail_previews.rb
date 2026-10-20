@@ -29,6 +29,7 @@ module Masks
             acme = Organization.new(key: "acme", name: "Acme", roles: [ "billing" ])
             joining = Membership.new(organization: acme, actor: person, role: "billing", invited_by: manager,
                                      invited_as: person.email, pending: true)
+            asked = AccessRequest.new(actor: person, client: client || Client.new(name: "Grafana"), label: "admins")
             promoted = Event.new(action: Event::MEMBERSHIP_ROLE_CHANGED, actor: person, by: manager, organization: acme,
                                  created_at: Time.current, details: { "was" => "member", "now" => "owner" })
 
@@ -51,6 +52,10 @@ module Masks
                 ActorMailer.organization_invitation(joining, journey: managing) ],
               [ "approved", "Account approved", managing,
                 ActorMailer.approved(person, journey: managing) ],
+              [ "access_granted", "Access granted", managing,
+                ActorMailer.access_granted(asked, journey: managing) ],
+              [ "access_declined", "Access declined", managing,
+                ActorMailer.access_declined(asked, journey: managing) ],
               [ "notification", "Security notice", system,
                 ActorMailer.notification(person, changed, journey: system) ],
               [ "notification_organization", "Organization role changed", system,

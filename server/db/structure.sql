@@ -29,6 +29,45 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: access_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_requests (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    client_id bigint NOT NULL,
+    decided_by_id bigint,
+    label character varying,
+    granted_at timestamp(6) without time zone,
+    declined_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.access_requests FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: access_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.access_requests_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: access_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.access_requests_id_seq OWNED BY public.access_requests.id;
+
+
+--
 -- Name: actors; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1524,6 +1563,13 @@ ALTER SEQUENCE public.tokens_id_seq OWNED BY public.tokens.id;
 
 
 --
+-- Name: access_requests id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests ALTER COLUMN id SET DEFAULT nextval('public.access_requests_id_seq'::regclass);
+
+
+--
 -- Name: actors id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1752,6 +1798,14 @@ ALTER TABLE ONLY public.tenants ALTER COLUMN id SET DEFAULT nextval('public.tena
 --
 
 ALTER TABLE ONLY public.tokens ALTER COLUMN id SET DEFAULT nextval('public.tokens_id_seq'::regclass);
+
+
+--
+-- Name: access_requests access_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT access_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -2032,6 +2086,27 @@ ALTER TABLE ONLY public.tenants
 
 ALTER TABLE ONLY public.tokens
     ADD CONSTRAINT tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_access_requests_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_access_requests_on_created_at ON public.access_requests USING btree (created_at);
+
+
+--
+-- Name: index_access_requests_on_open; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_access_requests_on_open ON public.access_requests USING btree (tenant_id, actor_id, client_id) WHERE ((granted_at IS NULL) AND (declined_at IS NULL));
+
+
+--
+-- Name: index_access_requests_on_tenant_id_and_client_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_access_requests_on_tenant_id_and_client_id ON public.access_requests USING btree (tenant_id, client_id);
 
 
 --
@@ -3062,6 +3137,14 @@ ALTER TABLE ONLY public.sign_in_policies
 
 
 --
+-- Name: access_requests fk_rails_210c259420; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT fk_rails_210c259420 FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
+
+
+--
 -- Name: client_logos fk_rails_2831eaaaa0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3246,6 +3329,14 @@ ALTER TABLE ONLY public.organizations
 
 
 --
+-- Name: access_requests fk_rails_6ec98a445a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT fk_rails_6ec98a445a FOREIGN KEY (actor_id) REFERENCES public.actors(id) ON DELETE CASCADE;
+
+
+--
 -- Name: delegations fk_rails_72cabb0bd2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3366,6 +3457,14 @@ ALTER TABLE ONLY public.memberships
 
 
 --
+-- Name: access_requests fk_rails_ab87701c06; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT fk_rails_ab87701c06 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: organizations fk_rails_ad271c93a4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3451,6 +3550,14 @@ ALTER TABLE ONLY public.domain_claims
 
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT fk_rails_d5b7012cbc FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: access_requests fk_rails_d9b1fd0d35; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT fk_rails_d9b1fd0d35 FOREIGN KEY (decided_by_id) REFERENCES public.actors(id) ON DELETE SET NULL;
 
 
 --
@@ -3572,6 +3679,12 @@ ALTER TABLE ONLY public.tokens
 ALTER TABLE ONLY public.tokens
     ADD CONSTRAINT fk_rails_fc9481b3fa FOREIGN KEY (session_id) REFERENCES public.sessions(id) ON DELETE SET NULL;
 
+
+--
+-- Name: access_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.access_requests ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: actors; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3746,6 +3859,13 @@ ALTER TABLE public.signing_keys ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: access_requests tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.access_requests USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
 
 --
 -- Name: actors tenant_isolation; Type: POLICY; Schema: public; Owner: -
@@ -3984,6 +4104,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261020150000'),
+('20261020100000'),
 ('20261019140000'),
 ('20261018110000'),
 ('20261018100000'),

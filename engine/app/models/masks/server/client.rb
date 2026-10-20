@@ -54,6 +54,7 @@ module Masks
       has_many :consents, dependent: :destroy
       has_many :delegations, dependent: :destroy
       has_many :saml_participations, dependent: :delete_all
+      has_many :access_requests, dependent: :delete_all
       has_many :namespaces, -> { order(:name) }, dependent: :nullify
       has_many :enrolled, class_name: "Client", foreign_key: :enrolled_by_id, inverse_of: :enrolled_by,
                           dependent: :nullify

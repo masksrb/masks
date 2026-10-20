@@ -135,6 +135,39 @@
               <% end %>
             </div>
 
+            <% asked = account_access_requests(organization) %>
+            <% if asked.any? %>
+              <p class="aside"><strong><%= account_text("access.heading") %></strong> <%= account_text("access.lede", organization: organization.name) %></p>
+
+              <div class="items" id="access-requests-<%= organization.key %>">
+                <% asked.each do |request| %>
+                  <% roles = request.organization_roles.filter_map { |key, role| role if key == organization.key } %>
+                  <div class="item item-member access-request" id="access-request-<%= request.id %>">
+                    <span class="item-name"><%= request.actor.identifier %></span>
+                    <span class="item-meta">
+                      <%= account_text("access.asked", app: request.client.name, age: time_ago_in_words(request.created_at)) %>
+                    </span>
+
+                    <div class="item-act item-acts">
+                      <%= form_with url: account_organization_access_path(organization.key, request.id), method: :post,
+                                    class: "item-acts" do |form| %>
+                        <%= form.select :role, roles, {}, class: "control control-sm",
+                                        id: "access-role-#{organization.key}-#{request.id}",
+                                        aria: { label: account_text("access.role_of", name: request.actor.identifier) } %>
+                        <button type="submit" class="action action-sm"><%= account_text("access.grant") %></button>
+                      <% end %>
+
+                      <%= button_to account_text("access.decline"),
+                            account_organization_access_path(organization.key, request.id), method: :delete,
+                            class: "action action-quiet action-sm",
+                            form: { data: { turbo_confirm: account_text("access.confirm_decline", identifier: request.actor.identifier,
+                                                                                                  app: request.client.name) } } %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
             <%= form_with url: account_organization_members_path(organization.key), method: :post, class: "member-add" do |form| %>
               <label class="field member-add-email">
                 <span class="field-label"><%= account_text("organizations.add_email") %></span>

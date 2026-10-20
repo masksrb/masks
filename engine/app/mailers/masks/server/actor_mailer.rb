@@ -160,6 +160,37 @@ module Masks
         )
       end
 
+      def access_granted(asked, journey:)
+        return message unless deliverable?
+
+        journey!(journey)
+        @actor = asked.actor
+        @app = asked.client
+        @url = (@app.approved? && @app.client_uri.presence) || home
+
+        mail(
+          from: self.class.from,
+          to: @actor.email,
+          subject: customize!(:access_granted, actor: @actor, app: @app.name,
+                                               default: t("actor_mailer.access_granted.subject", app: @app.name))
+        )
+      end
+
+      def access_declined(asked, journey:)
+        return message unless deliverable?
+
+        journey!(journey)
+        @actor = asked.actor
+        @app = asked.client
+
+        mail(
+          from: self.class.from,
+          to: @actor.email,
+          subject: customize!(:access_declined, actor: @actor, app: @app.name,
+                                                default: t("actor_mailer.access_declined.subject", app: @app.name))
+        )
+      end
+
       private
 
         def tenant_lede(manager)

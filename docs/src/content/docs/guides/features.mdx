@@ -574,10 +574,31 @@ role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
 On a client's **Access** tab, **Who may sign in** limits the client to some actors. Tick groups, or
 type **Organization roles** written as `key:role`, separated by commas or spaces.
 
-- Anyone else who signs in to it is sent back to the app with `access_denied`. The refusal appears in
-  their activity.
+- Anyone else who signs in to it lands on a page on masks that says the sign-in was refused. The page
+  offers **Ask for access** and a link back to the app, which carries `access_denied`. A request made
+  with `prompt=none` is answered with `access_denied` straight away. The refusal appears in their
+  activity.
 - Taking someone out of the group ends their next refresh with `invalid_grant`.
 - A client with nothing ticked lets everyone in.
+
+### Asking for access
+
+Somebody turned away from an app can press **Ask for access**. masks keeps one open request per
+person and app, and a second press says the request is waiting. After a decision, they can ask again
+after an hour.
+
+A request is decided in one of two places:
+
+- A manager holding `masks:manage:security` or `masks:manage` opens the client's **Access** tab.
+  **Access requests** lists each person waiting. **Approve** puts them in the first group the client
+  allows, or the one the manager picks, and **Decline** turns them away.
+- When the client allows an organization role, such as `acme:billing`, an owner of that organization
+  sees the request under the organization on their own account page. **Approve** makes the person a
+  member with the role the owner picks. No manage role is needed.
+
+Either way the person gets an email, **Access granted** or **Access declined**, and the decision is
+recorded as `access.granted` or `access.declined` in their activity. Both emails can be customized
+under **Settings**, then **Emails**. Requests older than 30 days are removed by the nightly cleanup.
 
 ## Accounts
 

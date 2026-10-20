@@ -1,0 +1,12 @@
+es:
+  manage:
+    access_requests:
+      title: "Solicitudes de acceso"
+      lede: "Actores que fueron rechazados por este cliente y pidieron acceso. Al aprobar, pasan a uno de los grupos que admite, y reciben un correo en cualquier caso."
+      empty: "Nadie está esperando acceso."
+      asked: "Pedido %{day}"
+      as: "Grupo al que pasan"
+      grant: "Aprobar"
+      decline: "Rechazar"
+      granted: "%{identifier} ya está en %{label} y puede iniciar sesión."
+      declined: "La solicitud de %{identifier} fue rechazada."

@@ -1,0 +1,43 @@
+fr:
+  authorize:
+    error:
+      asking: "Votre compte n’est dans aucun groupe autorisé à utiliser %{app}. Vous pouvez demander l’accès. Les personnes qui gèrent %{app} décident, et vous recevez un courriel dans tous les cas."
+      ask: "Demander l’accès"
+      asked: "Votre demande a été envoyée. Vous recevrez un courriel une fois qu’elle sera décidée."
+      waiting: "Votre demande pour utiliser %{app} est en attente. Vous recevrez un courriel une fois qu’elle sera décidée."
+      slow_down: "Vous avez demandé l’accès à cette application il y a moins d’une heure. Attendez la réponse."
+      back: "Retour à %{app}"
+      the_app: "l’application"
+
+  account:
+    index:
+      access:
+        heading: "Demandes d’accès"
+        lede: "Ces personnes ont été refusées par une application qui admet les membres de %{organization}. Approuver en fait des membres avec le rôle que vous choisissez."
+        asked: "A demandé à utiliser %{app} il y a %{age}"
+        role_of: "Rôle pour %{name}"
+        grant: "Approuver"
+        decline: "Refuser"
+        confirm_decline: "Refuser la demande de %{identifier} pour utiliser %{app} ? La personne reçoit un courriel et peut redemander dans une heure."
+
+  organization_access:
+    granted: "%{identifier} est maintenant %{role} de %{organization} et peut utiliser %{app}."
+    declined: "La demande de %{identifier} pour utiliser %{app} est refusée."
+    unknown: "Cette demande n’est pas en attente auprès de %{organization}."
+
+  actor_mailer:
+    access_granted:
+      subject: "Vous pouvez maintenant utiliser %{app}"
+      lede: "Votre demande pour utiliser %{app} sur %{tenant} a été approuvée. Reconnectez-vous à %{app} et vous serez admis."
+      action: "Ouvrir %{app}"
+    access_declined:
+      subject: "Votre demande pour utiliser %{app} a été refusée"
+      lede: "Une personne qui gère %{app} sur %{tenant} a refusé votre demande d’accès."
+      again: "Si vous pensez qu’il s’agit d’une erreur, demandez-lui directement. Vous pouvez redemander dans une heure."
+
+  events:
+    actions:
+      access:
+        requested: "A demandé l’accès à une application"
+        granted: "Accès à une application accordé"
+        declined: "Accès à une application refusé"

@@ -30,6 +30,7 @@ module Masks
       has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
       has_one :avatar, dependent: :destroy
       has_many :group_members, dependent: :delete_all
+      has_many :access_requests, dependent: :delete_all
       has_many :groups, through: :group_members
 
       before_destroy :sign_out_everywhere!, prepend: true

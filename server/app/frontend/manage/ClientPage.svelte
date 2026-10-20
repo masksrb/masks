@@ -6,6 +6,7 @@
   import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
   import Machines from "./Machines.svelte";
+  import AccessRequests from "./AccessRequests.svelte";
   import Namespaces from "./Namespaces.svelte";
   import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
@@ -46,6 +47,7 @@
         approvedBy { identifier }
         enrolledBy { clientId name }
         enrolled { clientId name lastSeenAt createdAt }
+        accessRequests { id createdAt actor { uuid identifier } }
         namespaces { name resource claimedAt releasable }
         consents(limit: 25) {
           id scopes audience updatedAt expiresAt authorizationDetails
@@ -510,6 +512,10 @@
               : t("client.groups.everyone")}
           </p>
         </Section>
+
+        {#if client.allowedGroups.length}
+          <AccessRequests {api} rows={client.accessRequests} labels={client.allowedGroups} ondecided={load} />
+        {/if}
 
         <Section row title={t("client.scopes.title")}>
           <div class="flex flex-col gap-1.5">

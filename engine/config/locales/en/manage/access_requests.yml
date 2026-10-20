@@ -1,0 +1,12 @@
+en:
+  manage:
+    access_requests:
+      title: "Access requests"
+      lede: "Actors who were turned away from this client and asked for access. Approving puts them in one of the groups it allows, and they get an email either way."
+      empty: "Nobody is waiting for access."
+      asked: "Asked %{day}"
+      as: "Group to put them in"
+      grant: "Approve"
+      decline: "Decline"
+      granted: "%{identifier} is in %{label} now and can sign in."
+      declined: "%{identifier}'s request is declined."

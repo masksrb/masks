@@ -65,6 +65,8 @@ module Masks
                 description: "The machines this app enrolled that are not archived."
           field :last_seen_at, GraphQL::Types::ISO8601DateTime,
                 description: "When this client last got a token. Null if it never has."
+          field :access_requests, [ "Masks::Server::Manage::Types::AccessRequestType" ], null: false,
+                description: "Actors turned away from this client who asked for access and are waiting."
           field :archived_at, GraphQL::Types::ISO8601DateTime
           field :secret_expires_at, GraphQL::Types::ISO8601DateTime
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -85,6 +87,10 @@ module Masks
 
           def enrolled
             object.enrolled.active.order(:name)
+          end
+
+          def access_requests
+            object.access_requests.open.includes(:actor).order(:created_at)
           end
 
           def last_seen_at

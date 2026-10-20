@@ -9,6 +9,10 @@ module Masks
         refuse(bad_request(:invalid_request_object, refusal.message))
       end
 
+      rate_limit to: 1, within: 1.hour, only: :ask,
+                 by: -> { [ current_tenant.id, current_actor&.id, refused_request(params[:rid])&.client_id ].join(":") },
+                 with: -> { redirect_to authorize_refused_path(rid: params[:rid]), alert: t("authorize.error.slow_down") }
+
       def show
         authorization = Authorization.from_request(request)
 
@@ -45,7 +49,7 @@ module Masks
 
         login = advance(pending)
 
-        return redirect_to(refuse_on_masks(pending, login.refusal)) if login.refused? && !answerable?(pending)
+        return redirect_to(refuse_on_masks(pending, login.refusal)) if login.refused? && (!answerable?(pending) || askable?(pending, login))
         return answer(deny(pending, login.refusal.error, login.refusal.description)) if login.refused?
         return interaction_required(pending) if login.prompted? && pending.silent?
         return redirect_to(login.redirect_to, allow_other_host: true) if login.redirect_to.present?
@@ -55,12 +59,29 @@ module Masks
       end
 
       def refused
-        refusal = refused_request(params[:rid])&.refusal
+        pending = refused_request(params[:rid])
+        refusal = pending&.refusal
 
         return show_error("invalid_request", "that sign-in request has expired", :bad_request) if refusal.nil?
 
         @refused = true
+        @asking = asking_for(pending)
+        @waiting = @asking && AccessRequest.open.find_by(actor: current_actor, client: @asking)
+        @return_to = answerable?(pending) && pending.authorization.redirect_with(
+          issuer: issuer, error: refusal["error"], error_description: refusal["description"]
+        )
         show_error(refusal["error"], refusal["description"], :forbidden)
+      end
+
+      def ask
+        pending = refused_request(params[:rid])
+        asking = pending && asking_for(pending)
+
+        return show_error("invalid_request", "that sign-in request has expired", :bad_request) if asking.nil?
+
+        AccessRequest.ask!(actor: current_actor, client: asking)
+
+        redirect_to authorize_refused_path(rid: params[:rid]), notice: t("authorize.error.asked")
       end
 
       private
@@ -147,6 +168,16 @@ module Masks
             format.html { render :error, status: status }
             format.any { render json: { "error" => code, "error_description" => description }, status: status }
           end
+        end
+
+        def askable?(pending, login)
+          !pending.silent? && login.actor.present? && asking_for(pending, login.actor).present?
+        end
+
+        def asking_for(pending, actor = current_actor)
+          client = pending.client
+
+          client if actor && client && client.allowed_groups.any? && !client.admits?(actor)
         end
 
         def admitted?(authorization)

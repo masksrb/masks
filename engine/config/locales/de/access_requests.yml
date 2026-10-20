@@ -1,0 +1,43 @@
+de:
+  authorize:
+    error:
+      asking: "Ihr Konto ist in keiner Gruppe, die %{app} nutzen darf. Sie können um Zugang bitten. Die Betreiber von %{app} entscheiden, und Sie erhalten in jedem Fall eine E-Mail."
+      ask: "Um Zugang bitten"
+      asked: "Ihre Anfrage wurde gesendet. Sie erhalten eine E-Mail, sobald sie entschieden ist."
+      waiting: "Ihre Anfrage, %{app} zu nutzen, wartet. Sie erhalten eine E-Mail, sobald sie entschieden ist."
+      slow_down: "Sie haben vor weniger als einer Stunde um Zugang zu dieser App gebeten. Warten Sie auf die Antwort."
+      back: "Zurück zu %{app}"
+      the_app: "der App"
+
+  account:
+    index:
+      access:
+        heading: "Um Zugang gebeten"
+        lede: "Diese Personen wurden von einer App abgewiesen, die Mitglieder von %{organization} zulässt. Mit Genehmigen werden sie Mitglied mit der Rolle, die Sie wählen."
+        asked: "Hat vor %{age} gebeten, %{app} zu nutzen"
+        role_of: "Rolle für %{name}"
+        grant: "Genehmigen"
+        decline: "Ablehnen"
+        confirm_decline: "Die Anfrage von %{identifier}, %{app} zu nutzen, ablehnen? Die Person erhält eine E-Mail und kann in einer Stunde erneut bitten."
+
+  organization_access:
+    granted: "%{identifier} ist jetzt %{role} von %{organization} und kann %{app} nutzen."
+    declined: "Die Anfrage von %{identifier}, %{app} zu nutzen, ist abgelehnt."
+    unknown: "Diese Anfrage wartet nicht auf %{organization}."
+
+  actor_mailer:
+    access_granted:
+      subject: "Sie können %{app} jetzt nutzen"
+      lede: "Ihre Anfrage, %{app} bei %{tenant} zu nutzen, wurde genehmigt. Melden Sie sich erneut bei %{app} an, und Sie werden eingelassen."
+      action: "%{app} öffnen"
+    access_declined:
+      subject: "Ihre Anfrage, %{app} zu nutzen, wurde abgelehnt"
+      lede: "Jemand, der %{app} bei %{tenant} betreibt, hat Ihre Anfrage um Zugang abgelehnt."
+      again: "Wenn Sie das für einen Fehler halten, fragen Sie die Person direkt. In einer Stunde können Sie erneut bitten."
+
+  events:
+    actions:
+      access:
+        requested: "Um Zugang zu einer App gebeten"
+        granted: "Zugang zu einer App genehmigt"
+        declined: "Zugang zu einer App abgelehnt"

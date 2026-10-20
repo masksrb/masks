@@ -1,0 +1,43 @@
+en:
+  authorize:
+    error:
+      asking: "Your account is not in a group that may use %{app}. You can ask for access. The people who run %{app} decide, and you get an email either way."
+      ask: "Ask for access"
+      asked: "Your request was sent. You get an email once it is decided."
+      waiting: "Your request to use %{app} is waiting. You get an email once it is decided."
+      slow_down: "You asked for access to this app less than an hour ago. Wait for the answer."
+      back: "Back to %{app}"
+      the_app: "the app"
+
+  account:
+    index:
+      access:
+        heading: "Asked for access"
+        lede: "These people were turned away from an app that admits members of %{organization}. Approving makes them a member with the role you pick."
+        asked: "Asked to use %{app} %{age} ago"
+        role_of: "Role for %{name}"
+        grant: "Approve"
+        decline: "Decline"
+        confirm_decline: "Decline %{identifier}'s request to use %{app}? They get an email, and they can ask again in an hour."
+
+  organization_access:
+    granted: "%{identifier} is %{role} of %{organization} now and can use %{app}."
+    declined: "%{identifier}'s request to use %{app} is declined."
+    unknown: "That request is not waiting on %{organization}."
+
+  actor_mailer:
+    access_granted:
+      subject: "You can use %{app} now"
+      lede: "Your request to use %{app} at %{tenant} was approved. Sign in to %{app} again and you are let in."
+      action: "Open %{app}"
+    access_declined:
+      subject: "Your request to use %{app} was declined"
+      lede: "Somebody who runs %{app} at %{tenant} declined your request for access."
+      again: "If you think this is a mistake, ask them directly. You can ask again in an hour."
+
+  events:
+    actions:
+      access:
+        requested: "Asked for access to an app"
+        granted: "Access to an app granted"
+        declined: "Access to an app declined"

@@ -102,6 +102,13 @@ module Masks
               Masks::Server::Group.find_by(key: key) || refuse!("no group keyed #{key}")
             end
 
+            def access_request!(id)
+              held = id.to_s[/\A\d+\z/] && Masks::Server::AccessRequest.open.find_by(id: id)
+
+              managed!(held.actor) && held if held
+              held || refuse!("no access request with that id is waiting")
+            end
+
             def invited!(actor)
               actor_created!(actor, invited: true)
 

@@ -1,0 +1,43 @@
+es:
+  authorize:
+    error:
+      asking: "Tu cuenta no está en ningún grupo que pueda usar %{app}. Puedes pedir acceso. Quienes gestionan %{app} deciden, y recibirás un correo en cualquier caso."
+      ask: "Pedir acceso"
+      asked: "Tu solicitud se envió. Recibirás un correo cuando se decida."
+      waiting: "Tu solicitud para usar %{app} está pendiente. Recibirás un correo cuando se decida."
+      slow_down: "Pediste acceso a esta aplicación hace menos de una hora. Espera la respuesta."
+      back: "Volver a %{app}"
+      the_app: "la aplicación"
+
+  account:
+    index:
+      access:
+        heading: "Pidieron acceso"
+        lede: "Estas personas fueron rechazadas por una aplicación que admite a los miembros de %{organization}. Al aprobar, pasan a ser miembros con el rol que elijas."
+        asked: "Pidió usar %{app} hace %{age}"
+        role_of: "Rol para %{name}"
+        grant: "Aprobar"
+        decline: "Rechazar"
+        confirm_decline: "¿Rechazar la solicitud de %{identifier} para usar %{app}? Recibirá un correo y podrá volver a pedirlo en una hora."
+
+  organization_access:
+    granted: "%{identifier} ahora es %{role} de %{organization} y puede usar %{app}."
+    declined: "La solicitud de %{identifier} para usar %{app} fue rechazada."
+    unknown: "Esa solicitud no está pendiente de %{organization}."
+
+  actor_mailer:
+    access_granted:
+      subject: "Ya puedes usar %{app}"
+      lede: "Tu solicitud para usar %{app} en %{tenant} fue aprobada. Vuelve a iniciar sesión en %{app} y entrarás."
+      action: "Abrir %{app}"
+    access_declined:
+      subject: "Tu solicitud para usar %{app} fue rechazada"
+      lede: "Alguien que gestiona %{app} en %{tenant} rechazó tu solicitud de acceso."
+      again: "Si crees que es un error, pregúntale directamente. Puedes volver a pedirlo en una hora."
+
+  events:
+    actions:
+      access:
+        requested: "Pidió acceso a una aplicación"
+        granted: "Acceso a una aplicación concedido"
+        declined: "Acceso a una aplicación rechazado"

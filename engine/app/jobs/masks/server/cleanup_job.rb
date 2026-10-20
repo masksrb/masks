@@ -34,6 +34,7 @@ module Masks
           Members.purge_lapsed!
           Replay.where(expires_at: ...Time.current).in_batches(of: BATCH).delete_all
           ReleasedNickname.lapsed.in_batches(of: BATCH).delete_all
+          AccessRequest.lapsed.in_batches(of: BATCH).delete_all
         end
 
         def sweep_tokens(cutoff)

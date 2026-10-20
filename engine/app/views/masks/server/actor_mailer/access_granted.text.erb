@@ -1,0 +1,7 @@
+<%= render layout: "message" do %>
+<%= t(".lede", app: @app.name, tenant: @tenant_name) %>
+<% end %>
+<% if @url %>
+
+<%= @url %>
+<% end %>

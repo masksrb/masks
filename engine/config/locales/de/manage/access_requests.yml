@@ -1,0 +1,12 @@
+de:
+  manage:
+    access_requests:
+      title: "Zugangsanfragen"
+      lede: "Akteure, die von diesem Client abgewiesen wurden und um Zugang gebeten haben. Mit Genehmigen kommen sie in eine der Gruppen, die er zulässt, und sie erhalten in jedem Fall eine E-Mail."
+      empty: "Niemand wartet auf Zugang."
+      asked: "Gebeten %{day}"
+      as: "Gruppe, in die sie kommen"
+      grant: "Genehmigen"
+      decline: "Ablehnen"
+      granted: "%{identifier} ist jetzt in %{label} und kann sich anmelden."
+      declined: "Die Anfrage von %{identifier} ist abgelehnt."

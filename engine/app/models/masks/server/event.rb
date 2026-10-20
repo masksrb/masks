@@ -54,6 +54,9 @@ module Masks
       GROUP_DELETED = "group.deleted".freeze
       GROUP_JOINED = "group.member_added".freeze
       GROUP_LEFT = "group.member_removed".freeze
+      ACCESS_REQUESTED = "access.requested".freeze
+      ACCESS_GRANTED = "access.granted".freeze
+      ACCESS_DECLINED = "access.declined".freeze
 
       DEVICE_CODE_ISSUED = "device_code.issued".freeze
       DEVICE_CODE_APPROVED = "device_code.approved".freeze

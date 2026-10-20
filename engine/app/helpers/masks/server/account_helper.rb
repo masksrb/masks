@@ -29,6 +29,10 @@ module Masks
         t("account.index.#{key}", **options)
       end
 
+      def account_access_requests(organization)
+        AccessRequest.for_organization(organization).includes(:actor, :client).order(:created_at)
+      end
+
       def account_roster(organization)
         organization.memberships.sort_by do |member|
           [ member.pending? ? 1 : 0, member.owner? ? 0 : 1, Members.label(member).to_s.downcase ]
