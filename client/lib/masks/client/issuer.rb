@@ -1,8 +1,15 @@
 module Masks
   module Client
+    # One issuer's discovery document and keys, fetched once and kept for an
+    # hour. While masks cannot be reached, the last good copies are served, a
+    # token signed with a key never seen raises Unreachable, and refetches back
+    # off from 5 seconds to once a minute.
     class Issuer
       DISCOVERY_PATH = "/.well-known/openid-configuration".freeze
-      TTL = 300
+      LIFETIME = 3600
+      FIRST_BACKOFF = 5
+      LONGEST_BACKOFF = 60
+      TTL = LIFETIME
 
       def self.normalize(url)
         url.to_s.chomp("/")
@@ -44,6 +51,10 @@ module Masks
         fetch(:jwks) { HTTP.get(endpoint("jwks_uri")) }
       end
 
+      def keys!
+        fetch(:jwks, now: true) { HTTP.get(endpoint("jwks_uri")) }
+      end
+
       def tenant
         discovery["tenant"]
       end
@@ -73,24 +84,41 @@ module Masks
       end
 
       def refresh!
-        @lock.synchronize { @cache = {} }
+        @lock.synchronize { @cache.each_value { |held| held[:at] = 0 } }
         self
       end
 
       private
 
-        def fetch(key)
-          cached = @lock.synchronize { @cache[key] }
-          return cached[:value] if fresh?(cached)
+        def fetch(key, now: false, &fetching)
+          held = @lock.synchronize { @cache[key] ||= { backoff: FIRST_BACKOFF, retry_at: 0 } }
+          clock = Time.now.to_i
+          good = held.key?(:value)
 
-          value = yield
+          return held[:value] if good && !now && (held[:at] + @ttl > clock || clock < held[:retry_at])
+          raise held[:failure] if clock < held[:retry_at]
 
-          @lock.synchronize { @cache[key] = { value: value, at: Time.now.to_i } }
-          value
+          refetch(held, clock, keep: good && !now, &fetching)
         end
 
-        def fresh?(entry)
-          entry && entry[:at] + @ttl > Time.now.to_i
+        def refetch(held, clock, keep:)
+          value = yield
+
+          @lock.synchronize do
+            held.merge!(value: value, at: clock, failure: nil, retry_at: 0, backoff: FIRST_BACKOFF)
+          end
+
+          value
+        rescue Masks::Client::Error => e
+          @lock.synchronize do
+            held[:failure] = e
+            held[:retry_at] = clock + held[:backoff]
+            held[:backoff] = [ held[:backoff] * 2, LONGEST_BACKOFF ].min
+          end
+
+          raise e unless keep
+
+          held[:value]
         end
     end
   end

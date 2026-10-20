@@ -36,7 +36,7 @@ from ..flows import (
 )
 from ..handshake import Handshake
 from ..keys import random_id
-from ..keyset import same
+from ..keyset import Retry, same
 from ..models import Issuer, Registration, Token
 from ..oidc import AVATARS_CLAIM, AuthorizationRequest, HeldConnection, Logout, organization_key
 from ..verifier import PROOF_ALGORITHMS, AsyncVerifier, Claims, Verifier
@@ -347,7 +347,7 @@ class Masks:
         self.config = config
         self._http = config.http
         self._async_http = config.async_http
-        self._issuers: dict[str, tuple[Issuer, float]] = {}
+        self._issuers: dict[str, tuple[Issuer | None, float, Retry]] = {}
         self._verifiers: dict[tuple[str, str], Verifier] = {}
         self._async_verifiers: dict[tuple[str, str], AsyncVerifier] = {}
         self._lock = threading.Lock()
@@ -498,15 +498,31 @@ class Masks:
 
     def discover(self, request: Incoming) -> Flow[Issuer]:
         named = self.issuer_url(request)
-        held = self._issuers.get(named)
-
-        if held is not None and time.monotonic() - held[1] < ISSUER_LIFETIME:
-            return held[0]
-
-        found = yield from discovery(named, self.config.allow_plain_http)
+        now = time.monotonic()
 
         with self._lock:
-            self._issuers[named] = (found, time.monotonic())
+            good, at, retry = self._issuers.setdefault(named, (None, 0.0, Retry()))
+
+        if good is not None and (now - at < ISSUER_LIFETIME or retry.waiting(now)):
+            return good
+
+        if retry.waiting(now) and retry.failure is not None:
+            raise retry.failure
+
+        try:
+            found = yield from discovery(named, self.config.allow_plain_http)
+        except (Error, httpx.HTTPError) as error:
+            with self._lock:
+                retry.failed(now, error)
+
+            if good is None:
+                raise
+
+            return good
+
+        with self._lock:
+            retry.succeeded()
+            self._issuers[named] = (found, now, retry)
 
         return found
 

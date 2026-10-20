@@ -484,6 +484,41 @@ def test_an_unreachable_issuer_answers_503(app: TestClient, fake: Fake) -> None:
     assert "www-authenticate" not in answered.headers
 
 
+def test_a_stale_issuer_is_served_while_masks_is_down_and_refetched_with_backoff(
+    app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    now = [1000.0]
+    monkeypatch.setattr("masks.web.core.time.monotonic", lambda: now[0])
+    sign_in(app, fake)
+
+    assert app.get("/me", headers=JSON).status_code == 200
+
+    fetched = fake.discovery_fetches
+    now[0] += masks.web.core.ISSUER_LIFETIME + 1
+    fake.discovery_down = True
+
+    assert location(app.get("/auth", headers=HTML)).startswith(f"{ISSUER}/authorize")
+    assert fake.discovery_fetches == fetched + 1
+
+    for _ in range(5):
+        assert location(app.get("/auth", headers=HTML)).startswith(f"{ISSUER}/authorize")
+
+    assert fake.discovery_fetches == fetched + 1
+
+    now[0] += 5
+
+    assert location(app.get("/auth", headers=HTML)).startswith(f"{ISSUER}/authorize")
+    assert fake.discovery_fetches == fetched + 2
+
+    fake.discovery_down = False
+    now[0] += 10
+
+    assert location(app.get("/auth", headers=HTML)).startswith(f"{ISSUER}/authorize")
+    assert fake.discovery_fetches == fetched + 3
+    assert location(app.get("/auth", headers=HTML)).startswith(f"{ISSUER}/authorize")
+    assert fake.discovery_fetches == fetched + 3
+
+
 def test_a_route_accepts_a_token_or_a_session(app: TestClient, fake: Fake) -> None:
     token = fake.access_token("caller", "catalog:read", "", subject="bob", audience=APP)
 

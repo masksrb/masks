@@ -10,9 +10,10 @@ import time
 from collections.abc import Sequence
 from typing import Any
 
+import httpx
 import jwt
 
-from .errors import InvalidToken
+from .errors import Error, InvalidToken
 from .flows import Flow, get, required
 from .keys import encode
 from .models import Issuer
@@ -21,6 +22,8 @@ SIGNING_ALGORITHMS = ("RS256", "ES256")
 KEYS_LIFETIME = 300
 KEYS_PATIENCE = 30
 LEEWAY = 30
+FIRST_BACKOFF = 5.0
+LONGEST_BACKOFF = 60.0
 
 SEGMENT = re.compile(r"[A-Za-z0-9_-]+")
 
@@ -81,27 +84,63 @@ def half_hash(value: str, algorithm: str) -> str:
     return encode(digest[: len(digest) // 2])
 
 
+class Retry:
+    def __init__(self) -> None:
+        self.at = 0.0
+        self.failure: Exception | None = None
+        self._wait = FIRST_BACKOFF
+
+    def waiting(self, now: float) -> bool:
+        return now < self.at
+
+    def failed(self, now: float, error: Exception) -> None:
+        self.at = now + self._wait
+        self.failure = error
+        self._wait = min(self._wait * 2, LONGEST_BACKOFF)
+
+    def succeeded(self) -> None:
+        self.at = 0.0
+        self.failure = None
+        self._wait = FIRST_BACKOFF
+
+
 class KeySet:
     def __init__(self, issuer: Issuer) -> None:
         self.issuer = issuer
         self._keys: list[dict[str, Any]] = []
         self._fetched_at = 0.0
         self._lock = threading.Lock()
+        self._retry = Retry()
 
     def key(self, kid: str) -> Flow[dict[str, Any]]:
-        age = time.monotonic() - self._fetched_at
+        now = time.monotonic()
+        age = now - self._fetched_at
         found = self._find(kid)
 
-        if found is not None and age < KEYS_LIFETIME:
+        if found is not None and (age < KEYS_LIFETIME or self._retry.waiting(now)):
             return found
 
+        if self._retry.waiting(now) and self._retry.failure is not None:
+            raise self._retry.failure
+
         if age >= KEYS_PATIENCE or not self._fetched_at:
-            body = required((yield get(self.issuer.metadata.jwks_uri)))
+            try:
+                body = required((yield get(self.issuer.metadata.jwks_uri)))
+            except (Error, httpx.HTTPError) as error:
+                with self._lock:
+                    self._retry.failed(now, error)
+
+                if found is None:
+                    raise
+
+                return found
+
             keys = body.get("keys")
 
             with self._lock:
                 self._keys = [key for key in keys if isinstance(key, dict)] if isinstance(keys, list) else []
-                self._fetched_at = time.monotonic()
+                self._fetched_at = now
+                self._retry.succeeded()
 
             found = self._find(kid)
 

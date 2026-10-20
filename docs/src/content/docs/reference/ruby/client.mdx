@@ -825,10 +825,18 @@ Inherits `Masks::Client::Error`.
 
 ## Masks::Client::Issuer
 
+One issuer's discovery document and keys, fetched once and kept for an hour.
+While masks cannot be reached, the last good copies are served, a token signed
+with a key never seen raises Unreachable, and refetches back off from 5
+seconds to once a minute.
+
 | Constant | Value |
 | --- | --- |
 | `DISCOVERY_PATH` | `"/.well-known/openid-configuration".freeze` |
-| `TTL` | `300` |
+| `LIFETIME` | `3600` |
+| `FIRST_BACKOFF` | `5` |
+| `LONGEST_BACKOFF` | `60` |
+| `TTL` | `LIFETIME` |
 
 | Attribute | Access |
 | --- | --- |
@@ -887,6 +895,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #jwks()
+```
+
+### #keys!
+
+```ruby
+#keys!()
 ```
 
 ### #refresh!

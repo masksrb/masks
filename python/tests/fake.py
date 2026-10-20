@@ -109,6 +109,8 @@ class Fake:
         self.photo_type = "image/png"
         self.unavailable_tokens = False
         self.keys_down = False
+        self.discovery_down = False
+        self.discovery_fetches = 0
         self.auth_time: int | None = None
         self.pairs: list[tuple[str, str]] = []
 
@@ -149,6 +151,11 @@ class Fake:
         return respond(404, {"error": "not_found"})
 
     def discovery(self, _: httpx.Request) -> httpx.Response:
+        self.discovery_fetches += 1
+
+        if self.discovery_down:
+            return respond(503)
+
         return respond(
             200,
             {

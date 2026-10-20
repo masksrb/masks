@@ -287,6 +287,43 @@ def test_an_unknown_key_refetches_the_keys_at_most_once_in_a_while(fake: Fake, i
     assert fake.jwks_fetches == 1
 
 
+def test_while_masks_is_down_a_known_key_keeps_checking_tokens_and_refetches_back_off(
+    fake: Fake, issuer: masks.Issuer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    now = [1000.0]
+    monkeypatch.setattr(masks.keyset.time, "monotonic", lambda: now[0])
+    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http())
+    verifier.verify(fake.issue(good_claims()))
+
+    now[0] += masks.keyset.KEYS_LIFETIME + 1
+    fake.keys_down = True
+
+    assert verifier.verify(fake.issue(good_claims())).subject == "ada"
+    assert fake.jwks_fetches == 2
+
+    for _ in range(5):
+        verifier.verify(fake.issue(good_claims()))
+
+    assert fake.jwks_fetches == 2
+
+    with pytest.raises(masks.Unavailable):
+        verifier.verify(fake.issue(good_claims(), kid="unknown"))
+
+    assert fake.jwks_fetches == 2
+
+    for waited, fetches in ((5, 3), (10, 4), (20, 5), (40, 6), (60, 7), (60, 8)):
+        now[0] += waited
+        verifier.verify(fake.issue(good_claims()))
+        assert fake.jwks_fetches == fetches, f"after {waited} more seconds"
+
+    fake.keys_down = False
+    now[0] += 60
+    verifier.verify(fake.issue(good_claims()))
+
+    with pytest.raises(masks.InvalidToken, match="publishes no key"):
+        verifier.verify(fake.issue(good_claims(), kid="unknown"))
+
+
 @pytest.mark.anyio
 async def test_the_async_client_signs_in_and_calls_an_api(fake: Fake, issuer: masks.Issuer) -> None:
     key, dpop = masks.Key.generate(), masks.Key.generate()

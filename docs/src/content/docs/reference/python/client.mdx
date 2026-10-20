@@ -266,6 +266,12 @@ code on another device. The synchronous form takes a `timeout` in seconds.
 `Claims` has `issuer`, `subject`, `audience`, `expiry`, `issued_at`, `id`, `client_id`, `scope`,
 `scopes`, `tenant`, `act`, `thumbprint`, `bound`, `has_scope(scope)`, and `raw`.
 
+A verifier fetches the issuer's keys again every five minutes. While masks cannot be reached, the
+keys it last fetched keep checking tokens, a token signed with a key it has never seen raises
+`masks.Unavailable`, and it tries masks again after 5 seconds, then 10, doubling up to once a
+minute. The web layer keeps the issuer's discovery document the same way: it reads it again after
+an hour, and serves the last good one with the same backoff while masks is down.
+
 Pass the URL the client used. Set `public_url` when a proxy sits in front of the API, since a DPoP
 proof names that address.
 

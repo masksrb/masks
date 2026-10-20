@@ -454,6 +454,33 @@
           "test": "TestMaxAgeRefusesASignInThatIsTooOld"
         }
       }
+    },
+    {
+      "name": "Serving the last good issuer and keys while masks is down, with backoff",
+      "cells": {
+        "rails": {
+          "file": "test/client/issuer_test.rb",
+          "test": "test_the_last_good_document_and_keys_are_served_while_masks_is_down",
+          "note": "Through Masks::Client"
+        },
+        "client": {
+          "file": "test/client/issuer_test.rb",
+          "test": "test_the_last_good_document_and_keys_are_served_while_masks_is_down"
+        },
+        "web": "no",
+        "node": {
+          "file": "node/test/issuers.test.js",
+          "test": "a stale issuer is served while one refresh runs, and a failure keeps the last good one"
+        },
+        "python": {
+          "file": "python/tests/test_fastapi.py",
+          "test": "test_a_stale_issuer_is_served_while_masks_is_down_and_refetched_with_backoff"
+        },
+        "go": {
+          "file": "go/web/web_test.go",
+          "test": "TestAStaleIssuerIsServedWhileOneRefreshRunsBehindIt"
+        }
+      }
     }
   ]
 }
