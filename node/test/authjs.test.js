@@ -178,7 +178,7 @@ test("an error on a sign-in this browser did not start never repeats its text", 
 test("an expired access token is refreshed once, however many requests arrive together", async () => {
   const held = await signedIn({
     before: (fake) => {
-      fake.lifetime = 1;
+      fake.lifetime = 20;
     },
   });
   const { fake, browser } = held;
@@ -194,9 +194,8 @@ test("an expired access token is refreshed once, however many requests arrive to
     .slice(expiring)
     .filter((grant) => grant === "refresh_token");
 
+  for (const answer of answers) assert.equal(answer?.masks?.subject, "ada");
   assert.equal(refreshes.length, 1);
-
-  for (const answer of answers) assert.equal(answer.masks.subject, "ada");
 });
 
 test("a back-channel logout ends the session, and its token is used once", async () => {
@@ -313,7 +312,7 @@ test("a second copy of auth.ts, as Next loads one for its proxy, shares the conn
   const held = await signedIn({
     credentials: fileCredentials(path),
     before: (fake) => {
-      fake.lifetime = 1;
+      fake.lifetime = 20;
     },
   });
   const { fake, browser } = held;
@@ -340,8 +339,8 @@ test("a second copy of auth.ts, as Next loads one for its proxy, shares the conn
     .slice(before)
     .filter((grant) => grant === "refresh_token");
 
+  for (const answer of answers) assert.equal(answer?.masks?.subject, "ada");
   assert.equal(refreshes.length, 1);
-  for (const answer of answers) assert.equal(answer.masks.subject, "ada");
 
   const { client_id } = await fileCredentials(path).read(new Request(APP));
   const logout = await fake.logoutToken({ aud: client_id, sub: "ada" });
@@ -393,7 +392,7 @@ test("servers that share a refresh store refresh a sign-in once between them", a
   const held = await signedIn({
     masks: { store },
     before: (fake) => {
-      fake.lifetime = 1;
+      fake.lifetime = 20;
     },
   });
   const { fake, browser, credentials } = held;
@@ -427,8 +426,8 @@ test("servers that share a refresh store refresh a sign-in once between them", a
     .slice(before)
     .filter((grant) => grant === "refresh_token");
 
+  for (const answer of answers) assert.equal(answer?.masks?.subject, "ada");
   assert.equal(refreshed.length, 1);
-  for (const answer of answers) assert.equal(answer.masks.subject, "ada");
 });
 
 test("a refusal one server saw signs the person out on every server", async () => {
@@ -437,7 +436,7 @@ test("a refusal one server saw signs the person out on every server", async () =
   const held = await signedIn({
     masks: { store },
     before: (fake) => {
-      fake.lifetime = 1;
+      fake.lifetime = 20;
     },
   });
   const { fake, browser } = held;
