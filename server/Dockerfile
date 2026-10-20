@@ -73,5 +73,8 @@ USER 1000:1000
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD curl --fail --silent "http://localhost:${PORT:-3000}/up" || exit 1
+
 EXPOSE 3000
 CMD ["./bin/rails", "server"]

@@ -16,8 +16,45 @@ class HealthController < ActionController::Base
                                .distinct.pluck("solid_queue_jobs.class_name").sort
   end
 
+  def self.worker_heartbeat_at
+    SolidQueue::Process.where(kind: "Worker").maximum(:last_heartbeat_at)
+  end
+
+  def self.oldest_waiting_at
+    SolidQueue::ReadyExecution.minimum(:created_at)
+  end
+
+  def self.worker_problem
+    return nil unless jobs_run?
+
+    silence = Rails.configuration.masks.worker_silence
+    wait = Rails.configuration.masks.queue_wait
+
+    if silence.positive?
+      heartbeat = worker_heartbeat_at
+
+      return "no worker has reported in the last #{plain(silence)}" if heartbeat.nil? || heartbeat < silence.ago
+    end
+
+    if wait.positive?
+      oldest = oldest_waiting_at
+
+      return "a job has waited since #{oldest.utc.iso8601}, longer than #{plain(wait)}" if oldest && oldest < wait.ago
+    end
+
+    nil
+  end
+
+  def self.plain(duration)
+    ActiveSupport::Duration.build(duration.to_i).inspect
+  end
+
   def show
     self.class.databases.each { |record| record.connection_pool.with_connection { |connection| connection.select_value("SELECT 1") } }
+
+    problem = self.class.worker_problem
+
+    return render(plain: "down: #{problem}", status: :service_unavailable) if problem
 
     render plain: "up"
   rescue ActiveRecord::ActiveRecordError

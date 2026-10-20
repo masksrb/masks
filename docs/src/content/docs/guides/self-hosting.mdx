@@ -122,12 +122,14 @@ CREATE ROLE masks WITH LOGIN PASSWORD '...';
 A health check is a request that a container runtime or a monitor makes again and again to see if a
 service works. masks answers two.
 
-| Path       | Answers                                                                                                                 |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `/up`      | `up` while the server can reach its database, job queue, and cache. `down` with a 503 when it cannot reach one of them. |
-| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed, and the tenants each one failed for on its last run. |
+| Path       | Answers                                                                                                                                                                                                                                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/up`      | `up` while the server can reach its database, job queue, and cache, a worker has reported in the last 5 minutes, and no job has waited more than 10 minutes to start. Otherwise a 503 that starts with `down` and says which of those is wrong. `MASKS_WORKER_SILENCE` and `MASKS_QUEUE_WAIT` set the two times. |
+| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed, and the tenants each one failed for on its last run.                                                                                                                                        |
 
-- Use `/up` for the container's health check, as the example does.
+- The image carries its own `HEALTHCHECK` on `/up`, so Docker and Compose mark a container
+  unhealthy when its worker stops. The example sets the same check for runtimes that read the
+  Compose file instead.
 - Point a monitor at `/up/jobs`. Leave it out of the container's health check, because restarting
   the server does not fix a failing job.
 - A job that fails for one tenant carries on with the rest, records a `job.failed` event in the

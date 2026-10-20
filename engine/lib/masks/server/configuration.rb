@@ -46,6 +46,8 @@ module Masks
         config.ldap_cert = ENV["MASKS_LDAP_CERT"].presence
         config.ldap_key = ENV["MASKS_LDAP_KEY"].presence
         config.ldap_plaintext = ENV.fetch("MASKS_LDAP_PLAINTEXT", "false") == "true"
+        config.worker_silence = ENV.fetch("MASKS_WORKER_SILENCE", 300).to_i.seconds
+        config.queue_wait = ENV.fetch("MASKS_QUEUE_WAIT", 600).to_i.seconds
         config
       end
 
