@@ -272,7 +272,7 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.python_tag }}
 
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           cache-dependency-glob: python/uv.lock
 
