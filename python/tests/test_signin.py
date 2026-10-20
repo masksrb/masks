@@ -356,3 +356,29 @@ async def test_the_async_client_signs_in(fake: Fake, issuer: masks.Issuer) -> No
     assert logout.sid == "s"
     assert upstream.access_token == "upstream-token"
     assert registration.client_id == "app"
+
+
+@pytest.mark.parametrize(
+    ("signed_in_at", "accepted"),
+    [(0, True), (-3600, False), (None, False)],
+    ids=["just now", "an hour ago", "never said"],
+)
+def test_a_sign_in_older_than_the_max_age_asked_for_is_refused(
+    web: masks.Client, fake: Fake, signed_in_at: int | None, accepted: bool
+) -> None:
+    fake.auth_time = None if signed_in_at is None else int(time.time()) + signed_in_at
+    started = web.start(CALLBACK, max_age=300)
+    params = returned(fake.authorize(started.url))
+
+    assert started.max_age == 300
+    assert masks.AuthorizationRequest.from_dict(started.to_dict()).max_age == 300
+
+    if accepted:
+        assert web.complete(started, params).subject == "ada"
+    else:
+        with pytest.raises(masks.InvalidToken, match="max_age"):
+            web.complete(started, params)
+
+    relaxed = masks.AuthorizationRequest.from_dict({**started.to_dict(), "max_age": 0})
+
+    assert web.complete(relaxed, returned(fake.authorize(started.url))).subject == "ada"

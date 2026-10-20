@@ -5,6 +5,18 @@ module Masks
       ACCESS_TOKEN = "at+jwt".freeze
       LOGOUT_TOKEN = "logout+jwt".freeze
       ID_TOKEN = [ "jwt", nil ].freeze
+      AUTH_TIME_LEEWAY = 30
+
+      def self.recent!(claims, max_age)
+        return claims if max_age.nil?
+
+        signed_in_at = claims["auth_time"]
+        allowed = signed_in_at.is_a?(Numeric) && signed_in_at + max_age.to_i + AUTH_TIME_LEEWAY >= Time.now.to_i
+
+        raise InvalidToken, "the person signed in longer ago than max_age allows" unless allowed
+
+        claims
+      end
 
       attr_reader :issuer, :audience
 
@@ -51,10 +63,7 @@ module Masks
         end
 
         def keys
-          ->(options) do
-            issuer.refresh! if options[:invalidate]
-            issuer.jwks
-          end
+          ->(options) { options[:invalidate] ? issuer.keys! : issuer.jwks }
         end
     end
   end

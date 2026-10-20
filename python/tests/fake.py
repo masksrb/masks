@@ -109,6 +109,7 @@ class Fake:
         self.photo_type = "image/png"
         self.unavailable_tokens = False
         self.keys_down = False
+        self.auth_time: int | None = None
         self.pairs: list[tuple[str, str]] = []
 
     def transport(self) -> httpx.MockTransport:
@@ -699,6 +700,7 @@ class Fake:
             "name": actor["name"],
             "masks:avatars": actor.get("masks:avatars"),
             "org": grant["org"],
+            "auth_time": self.auth_time,
         }
 
         return self.issue({key: value for key, value in claims.items() if value is not None}, typ="JWT")

@@ -1476,8 +1476,13 @@ Inherits `Masks::Client::Error`.
 ### #identity
 
 ```ruby
-#identity(tokens)
+#identity(tokens, max_age: nil)
 ```
+
+The person the `tokens` belong to: the ID token's claims merged over userinfo.
+With `max_age`, the seconds the app asked for when it started the sign-in, an
+ID token whose `auth_time` is missing or older than that, plus 30 seconds of
+leeway, raises InvalidToken.
 
 ### #introspect
 
@@ -1857,6 +1862,7 @@ Inherits `Masks::Client::Rejected`.
 | `ACCESS_TOKEN` | `"at+jwt".freeze` |
 | `LOGOUT_TOKEN` | `"logout+jwt".freeze` |
 | `ID_TOKEN` | `[ "jwt", nil ].freeze` |
+| `AUTH_TIME_LEEWAY` | `30` |
 
 | Attribute | Access |
 | --- | --- |
@@ -1867,6 +1873,12 @@ Inherits `Masks::Client::Rejected`.
 
 ```ruby
 ::new(issuer, audience:, algorithms: ALGORITHMS)
+```
+
+### ::recent!
+
+```ruby
+::recent!(claims, max_age)
 ```
 
 ### #verify

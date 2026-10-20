@@ -71,6 +71,10 @@ def unverified_header(token: str) -> dict[str, Any]:
     return header
 
 
+def recent(signed_in_at: Any, max_age: int) -> bool:
+    return isinstance(signed_in_at, (int, float)) and signed_in_at + max_age + LEEWAY >= time.time()
+
+
 def half_hash(value: str, algorithm: str) -> str:
     digest = HASHES[algorithm](value.encode()).digest()
 

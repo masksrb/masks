@@ -365,6 +365,32 @@ class SessionTest < EngineIntegrationTest
     assert_empty session_payload
   end
 
+  test "a sign-in older than the max_age the app asked for is refused" do
+    connect!
+    issuer.auth_time = Time.now.to_i - 3600
+
+    get "/auth?max_age=300", headers: host
+
+    query = URI.decode_www_form(URI.parse(response.location).query).to_h
+
+    assert_equal "300", query["max_age"]
+
+    landed = issuer.authorize!(response.location)
+    get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+
+    assert_response :bad_request
+    assert_includes response.body, "invalid_token"
+    assert_empty session_payload
+
+    issuer.auth_time = Time.now.to_i
+    get "/auth?max_age=300", headers: host
+    landed = issuer.authorize!(response.location)
+    get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+
+    assert_redirected_to "/"
+    refute_empty session_payload
+  end
+
   test "a callback with nothing in flight starts sign-in again once, then is refused" do
     connect!
 

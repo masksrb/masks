@@ -428,6 +428,32 @@
           "note": "With a store you supply"
         }
       }
+    },
+    {
+      "name": "Refusing a sign-in older than the `max_age` the app asked for",
+      "cells": {
+        "rails": {
+          "file": "test/engine/session_test.rb",
+          "test": "a sign-in older than the max_age the app asked for is refused"
+        },
+        "client": {
+          "file": "test/client/session_test.rb",
+          "test": "test_a_sign_in_older_than_the_max_age_asked_for_is_refused"
+        },
+        "web": "no",
+        "node": {
+          "file": "node/test/signin.test.js",
+          "test": "a sign-in older than the max_age the app asked for is refused"
+        },
+        "python": {
+          "file": "python/tests/test_signin.py",
+          "test": "test_a_sign_in_older_than_the_max_age_asked_for_is_refused"
+        },
+        "go": {
+          "file": "go/signin_test.go",
+          "test": "TestMaxAgeRefusesASignInThatIsTooOld"
+        }
+      }
     }
   ]
 }

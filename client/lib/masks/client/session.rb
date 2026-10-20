@@ -60,7 +60,8 @@ module Masks
           url: "#{issuer.endpoint('authorization_endpoint')}?#{URI.encode_www_form(pairs)}",
           state: state,
           nonce: nonce,
-          verifier: pkce.verifier
+          verifier: pkce.verifier,
+          max_age: max_age&.to_i
         }
       end
 
@@ -215,10 +216,14 @@ module Masks
         HTTP.parse(Transport.new(url, tokens: tokens, key: dpop).request("GET", url, limit: HTTP::READ_LIMIT))
       end
 
-      def identity(tokens)
+      # The person the +tokens+ belong to: the ID token's claims merged over
+      # userinfo. With +max_age+, the seconds the app asked for when it started
+      # the sign-in, an ID token whose +auth_time+ is missing or older than
+      # that, plus 30 seconds of leeway, raises InvalidToken.
+      def identity(tokens, max_age: nil)
         return nil if tokens.id_token.nil?
 
-        claims = Verifier.new(issuer, audience: client_id).verify(tokens.id_token)
+        claims = Verifier.recent!(Verifier.new(issuer, audience: client_id).verify(tokens.id_token), max_age)
 
         profile(tokens).merge(claims)
       end

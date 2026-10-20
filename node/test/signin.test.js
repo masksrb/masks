@@ -40,6 +40,8 @@ const redirectURI = "http://app.localhost:3000/auth/callback";
 test("a sign-in goes through masks with PKCE, a nonce, and an organization", async () => {
   const { fake, client } = await app();
 
+  fake.authTime = Math.floor(Date.now() / 1000);
+
   const started = await client.start({
     redirectURI,
     scope: ["openid", "profile", "organization"],
@@ -153,6 +155,39 @@ test("an id token for another client is refused", async () => {
       InvalidTokenError,
       name,
     );
+  }
+});
+
+test("a sign-in older than the max_age the app asked for is refused", async () => {
+  const { fake, client } = await app();
+  const now = Math.floor(Date.now() / 1000);
+
+  for (const [name, authTime, accepted] of [
+    ["just now", now, true],
+    ["an hour ago", now - 3600, false],
+    ["never said", undefined, false],
+  ]) {
+    fake.authTime = authTime;
+
+    const started = await client.start({ redirectURI, maxAge: 300 });
+    const completing = client.complete(fake.authorize(started.url), started);
+
+    assert.equal(started.maxAge, 300);
+
+    if (accepted) {
+      assert.equal((await completing).claims.sub, "ada", name);
+    } else {
+      await assert.rejects(completing, InvalidTokenError, name);
+    }
+
+    const relaxed = await client.start({ redirectURI });
+    const signedIn = await client.complete(
+      fake.authorize(relaxed.url),
+      relaxed,
+    );
+
+    assert.equal(relaxed.maxAge, undefined);
+    assert.equal(signedIn.claims.sub, "ada", `${name} without max_age`);
   }
 });
 

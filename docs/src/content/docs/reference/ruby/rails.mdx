@@ -113,8 +113,11 @@ prose is the RDoc in the source.
 ### #masks_login_url
 
 ```ruby
-#masks_login_url(return_to: nil, organization: nil, privilege: nil)
+#masks_login_url(return_to: nil, organization: nil, privilege: nil, max_age: nil)
 ```
+
+Where to send someone to sign in. `max_age` asks masks for a sign-in no older
+than that many seconds; an older one is refused at the callback.
 
 ### #masks_reconnect!
 

@@ -34,7 +34,7 @@ from .flows import (
     send_json,
 )
 from .keys import Key, random_id
-from .keyset import KeySet, half_hash, same
+from .keyset import KeySet, half_hash, recent, same
 from .models import (
     ACCESS_TOKEN_TYPE,
     CLIENT_SECRET_BASIC,
@@ -211,6 +211,7 @@ class _Flows:
             nonce=nonce,
             scope=" ".join(scopes),
             resource=tuple(resources),
+            max_age=int(max_age) if max_age else 0,
         )
 
     def start_delegation(
@@ -399,11 +400,13 @@ class _Flows:
             if not token.id_token:
                 raise InvalidToken("masks: the token endpoint answered without an ID token")
 
-            claims = yield from self._id_token(token.id_token, started.nonce, token.access_token)
+            claims = yield from self._id_token(
+                token.id_token, started.nonce, token.access_token, max_age=started.max_age
+            )
 
         return SignIn(token=token, claims=claims)
 
-    def _id_token(self, id_token: str, nonce: str, access_token: str) -> Flow[dict[str, Any]]:
+    def _id_token(self, id_token: str, nonce: str, access_token: str, *, max_age: int = 0) -> Flow[dict[str, Any]]:
         claims, algorithm = yield from self.keys.verify(
             id_token, accepted=("jwt", ""), audience=self.client_id, require=("iss", "sub", "aud", "exp", "iat")
         )
@@ -417,6 +420,9 @@ class _Flows:
 
         if "at_hash" in claims and not same(claims["at_hash"], half_hash(access_token, algorithm)):
             raise InvalidToken("masks: that ID token was issued with another access token")
+
+        if max_age > 0 and not recent(claims.get("auth_time"), max_age):
+            raise InvalidToken("masks: the person signed in longer ago than max_age allows")
 
         return claims
 

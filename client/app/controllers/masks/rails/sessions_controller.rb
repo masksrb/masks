@@ -35,12 +35,13 @@ module Masks
           state: pending.id,
           resource: masks_config.resource_for(request),
           scope: masks_config.scope_for(params[:privilege]),
+          max_age: (params[:max_age].to_i if params[:max_age].to_i.positive?),
           organization: Masks::Client::Session.organization_key(params[:organization]) ||
             masks_config.organization_for(request)
         )
 
         masks_requests.amend(
-          pending.id, nonce: started[:nonce], verifier: started[:verifier]
+          pending.id, nonce: started[:nonce], verifier: started[:verifier], max_age: started[:max_age]
         )
 
         redirect_to started[:url], allow_other_host: true
@@ -67,6 +68,10 @@ module Masks
 
         unless nonce_matches?(identity, pending[:nonce])
           return refuse("invalid_nonce", "the id token was issued for another request", pending)
+        end
+
+        unless recent?(identity, pending[:max_age])
+          return refuse("invalid_token", "the person signed in longer ago than max_age allows", pending)
         end
 
         renew_session
@@ -154,6 +159,13 @@ module Masks
 
         def requested_return_to
           masks_local_path(params[:return_to])
+        end
+
+        def recent?(identity, max_age)
+          Masks::Client::Verifier.recent!(identity.is_a?(Hash) ? identity : {}, max_age)
+          true
+        rescue Masks::Client::InvalidToken
+          false
         end
 
         def nonce_matches?(identity, sent)

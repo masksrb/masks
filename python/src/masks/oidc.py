@@ -60,6 +60,7 @@ class AuthorizationRequest:
     scope: str = ""
     resource: tuple[str, ...] = ()
     provider: str = ""
+    max_age: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -71,6 +72,7 @@ class AuthorizationRequest:
             "scope": self.scope,
             "resource": list(self.resource),
             "provider": self.provider,
+            "max_age": self.max_age,
         }
 
     @classmethod
@@ -84,6 +86,7 @@ class AuthorizationRequest:
             scope=str(data.get("scope") or ""),
             resource=tuple(_strings(data.get("resource"))),
             provider=str(data.get("provider") or ""),
+            max_age=int(data.get("max_age") or 0),
         )
 
     @property

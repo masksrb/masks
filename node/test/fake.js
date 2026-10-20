@@ -74,6 +74,7 @@ export class Fake {
   handshakes = [];
   lifetime = 3600;
   nonceOverride = undefined;
+  authTime = undefined;
   refreshRefusal = undefined;
   userinfoCalls = 0;
   tokenRequests = [];
@@ -596,6 +597,7 @@ export class Fake {
           iat: now,
           sid: held.sid,
           nonce: this.nonceOverride ?? held.nonce ?? undefined,
+          auth_time: this.authTime,
           name: actor.name,
           email: actor.email,
           org: actor.org,

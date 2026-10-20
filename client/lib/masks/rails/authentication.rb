@@ -194,12 +194,15 @@ module Masks
         held.merge(profile.slice(*IDENTITY))
       end
 
-      def masks_login_url(return_to: nil, organization: nil, privilege: nil)
+      # Where to send someone to sign in. +max_age+ asks masks for a sign-in no
+      # older than that many seconds; an older one is refused at the callback.
+      def masks_login_url(return_to: nil, organization: nil, privilege: nil, max_age: nil)
         path = Masks::Rails::Engine.routes.url_helpers.start_path
         query = {
           "return_to" => masks_local_path(return_to),
           "organization" => Masks::Client::Session.organization_key(organization),
-          "privilege" => Array(privilege).join(" ").presence
+          "privilege" => Array(privilege).join(" ").presence,
+          "max_age" => (max_age.to_i if max_age.to_i.positive?)
         }.compact
 
         query.empty? ? path : "#{path}?#{URI.encode_www_form(query)}"

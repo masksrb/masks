@@ -248,6 +248,9 @@ const token = await client.clientCredentials({
 | `enroll({ scope, name, expiresIn })`, `unenroll(clientId)` | Gives out an initial access token for one machine, and archives a machine. See [machines and enrollment](/reference/javascript/#machines-and-enrollment).                                                                             |
 | `fetch(source, origins)`                                   | A `fetch` that gets tokens from `source` and sends them only to `origins`. With `dpop`, it signs a proof for each request. `credentialsSource` and `refreshSource` make a source.                                                     |
 
+`start` takes `maxAge` in seconds. When it did, `complete` refuses an ID token whose `auth_time`
+is missing or older than that, plus 30 seconds of leeway, with an `InvalidTokenError`.
+
 `issuer.register(metadata, initialAccessToken)` redeems an initial access token, and
 `issuer.client(registration, key, dpop)` builds the client it registered.
 `readRegistration`, `updateRegistration`, and `deleteRegistration` manage it with its registration

@@ -31,7 +31,7 @@ class TestIssuer
   end
 
   attr_reader :port, :registrations, :deletions, :revocations, :refreshes
-  attr_accessor :id_tokens, :forgotten, :role, :backchannel, :refresh_outage, :refresh_delay, :padding
+  attr_accessor :id_tokens, :forgotten, :role, :backchannel, :refresh_outage, :refresh_delay, :padding, :auth_time
 
   def initialize
     @keys = {}
@@ -289,7 +289,7 @@ class TestIssuer
       end
 
       mint(subdomain: subdomain, audience: pending[:client_id], scopes: [], typ: "JWT",
-           nonce: nonce, sid: "session-1", name: "Test Owner",
+           nonce: nonce, sid: "session-1", name: "Test Owner", auth_time: auth_time,
            preferred_username: "owner", email: "owner@example.invalid",
            email_verified: true, "masks:avatars" => avatars(subdomain), "org" => organization_claim)
     end

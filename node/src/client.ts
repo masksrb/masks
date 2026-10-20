@@ -4,6 +4,7 @@ import {
   decoded,
   ForeignError,
   hasCode,
+  InvalidTokenError,
   MasksError,
   refused,
 } from "./errors.js";
@@ -38,6 +39,7 @@ export const UPSTREAM_ACCESS_TOKEN_TYPE =
 const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const ASSERTION_LIFETIME = 60;
 const EXPIRY_LEEWAY = 30;
+const AUTH_TIME_LEEWAY = 30;
 
 export const timing = { devicePause: 5000 };
 
@@ -92,6 +94,7 @@ export interface PendingAuthorization {
   nonce?: string;
   redirectURI: string;
   resource?: string[];
+  maxAge?: number;
 }
 
 export interface AuthorizationStart extends PendingAuthorization {
@@ -177,6 +180,13 @@ export function bound(token: Token | undefined | null): boolean {
   return !!token && token.token_type?.toLowerCase() === DPOP.toLowerCase();
 }
 
+function recent(authTime: unknown, maxAge: number): boolean {
+  return (
+    typeof authTime === "number" &&
+    authTime + maxAge + AUTH_TIME_LEEWAY >= Date.now() / 1000
+  );
+}
+
 export function scopes(token: { scope?: string }): string[] {
   return (token.scope ?? "").split(/\s+/).filter(Boolean);
 }
@@ -235,9 +245,11 @@ export class Client {
       query.append("resource", resource);
     }
     if (asked.prompt) query.set("prompt", asked.prompt);
-    if (asked.maxAge !== undefined) {
-      query.set("max_age", String(Math.max(0, Math.floor(asked.maxAge))));
-    }
+    const maxAge =
+      asked.maxAge === undefined
+        ? undefined
+        : Math.max(0, Math.floor(asked.maxAge));
+    if (maxAge !== undefined) query.set("max_age", String(maxAge));
 
     const organization = organizationKey(asked.organization);
     if (organization) query.set("organization", organization);
@@ -253,6 +265,7 @@ export class Client {
       nonce,
       redirectURI: asked.redirectURI,
       resource: asked.resource,
+      maxAge,
     };
   }
 
@@ -325,6 +338,15 @@ export class Client {
       throw new MasksError(
         "invalid_nonce",
         "the id token was issued for another sign-in",
+      );
+    }
+
+    if (
+      pending.maxAge !== undefined &&
+      !recent(claims.auth_time, pending.maxAge)
+    ) {
+      throw new InvalidTokenError(
+        "the person signed in longer ago than max_age allows",
       );
     }
 

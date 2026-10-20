@@ -171,6 +171,31 @@ class SessionTest < ClientTest
     refute tokens.expired?
   end
 
+  def test_a_sign_in_older_than_the_max_age_asked_for_is_refused
+    now = Time.now.to_i
+
+    assert_equal 300, session.start(max_age: 300)[:max_age]
+    assert_nil session.start[:max_age]
+
+    { "just now" => now, "an hour ago" => now - 3600, "never said" => nil }.each do |name, signed_in_at|
+      claims = { "iss" => issuer.url, "sub" => "ada", "aud" => "app", "exp" => now + 300, "iat" => now }
+      claims["auth_time"] = signed_in_at if signed_in_at
+      issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "expires_in" => 3600,
+                                  "scope" => "openid", "id_token" => issuer.sign(claims) })
+      tokens = session.complete(code: "abc", verifier: "v")
+
+      if name == "just now"
+        assert_equal "ada", session.identity(tokens, max_age: 300)["sub"]
+        assert_equal "ada", session.identity(tokens)["sub"]
+      else
+        error = assert_raises(Masks::Client::InvalidToken, name) { session.identity(tokens, max_age: 300) }
+
+        assert_includes error.message, "max_age"
+        assert_equal "ada", session.identity(tokens)["sub"], "without max_age the sign-in is taken as it is"
+      end
+    end
+  end
+
   def test_introspection_answers_a_claims_object_rather_than_a_hash
     issuer.override("/introspect", {
                       "active" => true, "scope" => "xixo:catalog:read", "sub" => "actor-1",
