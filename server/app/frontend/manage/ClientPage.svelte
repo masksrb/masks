@@ -5,6 +5,7 @@
   import { POLICY_FIELDS, policyDifferences } from "./lib/policies.js";
   import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
+  import ForwardAuthRules from "./ForwardAuthRules.svelte";
   import Machines from "./Machines.svelte";
   import AccessRequests from "./AccessRequests.svelte";
   import Namespaces from "./Namespaces.svelte";
@@ -31,7 +32,7 @@
         tokenEndpointAuthMethod applicationType clientUri logoUri tosUri policyUri logoUrl(size: 128)
         subjectType sectorIdentifierUri
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
-        requiredScopes allowedScopes allowedGroups
+        requiredScopes allowedScopes allowedGroups forwardAuthRules
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired appPasswords jwks jwksUri
         authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
@@ -235,7 +236,8 @@
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
         $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
         $authorizationDetailsSchemas: JSON, $consentLifetime: Int, $allowedGroups: [String!],
-        $accessTokenLifetime: Int, $refreshTokenLifetime: Int, $refreshTokenAbsoluteLifetime: Int
+        $accessTokenLifetime: Int, $refreshTokenLifetime: Int, $refreshTokenAbsoluteLifetime: Int,
+        $forwardAuthRules: JSON
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -272,6 +274,7 @@
           refreshTokenLifetime: $refreshTokenLifetime
           refreshTokenAbsoluteLifetime: $refreshTokenAbsoluteLifetime
           allowedGroups: $allowedGroups
+          forwardAuthRules: $forwardAuthRules
         ) {
           client { clientId }
         }
@@ -515,6 +518,13 @@
 
         {#if client.allowedGroups.length}
           <AccessRequests {api} rows={client.accessRequests} labels={client.allowedGroups} ondecided={load} />
+        {/if}
+
+        {#if client.protocol === "forward"}
+          <ForwardAuthRules
+            rules={client.forwardAuthRules}
+            onsave={(forwardAuthRules) => update({ forwardAuthRules }, t("forward_auth_rules.saved"))}
+          />
         {/if}
 
         <Section row title={t("client.scopes.title")}>

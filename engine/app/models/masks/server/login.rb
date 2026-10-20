@@ -30,6 +30,9 @@ module Masks
 
       SETTLED = "settled".freeze
       FIRST_FACTOR_BY = "first_factor_by".freeze
+      RELAXED = "relaxed".freeze
+      STEP_UP = "step_up".freeze
+      ASKED_FOR = 10.minutes
 
       def self.permitted_updates
         STATES.flat_map { |state| state.declared_updates }.uniq
@@ -256,7 +259,30 @@ module Masks
 
         wanted = request.respond_to?(:multi_factor?) && request.multi_factor?
 
-        wanted || (request.present? && policy.apps_require_second_factor) || state("risk-check").stepping_up?
+        wanted || (request.present? && policy.apps_require_second_factor) || state("risk-check").stepping_up? ||
+          asked?(STEP_UP)
+      end
+
+      def relaxed?
+        asked?(RELAXED) && !stepping_up? && !policy.second_factor_required
+      end
+
+      def skipped_second_factor?
+        relaxed? && actor.present? && actor.second_factor? && !touched?(:second_factor) && !amr.include?(Issuer::MULTI_FACTOR)
+      end
+
+      def relax!(now = Time.current)
+        store[RELAXED] = { "until" => (now + ASKED_FOR).to_i }
+      end
+
+      def step_up!(now = Time.current)
+        store[STEP_UP] = { "until" => (now + ASKED_FOR).to_i }
+      end
+
+      def asked?(key)
+        held = store[key]
+
+        held.is_a?(Hash) && held["until"].to_i > Time.current.to_i
       end
 
       def multi_factored?
@@ -268,7 +294,7 @@ module Masks
       def second_factored?
         return false if reauthenticating? || stale? || actor.nil? || stepping_up?
 
-        touched?(:second_factor) || signed_in? || remembered?(:second_factor)
+        touched?(:second_factor) || (signed_in? && !session.second_factor_skipped?) || remembered?(:second_factor)
       end
 
       def second_factor_pending?

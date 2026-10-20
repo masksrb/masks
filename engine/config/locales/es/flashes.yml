@@ -163,3 +163,4 @@ es:
   forward_auth:
     unknown: "No hay ninguna aplicación detrás de un proxy registrada en esa dirección."
     not_admitted: "Tu cuenta no puede usar %{app}."
+    denied: "Esta página de %{app} está cerrada para todos."

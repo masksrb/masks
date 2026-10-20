@@ -326,7 +326,8 @@ CREATE TABLE public.clients (
     enrolled_by_id bigint,
     handshake_return_to character varying,
     refresh_token_absolute_lifetime integer,
-    app_passwords boolean DEFAULT false NOT NULL
+    app_passwords boolean DEFAULT false NOT NULL,
+    forward_auth_rules jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -1217,7 +1218,8 @@ CREATE TABLE public.sessions (
     idle_timeout integer,
     bounded boolean DEFAULT false NOT NULL,
     first_factor character varying,
-    provider_id bigint
+    provider_id bigint,
+    second_factor_skipped boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.sessions FORCE ROW LEVEL SECURITY;
@@ -4136,6 +4138,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261020150000'),
 ('20261020130000'),
+('20261020120000'),
 ('20261020110000'),
 ('20261020100000'),
 ('20261019140000'),

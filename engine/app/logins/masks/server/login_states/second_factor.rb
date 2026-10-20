@@ -11,7 +11,7 @@ module Masks
         end
 
         prompts "second-factor" do
-          login.first_factored? && !login.second_factored?
+          login.first_factored? && !login.second_factored? && !login.relaxed?
         end
 
         def factor!

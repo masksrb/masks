@@ -35,9 +35,9 @@ module Masks
 
       def show
         hold_return_to
-        return redirect_to after_login_path if current_actor && pending.nil?
-
         @login = run
+        return redirect_to after_login_path if current_actor && pending.nil? && !@login.stepping_up?
+
         @login.carry!(flash[:warnings]) if flash[:warnings].present?
 
         redirect_to after_login_path if @login.settled?
@@ -153,8 +153,9 @@ module Masks
           if login.touched?(:first_factor)
             sign_in(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by,
                                  authenticated_at: login.authenticated_at)
+            current_session.update!(second_factor_skipped: true) if login.skipped_second_factor?
           elsif login.signed_in? && login.touched?(:second_factor)
-            current_session.update!(amr: Array(current_session.amr) | login.amr)
+            current_session.update!(amr: Array(current_session.amr) | login.amr, second_factor_skipped: false)
           end
 
           forget_login

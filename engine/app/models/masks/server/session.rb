@@ -118,6 +118,14 @@ module Masks
         true
       end
 
+      def multi_factored?
+        Array(amr).include?(Issuer::MULTI_FACTOR) || !actor.second_factor?
+      end
+
+      def complete?
+        !second_factor_skipped?
+      end
+
       def fresh?
         authenticated_at.present? && authenticated_at > FRESHNESS.ago
       end

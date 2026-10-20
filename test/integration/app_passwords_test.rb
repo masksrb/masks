@@ -185,6 +185,21 @@ module Masks
         assert_equal 1, events(Event::APP_PASSWORD_USED).size
       end
 
+      test "an app password is refused where a rule denies the path" do
+        sign_in_as(@actor)
+        secret = make(client: @dash)
+        reset!
+        host! host_for(@tenant)
+        within { @dash.update!(forward_auth_rules: [ { "paths" => [ "/admin/**" ], "outcome" => "deny" } ]) }
+
+        forwarded("#{APP}/admin/users", identifier: "ada", secret: secret)
+        assert_response :forbidden
+        assert_nil response.headers["Remote-User"]
+
+        forwarded("#{APP}/reports", identifier: "ada", secret: secret)
+        assert_response :ok
+      end
+
       test "an app password works only for the app it was made for" do
         sign_in_as(@actor)
         secret = make(client: @nas)

@@ -74,6 +74,7 @@ module Masks
       validate :keys_are_usable
       validate :saml_is_described, if: :saml?
       validate :forward_is_described, if: :forward?
+      validate :forward_auth_rules_are_usable
       validate :backchannel_logout_uri_is_usable
       validate :sector_is_derivable
       validate :consent_is_skipped_only_when_approved
@@ -90,6 +91,7 @@ module Masks
 
       normalizes :allowed_groups, with: ->(value) { Array(value).map { |group| group.to_s.strip.downcase }.compact_blank.uniq.sort }
       normalizes :saml_entity_id, :saml_slo_url, with: ->(value) { value.to_s.strip.presence }
+      normalizes :forward_auth_rules, with: ->(value) { ForwardAuthRules.normalize(value) }
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
       after_commit :refresh_logo!, on: %i[create update], if: :saved_change_to_logo_uri?
@@ -465,6 +467,10 @@ module Masks
         allowed_groups.empty? || actor.group_labels.intersect?(allowed_groups)
       end
 
+      def forward_rules
+        ForwardAuthRules.new(forward_auth_rules)
+      end
+
       def permitted_scopes(requested)
         return scope_list if Scopes.list(requested).empty?
 
@@ -603,6 +609,14 @@ module Masks
         def grant_types_are_known
           unknown = grant_types - GRANT_TYPES
           errors.add(:grant_types, "not supported: #{unknown.join(', ')}") if unknown.any?
+        end
+
+        def forward_auth_rules_are_usable
+          held = forward_auth_rules
+
+          return errors.add(:base, "forward auth rules apply only to an app behind a proxy") if held.present? && !forward?
+
+          ForwardAuthRules.problems(held).each { |problem| errors.add(:base, problem) }
         end
 
         def forward_is_described

@@ -20,6 +20,10 @@ module Masks
                 description: "Seconds from a sign-in until its refresh tokens stop, however often they are used. Null is 90 days."
           field :allowed_groups, [ String ], null: false,
                 description: "Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in."
+          field :forward_auth_rules, GraphQL::Types::JSON, null: false,
+                description: "The ordered rules forward auth follows for an app behind a proxy. Each has `paths`, `methods`, " \
+                             "`networks`, and `groups` it covers, and an `outcome` of open, one_factor, two_factor, token, or deny. " \
+                             "The first rule that covers a request decides it. With no rule, a signed-in person who may sign in is let through."
           field :namespaces, [ "Masks::Server::Manage::Types::NamespaceType" ], null: false
           field :token_endpoint_auth_method, String, null: false
           field :subject_type, String, null: false

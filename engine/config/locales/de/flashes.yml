@@ -163,3 +163,4 @@ de:
   forward_auth:
     unknown: "Unter dieser Adresse ist keine App hinter einem Proxy registriert."
     not_admitted: "Ihr Konto darf %{app} nicht verwenden."
+    denied: "Diese Seite von %{app} ist für alle gesperrt."

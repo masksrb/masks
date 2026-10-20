@@ -43,6 +43,10 @@ module Masks
                                 "from 300 to 400 days. Zero goes back to 90 days."
           argument :allowed_groups, [ String ], required: false,
                    description: "Group keys, or organization roles as key:role, whose people may sign in to this client. Empty lets everyone in."
+          argument :forward_auth_rules, GraphQL::Types::JSON, required: false,
+                   description: "The ordered rules forward auth follows, for an app behind a proxy only. Each rule has `paths` " \
+                                "(absolute, with * for one segment and ** for any depth), `methods`, `networks` (addresses or ranges), " \
+                                "and `groups` it covers, and an `outcome` of open, one_factor, two_factor, token, or deny. Empty removes them all."
           argument :sign_in_policy, ID, required: false
           argument :client_uri, String, required: false
           argument :logo_uri, String, required: false
