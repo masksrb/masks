@@ -212,6 +212,12 @@ A replica that generates its own key cannot read the database's encrypted column
 start, with an error that says so. The same check stops a server whose database was restored with a
 different key.
 
+The tasks a server runs at boot, such as applying `MASKS_CONFIG`, running `MASKS_RECOVER`, and
+re-encrypting after a key change, run once when several replicas start together. The first replica
+takes a database lock and does the task. The others wait for it, see it was done, and skip it. Each
+replica's log says which one did the task, so a recovery link is printed by one replica only. The
+record lasts 10 minutes, so a replica that starts later runs the task again.
+
 ### Rotating the master key
 
 1. Set `MASKS_PREVIOUS_MASTER_KEY` to the key in use now.
