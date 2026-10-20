@@ -65,6 +65,8 @@ module Masks
             values(type)
           elsif type.kind.scalar?
             "A scalar.\n"
+          elsif type.kind.input_object?
+            arguments(type)
           else
             fields(type)
           end
@@ -86,6 +88,16 @@ module Masks
           end
 
           table([ "Value", "Description" ], rows, described)
+        end
+
+        def arguments(type)
+          described = type.arguments.values.map { |argument| argument.description.to_s.strip }
+
+          rows = type.arguments.values.zip(described).map do |argument, text|
+            cells([ "`#{argument.graphql_name}`", link(argument.type), text ], described)
+          end
+
+          table([ "Field", "Type", "Description" ], rows, described)
         end
 
         def fields(type)

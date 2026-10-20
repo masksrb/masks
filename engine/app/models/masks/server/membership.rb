@@ -29,6 +29,7 @@ module Masks
       validate :an_owner_remains, on: :update
 
       before_destroy :keep_an_owner
+      after_commit :settle_nested_groups
 
       def owner?
         role == Organization::OWNER && !pending?
@@ -71,6 +72,12 @@ module Masks
       end
 
       private
+
+        def settle_nested_groups
+          return if organization.nil? || actor.nil?
+
+          Group.nested_under_organization(organization.key).find_each { |group| group.settle!(actor) }
+        end
 
         def role_is_offered
           errors.add(:role, "is not one #{organization&.name} offers") unless organization&.role?(role)

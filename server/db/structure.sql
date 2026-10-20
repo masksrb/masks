@@ -374,7 +374,8 @@ CREATE TABLE public.connections (
     refresh_token text,
     access_token_expires_at timestamp(6) without time zone,
     delegated_scopes character varying,
-    tokens_refreshed_at timestamp(6) without time zone
+    tokens_refreshed_at timestamp(6) without time zone,
+    upstream_groups jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.connections FORCE ROW LEVEL SECURITY;
@@ -691,7 +692,8 @@ CREATE TABLE public.group_members (
     group_id bigint NOT NULL,
     actor_id bigint NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    sourced_by character varying
 );
 
 ALTER TABLE ONLY public.group_members FORCE ROW LEVEL SECURITY;
@@ -726,7 +728,13 @@ CREATE TABLE public.groups (
     key character varying NOT NULL,
     name character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    source character varying DEFAULT 'manual'::character varying NOT NULL,
+    rule jsonb DEFAULT '[]'::jsonb NOT NULL,
+    provider_id bigint,
+    upstream_group character varying,
+    parent_labels jsonb DEFAULT '[]'::jsonb NOT NULL,
+    refreshed_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.groups FORCE ROW LEVEL SECURITY;
@@ -2544,10 +2552,24 @@ CREATE UNIQUE INDEX index_group_members_on_group_id_and_actor_id ON public.group
 
 
 --
+-- Name: index_groups_on_provider_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_groups_on_provider_id ON public.groups USING btree (provider_id);
+
+
+--
 -- Name: index_groups_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_groups_on_tenant_id_and_key ON public.groups USING btree (tenant_id, key);
+
+
+--
+-- Name: index_groups_on_tenant_id_and_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_groups_on_tenant_id_and_source ON public.groups USING btree (tenant_id, source);
 
 
 --
@@ -3070,6 +3092,14 @@ ALTER TABLE ONLY public.clients
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT fk_rails_0cc92e64df FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
+-- Name: groups fk_rails_10a68598b1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.groups
+    ADD CONSTRAINT fk_rails_10a68598b1 FOREIGN KEY (provider_id) REFERENCES public.providers(id) ON DELETE SET NULL;
 
 
 --
@@ -4104,6 +4134,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261020150000'),
+('20261020130000'),
 ('20261020100000'),
 ('20261019140000'),
 ('20261018110000'),

@@ -1,0 +1,44 @@
+es:
+  manage:
+    group_sources:
+      source: "Se llena desde"
+      sources:
+        manual: "Personas añadidas a mano"
+        rule: "Una regla"
+        provider: "Un proveedor"
+        group: "Otros grupos"
+      ledes:
+        manual: "Un gestor añade y quita personas desde sus propias páginas."
+        rule: "Todas las personas que cumplen cada condición. Una dirección de correo cuenta cuando está verificada. Un campo del perfil cuenta solo cuando lo fija un directorio, porque las personas no pueden cambiarlo. Se comprueba al cambiar un perfil y cada hora."
+        provider: "Todas las personas cuyo último inicio de sesión con el proveedor incluyó el grupo."
+        group: "Todas las personas en alguno de los grupos o roles de organización superiores."
+      change: "Cambiar cómo se llena %{name}"
+      kinds:
+        email_domain: "La dirección de correo termina en"
+        profile: "El campo del perfil es igual a"
+      field: "Campo"
+      value: "Valor"
+      add_condition: "Añadir condición"
+      remove_condition: "Quitar condición"
+      provider: "Proveedor"
+      choose_provider: "Elige un proveedor"
+      no_providers: "Añade primero un proveedor."
+      upstream_group: "Nombre del grupo en el proveedor"
+      parent_labels: "Grupos superiores"
+      parent_labels_hint: "Claves de grupo o roles de organización como clave:rol, separados por comas."
+      save: "Guardar"
+      cancel: "Cancelar"
+      saved: "%{name} ahora se llena desde %{source}."
+      refresh: "Actualizar ahora"
+      refreshed: "%{name} se actualizó."
+      refreshed_at: "Actualizado %{when}."
+      never_refreshed: "Aún no se actualizó."
+      summary:
+        rule: "Se llena por regla"
+        provider: "Se llena desde %{provider}"
+        group: "Se llena desde %{parents}"
+      by_hand: "Añadido a mano, así que solo un gestor lo quita."
+      from:
+        rule: "En el grupo por su regla, así que la regla decide."
+        provider: "En el grupo por un inicio de sesión con el proveedor, así que el proveedor decide."
+        group: "En el grupo a través de un grupo superior, así que ese grupo decide."

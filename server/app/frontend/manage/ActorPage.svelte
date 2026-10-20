@@ -49,7 +49,7 @@
       actor(uuid: $uuid) {
         uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
         recoveryRequestedAt
-        groups { key }
+        groupMemberships { group { key } sourcedBy }
         groupLabels
         suspendedAt externalId
         memberships { externalId organization { key name } }
@@ -83,7 +83,7 @@
           device { id label }
         }
       }
-      groups { key name }
+      groups { key name source }
       viewer { uuid }
       scopesSupported
     }
@@ -174,7 +174,9 @@
     return data;
   }
 
-  const belongs = (group) => actor.groups.some((held) => held.key === group.key);
+  const membership = (group) => actor.groupMemberships.find((held) => held.group.key === group.key);
+  const belongs = (group) => Boolean(membership(group));
+  const sourcedBy = (group) => membership(group)?.sourcedBy ?? null;
 
   const toggleGroup = (group) =>
     act(
@@ -467,9 +469,20 @@
           {#if groups.length}
             <div class="flex flex-col gap-1">
               {#each groups as group (group.key)}
-                <label class="flex items-center gap-2 text-sm">
-                  <input type="checkbox" class="checkbox checkbox-sm" checked={belongs(group)} onchange={() => toggleGroup(group)} />
+                <label class="flex flex-wrap items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    checked={belongs(group)}
+                    disabled={Boolean(sourcedBy(group))}
+                    onchange={() => toggleGroup(group)}
+                  />
                   {group.name} <code class="hint font-mono">{group.key}</code>
+                  {#if sourcedBy(group)}
+                    <span class="hint">{t(`group_sources.from.${sourcedBy(group)}`)}</span>
+                  {:else if belongs(group) && group.source !== "manual"}
+                    <span class="hint">{t("group_sources.by_hand")}</span>
+                  {/if}
                 </label>
               {/each}
             </div>

@@ -1,0 +1,5 @@
+es:
+  events:
+    actions:
+      group:
+        refreshed: "Grupo llenado desde su origen"

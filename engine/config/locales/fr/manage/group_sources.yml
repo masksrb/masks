@@ -1,0 +1,44 @@
+fr:
+  manage:
+    group_sources:
+      source: "Se remplit depuis"
+      sources:
+        manual: "Des personnes ajoutées à la main"
+        rule: "Une règle"
+        provider: "Un fournisseur"
+        group: "D’autres groupes"
+      ledes:
+        manual: "Un gestionnaire ajoute et retire les personnes depuis leur propre page."
+        rule: "Toute personne qui remplit chaque condition. Une adresse e-mail compte une fois vérifiée. Un champ du profil compte seulement quand un annuaire le fixe, car les personnes ne peuvent pas le changer. Vérifié à chaque changement de profil et toutes les heures."
+        provider: "Toute personne dont la dernière connexion par le fournisseur listait le groupe."
+        group: "Toute personne dans l’un des groupes ou rôles d’organisation parents."
+      change: "Changer la façon dont %{name} se remplit"
+      kinds:
+        email_domain: "L’adresse e-mail se termine par"
+        profile: "Le champ du profil est égal à"
+      field: "Champ"
+      value: "Valeur"
+      add_condition: "Ajouter une condition"
+      remove_condition: "Retirer la condition"
+      provider: "Fournisseur"
+      choose_provider: "Choisir un fournisseur"
+      no_providers: "Ajoutez d’abord un fournisseur."
+      upstream_group: "Nom du groupe chez le fournisseur"
+      parent_labels: "Groupes parents"
+      parent_labels_hint: "Clés de groupe ou rôles d’organisation sous la forme clé:rôle, séparés par des virgules."
+      save: "Enregistrer"
+      cancel: "Annuler"
+      saved: "%{name} se remplit maintenant depuis %{source}."
+      refresh: "Actualiser maintenant"
+      refreshed: "%{name} est actualisé."
+      refreshed_at: "Actualisé %{when}."
+      never_refreshed: "Pas encore actualisé."
+      summary:
+        rule: "Se remplit par règle"
+        provider: "Se remplit depuis %{provider}"
+        group: "Se remplit depuis %{parents}"
+      by_hand: "Ajouté à la main, donc seul un gestionnaire le retire."
+      from:
+        rule: "Dans le groupe par sa règle, donc la règle décide."
+        provider: "Dans le groupe par une connexion chez le fournisseur, donc le fournisseur décide."
+        group: "Dans le groupe par un groupe parent, donc ce groupe décide."

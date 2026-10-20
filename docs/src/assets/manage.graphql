@@ -60,6 +60,11 @@ type Actor {
   What the groups claim carries: each group's key, and each organization role as key:role.
   """
   groupLabels: [String!]!
+
+  """
+  Each group the person is in, with what put them there.
+  """
+  groupMemberships: [GroupMember!]!
   groups: [Group!]!
   identifier: String!
   idleWarnedAt: ISO8601DateTime
@@ -622,14 +627,106 @@ type GrantAccessPayload {
 }
 
 """
-A named set of people in the tenant. The groups claim lists the key of each group a person is in.
+A named set of people in the tenant. The groups claim lists the key of each
+group a person is in. A group fills by hand, from a rule, from a provider, or
+from other groups.
 """
 type Group {
   createdAt: ISO8601DateTime!
   key: String!
   memberCount: Int!
   members: [Actor!]!
+
+  """
+  Each member with what put them in the group.
+  """
+  memberships: [GroupMember!]!
   name: String!
+
+  """
+  The group keys and organization roles, as key:role, a nested group holds everyone from.
+  """
+  parentLabels: [String!]!
+
+  """
+  The provider a provider group reads at sign-in.
+  """
+  providerKey: String
+
+  """
+  When the source last filled the group.
+  """
+  refreshedAt: ISO8601DateTime
+
+  """
+  The conditions a rule group checks. Empty unless the source is rule.
+  """
+  rule: [GroupCondition!]!
+
+  """
+  manual, rule, provider, or group.
+  """
+  source: String!
+
+  """
+  The group name the provider lists for people who belong.
+  """
+  upstreamGroup: String
+}
+
+"""
+One condition of a group's rule. Every condition must hold for a person to be in the group.
+"""
+type GroupCondition {
+  """
+  The profile field a profile condition reads.
+  """
+  field: String
+
+  """
+  email_domain or profile.
+  """
+  kind: String!
+
+  """
+  The domain a verified email address ends with, or the value the profile field
+  equals. A profile condition matches only people whose profile a directory sets.
+  """
+  value: String!
+}
+
+"""
+One condition of a group's rule.
+"""
+input GroupConditionInput {
+  """
+  For profile: name, given_name, family_name, middle_name, nickname, gender, zoneinfo, or locale.
+  """
+  field: String
+
+  """
+  email_domain or profile.
+  """
+  kind: String!
+
+  """
+  The domain a verified email address ends with, or the value the profile field equals.
+  """
+  value: String!
+}
+
+"""
+A person's place in a group, and what put them there.
+"""
+type GroupMember {
+  actor: Actor!
+  createdAt: ISO8601DateTime!
+  group: Group!
+
+  """
+  rule, provider, or group when the group's source put them in. Null when a manager added them by hand.
+  """
+  sourcedBy: String
 }
 
 """
@@ -858,6 +955,31 @@ type Mutation {
     """
     key: String!
     name: String!
+
+    """
+    For group: group keys and organization roles, as key:role, the group holds everyone from.
+    """
+    parentLabels: [String!]
+
+    """
+    For provider: the provider whose sign-ins list groups.
+    """
+    providerKey: String
+
+    """
+    For rule: up to five conditions, all of which must hold.
+    """
+    rule: [GroupConditionInput!]
+
+    """
+    manual, rule, provider, or group. A sourced group fills itself and keeps anyone added by hand.
+    """
+    source: String
+
+    """
+    For provider: the group name the provider lists.
+    """
+    upstreamGroup: String
   ): CreateGroupPayload
 
   """
@@ -1049,6 +1171,11 @@ type Mutation {
   ): IssueProvisioningTokenPayload
   readSamlApplicationMetadata(xml: String!): ReadSamlApplicationMetadataPayload
   readSamlMetadata(metadataUrl: String, metadataXml: String): ReadSamlMetadataPayload
+
+  """
+  Fills a sourced group now instead of waiting for the hourly run.
+  """
+  refreshGroup(key: String!): RefreshGroupPayload
   registerProvider(key: ID!): RegisterProviderPayload
   releaseDomain(domain: String!): ReleaseDomainPayload
   releaseNamespace(name: String!): ReleaseNamespacePayload
@@ -1214,7 +1341,35 @@ type Mutation {
     organization: ID
     url: String
   ): UpdateEventStreamPayload
-  updateGroup(key: String!, name: String!): UpdateGroupPayload
+  updateGroup(
+    key: String!
+    name: String
+
+    """
+    For group: group keys and organization roles, as key:role, the group holds everyone from.
+    """
+    parentLabels: [String!]
+
+    """
+    For provider: the provider whose sign-ins list groups.
+    """
+    providerKey: String
+
+    """
+    For rule: up to five conditions, all of which must hold.
+    """
+    rule: [GroupConditionInput!]
+
+    """
+    manual, rule, provider, or group. A sourced group fills itself and keeps anyone added by hand.
+    """
+    source: String
+
+    """
+    For provider: the group name the provider lists.
+    """
+    upstreamGroup: String
+  ): UpdateGroupPayload
 
   """
   Sets the tenant's template for one kind of email. Leaving both the subject and
@@ -1710,6 +1865,13 @@ type ReadSamlMetadataPayload {
   idpCertificates: String!
   idpEntityId: String!
   idpSsoUrl: String!
+}
+
+"""
+Autogenerated return type of RefreshGroup.
+"""
+type RefreshGroupPayload {
+  group: Group!
 }
 
 """

@@ -34,6 +34,11 @@ default: &default
     queue: maintenance
     schedule: every day at 6am
 
+  refresh_groups:
+    class: Masks::Server::RefreshGroupsJob
+    queue: maintenance
+    schedule: every hour
+
 development:
   <<: *default
 

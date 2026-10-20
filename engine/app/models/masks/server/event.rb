@@ -57,6 +57,7 @@ module Masks
       ACCESS_REQUESTED = "access.requested".freeze
       ACCESS_GRANTED = "access.granted".freeze
       ACCESS_DECLINED = "access.declined".freeze
+      GROUP_REFRESHED = "group.refreshed".freeze
 
       DEVICE_CODE_ISSUED = "device_code.issued".freeze
       DEVICE_CODE_APPROVED = "device_code.approved".freeze

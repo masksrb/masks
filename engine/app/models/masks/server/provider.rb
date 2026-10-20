@@ -42,6 +42,7 @@ module Masks
       encrypts :private_key
 
       has_many :connections, dependent: :destroy
+      has_many :groups, dependent: :nullify
       has_many :delegations, through: :connections
 
       belongs_to :organization, optional: true

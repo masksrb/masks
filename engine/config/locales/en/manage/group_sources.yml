@@ -1,0 +1,44 @@
+en:
+  manage:
+    group_sources:
+      source: "Fills from"
+      sources:
+        manual: "People added by hand"
+        rule: "A rule"
+        provider: "A provider"
+        group: "Other groups"
+      ledes:
+        manual: "A manager adds and removes people on their own pages."
+        rule: "Everyone who matches every condition. An email address counts once it is verified. A profile field counts only when a directory sets it, since people cannot change those. Checked when a profile changes and every hour."
+        provider: "Everyone whose last sign-in through the provider listed the group."
+        group: "Everyone in any of the parent groups or organization roles."
+      change: "Change how %{name} fills"
+      kinds:
+        email_domain: "Email address ends with"
+        profile: "Profile field equals"
+      field: "Field"
+      value: "Value"
+      add_condition: "Add condition"
+      remove_condition: "Remove condition"
+      provider: "Provider"
+      choose_provider: "Choose a provider"
+      no_providers: "Add a provider first."
+      upstream_group: "Group name at the provider"
+      parent_labels: "Parent groups"
+      parent_labels_hint: "Group keys or organization roles as key:role, separated by commas."
+      save: "Save"
+      cancel: "Cancel"
+      saved: "%{name} now fills from %{source}."
+      refresh: "Refresh now"
+      refreshed: "%{name} is refreshed."
+      refreshed_at: "Refreshed %{when}."
+      never_refreshed: "Not refreshed yet."
+      summary:
+        rule: "Fills by rule"
+        provider: "Fills from %{provider}"
+        group: "Fills from %{parents}"
+      by_hand: "Added by hand, so only a manager removes them."
+      from:
+        rule: "In the group by its rule, so the rule decides."
+        provider: "In the group from a provider sign-in, so the provider decides."
+        group: "In the group through a parent group, so the parent decides."

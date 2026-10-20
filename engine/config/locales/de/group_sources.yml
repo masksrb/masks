@@ -1,0 +1,5 @@
+de:
+  events:
+    actions:
+      group:
+        refreshed: "Gruppe aus ihrer Quelle gefüllt"

@@ -30,6 +30,7 @@ module Masks
           field :remove_group_member, mutation: Mutations::RemoveGroupMember
           field :grant_access, mutation: Mutations::GrantAccess
           field :decline_access, mutation: Mutations::DeclineAccess
+          field :refresh_group, mutation: Mutations::RefreshGroup
           field :disable_code_factor, mutation: Mutations::DisableCodeFactor
           field :revoke_passkey, mutation: Mutations::RevokePasskey
           field :upload_avatar, mutation: Mutations::UploadAvatar

@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class CreateGroup < BaseMutation
+          include GroupSource
+
           requires :security
 
           argument :key, String, description: "Lowercase letters, digits, dots, dashes, and underscores. Apps see it in the groups claim."
@@ -10,13 +12,13 @@ module Masks
 
           field :group, Types::GroupType, null: false
 
-          def resolve(key:, name:)
-            group = Masks::Server::Group.new(key: key, name: name)
+          def resolve(key:, name:, **source)
+            group = fill_source(Masks::Server::Group.new(key: key, name: name), **source)
             save!(group)
 
-            audit!(Masks::Server::Event::GROUP_CREATED, group: group.key)
+            audit!(Masks::Server::Event::GROUP_CREATED, group: group.key, source: group.source)
 
-            { group: group }
+            { group: group.reload }
           end
         end
       end

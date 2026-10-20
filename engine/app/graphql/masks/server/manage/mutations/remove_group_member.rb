@@ -17,6 +17,8 @@ module Masks
             group.remove!(actor, by: viewer)
 
             { group: group }
+          rescue Masks::Server::Group::Sourced => e
+            refuse!(e.message)
           end
         end
       end

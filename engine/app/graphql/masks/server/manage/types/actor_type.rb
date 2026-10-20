@@ -32,6 +32,8 @@ module Masks
           field :tokens, [ "Masks::Server::Manage::Types::TokenType" ], null: false
           field :memberships, [ "Masks::Server::Manage::Types::MembershipType" ], null: false
           field :groups, [ "Masks::Server::Manage::Types::GroupType" ], null: false
+          field :group_memberships, [ "Masks::Server::Manage::Types::GroupMemberType" ], null: false,
+                description: "Each group the person is in, with what put them there."
           field :group_labels, [ String ], null: false,
                 description: "What the groups claim carries: each group's key, and each organization role as key:role."
 
@@ -128,6 +130,10 @@ module Masks
 
           def memberships
             object.memberships.includes(:organization).joins(:organization).order("organizations.name")
+          end
+
+          def group_memberships
+            object.group_members.includes(:group).joins(:group).order("groups.name")
           end
 
           def tokens

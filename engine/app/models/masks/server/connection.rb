@@ -20,6 +20,8 @@ module Masks
 
       scope :live, -> { where(revoked_at: nil) }
 
+      after_commit :settle_sourced_groups, if: -> { saved_changes.keys.intersect?(%w[upstream_groups revoked_at actor_id]) }
+
       class << self
         def record!(provider:, actor:, identity:)
           subject = identity["sub"].presence ||
@@ -40,6 +42,7 @@ module Masks
       end
 
       def absorb_identity(identity)
+        self.upstream_groups = Array(identity[Provider::GROUPS]).map(&:to_s).compact_blank.uniq
         held = identity["email"].to_s.strip.downcase.presence
 
         return self if held.nil?
@@ -124,6 +127,10 @@ module Masks
       end
 
       private
+
+        def settle_sourced_groups
+          Group.filled_by(provider).find_each { |group| group.settle!(actor) }
+        end
 
         def store_tokens!(tokens, **attributes)
           update!(access_token: tokens["access_token"], access_token_expires_at: expiry_from(tokens),

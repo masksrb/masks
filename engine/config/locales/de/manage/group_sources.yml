@@ -1,0 +1,44 @@
+de:
+  manage:
+    group_sources:
+      source: "Füllt sich aus"
+      sources:
+        manual: "Von Hand hinzugefügte Personen"
+        rule: "Einer Regel"
+        provider: "Einem Anbieter"
+        group: "Anderen Gruppen"
+      ledes:
+        manual: "Ein Verwalter fügt Personen auf deren eigenen Seiten hinzu und entfernt sie dort."
+        rule: "Alle, die jede Bedingung erfüllen. Eine E-Mail-Adresse zählt, sobald sie bestätigt ist. Ein Profilfeld zählt nur, wenn ein Verzeichnis es setzt, denn solche Felder können Personen nicht ändern. Geprüft bei jeder Profiländerung und jede Stunde."
+        provider: "Alle, deren letzte Anmeldung über den Anbieter die Gruppe aufgeführt hat."
+        group: "Alle in einer der übergeordneten Gruppen oder Organisationsrollen."
+      change: "Ändern, wie sich %{name} füllt"
+      kinds:
+        email_domain: "E-Mail-Adresse endet auf"
+        profile: "Profilfeld ist gleich"
+      field: "Feld"
+      value: "Wert"
+      add_condition: "Bedingung hinzufügen"
+      remove_condition: "Bedingung entfernen"
+      provider: "Anbieter"
+      choose_provider: "Anbieter wählen"
+      no_providers: "Fügen Sie zuerst einen Anbieter hinzu."
+      upstream_group: "Gruppenname beim Anbieter"
+      parent_labels: "Übergeordnete Gruppen"
+      parent_labels_hint: "Gruppenschlüssel oder Organisationsrollen als schlüssel:rolle, durch Kommas getrennt."
+      save: "Speichern"
+      cancel: "Abbrechen"
+      saved: "%{name} füllt sich jetzt aus %{source}."
+      refresh: "Jetzt auffrischen"
+      refreshed: "%{name} ist aufgefrischt."
+      refreshed_at: "Aufgefrischt %{when}."
+      never_refreshed: "Noch nicht aufgefrischt."
+      summary:
+        rule: "Füllt sich per Regel"
+        provider: "Füllt sich aus %{provider}"
+        group: "Füllt sich aus %{parents}"
+      by_hand: "Von Hand hinzugefügt, daher entfernt nur ein Verwalter die Person."
+      from:
+        rule: "Durch die Regel in der Gruppe, daher entscheidet die Regel."
+        provider: "Durch eine Anmeldung beim Anbieter in der Gruppe, daher entscheidet der Anbieter."
+        group: "Über eine übergeordnete Gruppe in der Gruppe, daher entscheidet diese."

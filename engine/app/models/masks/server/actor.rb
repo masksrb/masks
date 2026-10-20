@@ -62,6 +62,7 @@ module Masks
       after_save :release_previous_nickname, if: :saved_change_to_nickname?
       before_save :forget_code_factors_for_new_addresses
       after_update :forget_mailed_links, if: :saved_change_to_email?
+      after_commit :settle_sourced_groups, on: %i[create update], if: -> { saved_changes.keys.intersect?(Group::WATCHED) }
 
       normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
       normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
@@ -469,6 +470,10 @@ module Masks
       end
 
       private
+
+        def settle_sourced_groups
+          Group.ruled.find_each { |group| group.settle!(self) }
+        end
 
         def forget_mailed_links
           [ PasswordReset, Invitation, EmailVerification ].each do |kind|
