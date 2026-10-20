@@ -65,7 +65,11 @@ module Masks
         authorize(client_id: @registration["client_id"])
         consent! if awaiting_consent?
 
-        assert_equal "access_denied", redirected["error"]
+        assert_match %r{/authorize/refused}, response.location
+
+        follow_redirect!
+
+        assert_select "#back-to-app[href*='error=access_denied']"
         assert within { Event.where(action: Event::LOGIN_REFUSED, actor: @actor).exists? }
       end
 
