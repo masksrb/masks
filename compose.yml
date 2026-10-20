@@ -49,7 +49,7 @@ x-env: &env
 services:
   postgres:
     logging: *logging
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -142,7 +142,7 @@ services:
 
   masks-docs:
     logging: *logging
-    image: node:22-alpine
+    image: node:26-alpine
     working_dir: /docs
     command:
       - sh
