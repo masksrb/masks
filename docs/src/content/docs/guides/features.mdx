@@ -68,7 +68,7 @@ masks then:
 | Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin), Matrix (Synapse) | **Name it uses for masks**. This is `masks` unless you change it. |
 | Wiki.js | **Name it uses for masks**. Wiki.js shows it in the strategy's callback URL. Copy it from there. |
 | Tailscale | Nothing. Its address is `https://login.tailscale.com`. See [signing in to a tailnet](#signing-in-to-a-tailnet). |
-| Any app behind Caddy, Traefik, or nginx | Nothing. See [forward authentication](/guides/forward-auth/). |
+| Any app behind Caddy, Traefik, or nginx | Nothing. See [forward authentication](/guides/forward-auth/). Its [rules](/guides/forward-auth/#rules) can treat paths, methods, networks, and groups differently. |
 
 Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, Open WebUI,
 Headscale, Home Assistant, BookStack, Wiki.js, MinIO, and Argo CD read the [groups claim](#groups).

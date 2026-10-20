@@ -45,7 +45,8 @@ To limit the app to some [groups](/guides/features/#groups), use **Who may sign 
 4. The proxy hands that path to masks. masks sets a cookie for the app's host alone and returns the
    browser to the page it asked for.
 
-masks answers 403 when no app is registered for the address. An actor who is not in a group that
+masks answers 403 when no app is registered for the address, or when a [rule](#rules) closes the
+path. An actor who is not in a group that
 **Who may sign in** allows gets a 403 page from masks after they sign in.
 
 The cookie lasts as long as the actor's masks session. Each app has its own cookie, so one app never
@@ -55,6 +56,83 @@ sees another app's cookie. Access to the app ends on the next request when the a
 - ends the session from the account page
 - is suspended
 - is no longer in a group that **Who may sign in** allows
+
+## Rules
+
+Rules let one app treat its paths differently. A manager can close `/admin` to everyone outside a
+group, leave `/share` open, let scripts in with a token, and skip the second factor on a home
+network.
+
+To add rules, open the app's **Access** tab in `/manage` and use **Rules**. Each rule covers the
+requests that match all of its fields. A field left empty covers everything.
+
+| | |
+| --- | --- |
+| **Paths** | One per line. `*` covers one segment and `**` covers any depth, so `/admin/**` covers `/admin` and everything under it. |
+| **Methods** | Such as `GET` and `POST`. |
+| **Networks** | Addresses or ranges, such as `192.168.0.0/16` or `2001:db8::/32`. |
+| **Groups** | Group keys, or organization roles as `key:role`. A rule with groups waits until the person signs in, then covers only members. |
+
+Each rule has one **Outcome**:
+
+| | |
+| --- | --- |
+| Open to everyone | Lets the request through with no sign-in. When the person is signed in, the app still gets their headers. |
+| A signed-in person, without a second factor | Asks the person to sign in, but does not ask for their second factor. |
+| A signed-in person, with their second factor | Asks for the second factor of a person who has one, even when they signed in without it. |
+| A signed-in person, or a script with an access token | Also lets a script through when it sends `Authorization: Bearer` with an access token for the app. See [scripts](#scripts). |
+| Closed to everyone | Answers 403. |
+
+masks reads the rules from the top. The first rule that covers a request decides it. A request no
+rule covers needs a signed-in person, as it does with no rules at all. Use **Move up** and **Move
+down** to change the order.
+
+**Who may sign in** still applies to every rule except **Open to everyone**. A rule cannot let in a
+person outside the groups **Who may sign in** allows.
+
+### Example
+
+These rules close the admin pages, open shared links, and skip the second factor at home:
+
+1. **Paths** `/admin/**`, **Groups** `admins`, **Outcome** a signed-in person, with their second factor.
+2. **Paths** `/admin/**`, **Outcome** closed to everyone.
+3. **Paths** `/share/**`, **Outcome** open to everyone.
+4. **Networks** `192.168.0.0/16`, **Outcome** a signed-in person, without a second factor.
+
+Everything else needs a signed-in person, with their second factor when they have one.
+
+### Methods and networks
+
+A method rule needs the proxy to send the request's method. Caddy and Traefik send
+`X-Forwarded-Method` on their own. In nginx, add this line to the `/masks-check` location:
+
+```nginx
+proxy_set_header X-Original-Method $request_method;
+```
+
+A network rule reads the address of the person's browser from `X-Forwarded-For`. masks reads that
+header only from a proxy listed in `MASKS_TRUSTED_PROXIES`, or from a private address. From any
+other address, masks uses the address of the connection itself.
+
+:::caution
+A network rule is only as trustworthy as the proxy in front of masks. Make the proxy set
+`X-Forwarded-For` itself, and never pass on the one a browser sends. Otherwise a browser anywhere
+can claim to be on the home network.
+:::
+
+### Scripts
+
+A script signs in as its own client with the `client_credentials` grant and asks for a token for the
+app's address as its `resource`. See [signing in as itself](/guides/features/#signing-in-as-itself).
+The script's client needs the app's address, such as `https://dash.example.com`, in its
+**Resources**.
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" https://dash.example.com/api/items
+```
+
+masks lets the request through when the token is live and was issued for the app. The app gets
+the script's client id in `Remote-User` and its name in `Remote-Name`.
 
 ## Caddy
 
