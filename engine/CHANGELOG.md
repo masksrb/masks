@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.11.0](https://github.com/masksrb/masks/compare/masks-server-v0.10.0...masks-server-v0.11.0) (2026-10-20)
+
+
+### Features
+
+* **engine:** a tailnet discovers masks through WebFinger ([e22ae37](https://github.com/masksrb/masks/commit/e22ae37f4ef01d35995850da0a2a835cbb771384))
+* **engine:** an app's enrollment tokens are rate limited per app and last up to a day ([7cc6beb](https://github.com/masksrb/masks/commit/7cc6beb2c1b4161827f8d7c2194053c5a67e0aea))
+* **engine:** nine more known products are presets, Tailscale and Headscale among them ([bb842da](https://github.com/masksrb/masks/commit/bb842dac85b112f8ee1e762bad5a0fbb1183b8d4))
+* **server:** an app's machines are listed on its page and revoked one at a time ([97e0ad5](https://github.com/masksrb/masks/commit/97e0ad544213721f74b9644e285171d11e5418eb))
+* **server:** the job queue prunes finished jobs after a week and failed ones after a month, and a text that fails its last retry is recorded ([7d2fafe](https://github.com/masksrb/masks/commit/7d2fafed7147559e5ea5abf359cab7e7a7cbbf9a))
+
+
+### Fixes
+
+* **engine:** a member route takes only a whole number, so an id that starts with digits is not read as that membership ([701ef5b](https://github.com/masksrb/masks/commit/701ef5b381b42cc0e1eaa177aba8ef39b336f1fe))
+* **engine:** boot tasks run once across replicas under a database lock ([3bba611](https://github.com/masksrb/masks/commit/3bba611ae4d54bea21ec6ff6cb83c77849997774)), closes [#195](https://github.com/masksrb/masks/issues/195)
+* **engine:** each language is measured for how much of it is translated, and seven strings that were still English are not ([27c5410](https://github.com/masksrb/masks/commit/27c54104f27f0ff8abcdd0dc1f23aec627a35dbd))
+* **engine:** maintenance jobs carry on past a tenant that fails and record which one ([1d30014](https://github.com/masksrb/masks/commit/1d30014b81c3cd6e5989d0cd9116fb0eddc74f3d)), closes [#194](https://github.com/masksrb/masks/issues/194)
+* **server:** the health check notices a stopped worker and the image carries a HEALTHCHECK ([a2a110c](https://github.com/masksrb/masks/commit/a2a110c1813226ffe7072579810a1220678fac7a)), closes [#196](https://github.com/masksrb/masks/issues/196)
+
+
+### Performance
+
+* **engine:** cleanup walks token families by id, and the columns cleanup and metrics read are indexed ([efb05c9](https://github.com/masksrb/masks/commit/efb05c95469b9f13c237d55ce72ae28fbc1cdfbf))
+
 ## [0.10.0](https://github.com/masksrb/masks/compare/masks-server-v0.9.0...masks-server-v0.10.0) (2026-10-19)
 
 

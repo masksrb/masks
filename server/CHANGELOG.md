@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/masksrb/masks/compare/server-v0.10.0...server-v0.11.0) (2026-10-20)
+
+
+### Features
+
+* **server:** an app's machines are listed on its page and revoked one at a time ([97e0ad5](https://github.com/masksrb/masks/commit/97e0ad544213721f74b9644e285171d11e5418eb))
+* **server:** the job queue prunes finished jobs after a week and failed ones after a month, and a text that fails its last retry is recorded ([7d2fafe](https://github.com/masksrb/masks/commit/7d2fafed7147559e5ea5abf359cab7e7a7cbbf9a))
+
+
+### Fixes
+
+* **engine:** maintenance jobs carry on past a tenant that fails and record which one ([1d30014](https://github.com/masksrb/masks/commit/1d30014b81c3cd6e5989d0cd9116fb0eddc74f3d)), closes [#194](https://github.com/masksrb/masks/issues/194)
+* **server:** the health check notices a stopped worker and the image carries a HEALTHCHECK ([a2a110c](https://github.com/masksrb/masks/commit/a2a110c1813226ffe7072579810a1220678fac7a)), closes [#196](https://github.com/masksrb/masks/issues/196)
+
+
+### Performance
+
+* **engine:** cleanup walks token families by id, and the columns cleanup and metrics read are indexed ([efb05c9](https://github.com/masksrb/masks/commit/efb05c95469b9f13c237d55ce72ae28fbc1cdfbf))
+
 ## [0.10.0](https://github.com/masksrb/masks/compare/server-v0.9.0...server-v0.10.0) (2026-10-19)
 
 

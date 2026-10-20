@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/masksrb/masks/compare/python-v0.3.1...python-v0.3.2) (2026-10-20)
+
+
+### Fixes
+
+* **client:** a sign-in older than the max_age the app asked for is refused ([7116e24](https://github.com/masksrb/masks/commit/7116e24e73dedcca6ce54aa4347100b7d4714e3a)), closes [#161](https://github.com/masksrb/masks/issues/161)
+* **client:** the last good issuer and keys are served while masks is down ([1423d1e](https://github.com/masksrb/masks/commit/1423d1ea6b7968aa66ad2a2ca63180effa4c1002)), closes [#162](https://github.com/masksrb/masks/issues/162)
+
 ## [0.3.1](https://github.com/masksrb/masks/compare/python-v0.3.0...python-v0.3.1) (2026-10-19)
 
 

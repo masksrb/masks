@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/masksrb/masks/compare/node-v0.3.1...node-v0.3.2) (2026-10-20)
+
+
+### Fixes
+
+* **client:** a sign-in older than the max_age the app asked for is refused ([7116e24](https://github.com/masksrb/masks/commit/7116e24e73dedcca6ce54aa4347100b7d4714e3a)), closes [#161](https://github.com/masksrb/masks/issues/161)
+* **node:** the Auth.js refresh tests sign in with a token that outlives the callback ([e1cbc7e](https://github.com/masksrb/masks/commit/e1cbc7e318120fe295458bbdd6e31daeca1dc136)), closes [#210](https://github.com/masksrb/masks/issues/210)
+
 ## [0.3.1](https://github.com/masksrb/masks/compare/node-v0.3.0...node-v0.3.1) (2026-10-19)
 
 
