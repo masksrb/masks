@@ -276,7 +276,8 @@ credentials in code. See [Python apps](/reference/python/) and [Go apps](/refere
 | `MASKS_FIRST_SIGN_IN_PORT` | `5557` | The host port of the throwaway stack that `./dev first-sign-in` times. |
 | `MASKS_FIRST_SIGN_IN_BUDGET` | `120` | The seconds `./dev first-sign-in` allows from a fresh image to a signed-in account before it fails. |
 | `MASKS_FIRST_SIGN_IN_TOKEN` | a fixed value | The setup token `./dev first-sign-in` gives its throwaway stack. |
-| `GITHUB_STEP_SUMMARY` | none | Set by GitHub Actions. When present, `./dev first-sign-in` and the conformance summary append their tables to the file it names. |
+| `GITHUB_STEP_SUMMARY` | none | Set by GitHub Actions. When present, `./dev first-sign-in`, the conformance summary, and the readability report append their tables to the file it names. |
+| `CHECK_LINKS` | unset | When set, the docs build checks every internal link and fails on a broken one. The Docs workflow sets it. |
 | `MASKS_POSTGRES_PORT` | `5435` | The host port of PostgreSQL. |
 | `MASKS_HOST_SUFFIX` | `masks.localhost` | The domain whose subdomains the dev server answers. |
 | `PG_BIN_PATH` | none | A folder put first on `PATH` when masks writes `db/structure.sql`. Use it to pick a `pg_dump` that matches the server's PostgreSQL version. |
