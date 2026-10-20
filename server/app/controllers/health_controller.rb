@@ -31,7 +31,7 @@ class HealthController < ActionController::Base
 
     return render(plain: "up") if failing.empty?
 
-    render plain: "failing in the last day: #{failing.join(', ')}", status: :service_unavailable
+    render plain: "failing in the last day: #{Masks::Server::JobFailures.named(failing).join(', ')}", status: :service_unavailable
   rescue ActiveRecord::ActiveRecordError
     render plain: "down", status: :service_unavailable
   end

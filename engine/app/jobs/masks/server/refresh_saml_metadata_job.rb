@@ -5,9 +5,7 @@ module Masks
       across_tenants!
 
       def perform
-        Tenant.active.find_each do |tenant|
-          Tenant.switch(tenant) { refresh }
-        end
+        each_tenant { refresh }
       end
 
       private

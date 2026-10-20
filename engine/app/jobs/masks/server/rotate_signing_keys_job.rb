@@ -7,9 +7,7 @@ module Masks
       PUBLISHED_FOR = 1.day
 
       def perform
-        Tenant.active.where.not(key_rotation_days: nil).find_each do |tenant|
-          Tenant.switch(tenant) { advance(tenant) }
-        end
+        each_tenant(Tenant.active.where.not(key_rotation_days: nil)) { |tenant| advance(tenant) }
       end
 
       private

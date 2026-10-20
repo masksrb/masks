@@ -157,6 +157,8 @@ de:
         exported: "Aktivität exportiert"
       mail_template:
         updated: "E-Mail-Vorlage geändert"
+      job:
+        failed: "Hintergrundjob für diesen Mandanten fehlgeschlagen"
       stream:
         created: "Event-Stream hinzugefügt"
         updated: "Event-Stream geändert"

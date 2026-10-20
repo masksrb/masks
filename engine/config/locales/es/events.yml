@@ -157,6 +157,8 @@ es:
         exported: "Actividad exportada"
       mail_template:
         updated: "Plantilla de correo cambiada"
+      job:
+        failed: "Tarea en segundo plano fallida para este inquilino"
       stream:
         created: "Flujo de eventos añadido"
         updated: "Flujo de eventos cambiado"

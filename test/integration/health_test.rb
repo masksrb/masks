@@ -41,6 +41,15 @@ module Masks
         assert_response :ok
         assert_equal "no jobs run here", response.body
       end
+
+      test "a failing job names the tenants that failed last time" do
+        JobFailures.record("Masks::Server::RotateSigningKeysJob", %w[demo acme])
+
+        failing(%w[Masks::Server::CleanupJob Masks::Server::RotateSigningKeysJob]) { get "/up/jobs" }
+
+        assert_response :service_unavailable
+        assert_equal "failing in the last day: Masks::Server::CleanupJob, Masks::Server::RotateSigningKeysJob (acme, demo)", response.body
+      end
     end
   end
 end

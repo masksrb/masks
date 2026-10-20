@@ -125,11 +125,13 @@ service works. masks answers two.
 | Path       | Answers                                                                                                                 |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `/up`      | `up` while the server can reach its database, job queue, and cache. `down` with a 503 when it cannot reach one of them. |
-| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed.        |
+| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed, and the tenants each one failed for on its last run. |
 
 - Use `/up` for the container's health check, as the example does.
 - Point a monitor at `/up/jobs`. Leave it out of the container's health check, because restarting
   the server does not fix a failing job.
+- A job that fails for one tenant carries on with the rest, records a `job.failed` event in the
+  tenant it failed for, and is named by `/up/jobs` with that tenant.
 - The errors themselves are in the logs.
 
 ## Database roles

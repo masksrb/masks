@@ -5,9 +5,7 @@ module Masks
       across_tenants!
 
       def perform
-        Tenant.active.idling.find_each do |tenant|
-          Tenant.switch(tenant) { IdleAccounts.sweep(tenant) }
-        end
+        each_tenant(Tenant.active.idling) { |tenant| IdleAccounts.sweep(tenant) }
       end
     end
   end

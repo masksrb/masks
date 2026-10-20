@@ -157,6 +157,8 @@ fr:
         exported: "Activité exportée"
       mail_template:
         updated: "Modèle d’e-mail modifié"
+      job:
+        failed: "Tâche de fond échouée pour ce locataire"
       stream:
         created: "Flux d’événements ajouté"
         updated: "Flux d’événements modifié"

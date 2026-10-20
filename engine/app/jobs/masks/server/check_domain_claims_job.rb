@@ -5,9 +5,7 @@ module Masks
       across_tenants!
 
       def perform
-        Tenant.active.find_each do |tenant|
-          Tenant.switch(tenant) { check }
-        end
+        each_tenant { check }
       end
 
       private

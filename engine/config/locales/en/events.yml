@@ -157,6 +157,8 @@ en:
         exported: "Activity exported"
       mail_template:
         updated: "Email template changed"
+      job:
+        failed: "Background job failed for this tenant"
       stream:
         created: "Event stream added"
         updated: "Event stream changed"

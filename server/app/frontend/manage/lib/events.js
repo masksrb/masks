@@ -1,6 +1,7 @@
 import { t } from "./copy.js";
 
 const GRAVE = new Set([
+  "job.failed",
   "logout.undelivered",
   "login.refused",
   "login.throttled",
