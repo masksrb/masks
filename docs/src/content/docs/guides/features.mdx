@@ -569,6 +569,41 @@ scopes = openid profile email groups
 role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
 ```
 
+### Groups that fill themselves
+
+A group can fill itself. Open the group under **Settings**, then **General**, then **Groups**, and
+choose **Fills from**:
+
+| Fills from               | Who is in the group                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **People added by hand** | The people a manager adds. This is the default.                                                       |
+| **A rule**               | Everyone who matches every condition, up to five.                                                     |
+| **A provider**           | Everyone whose last sign-in through that provider listed a group you name.                            |
+| **Other groups**         | Everyone in any of the parent groups or organization roles, written as `key:role`.                    |
+
+A rule has two kinds of condition:
+
+- **Email address ends with** a domain, such as `example.com`. Only a verified address counts.
+- **Profile field equals** a value. Only a profile a directory sets counts, because people cannot
+  change it. Someone who edits their own name does not join a group by doing so.
+
+masks fills the group when you save it. After that:
+
+- a rule group follows each profile change and is checked again every hour
+- a provider group follows each sign-in through the provider
+- a nested group follows each change to its parents and to the organization roles it names
+
+**Refresh now** fills a group at once.
+
+On an actor's **Access** tab, a person a source put in a group shows what put them there, and their
+box cannot be cleared. The source decides when they leave. A person a manager adds by hand stays in
+the group even when the source would leave them out.
+
+The `groups` claim, [who may sign in to an app](#who-may-sign-in-to-an-app), and
+[forward auth](/guides/forward-auth/) treat every member the same, however they joined.
+
+A nested group cannot sit inside itself, directly or through its parents. masks refuses that change.
+
 ### Who may sign in to an app
 
 On a client's **Access** tab, **Who may sign in** limits the client to some actors. Tick groups, or
