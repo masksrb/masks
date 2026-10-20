@@ -58,6 +58,7 @@ es:
   - "User agent"
   - "%{count} actor"
 fr:
+  - Machines
   - Code
   - Identification
   - Configuration
