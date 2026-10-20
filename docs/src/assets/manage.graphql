@@ -296,6 +296,14 @@ type Client {
   """
   enrolledBy: Client
   events(limit: Int): [Event!]!
+
+  """
+  The ordered rules forward auth follows for an app behind a proxy. Each has
+  `paths`, `methods`, `networks`, and `groups` it covers, and an `outcome` of
+  open, one_factor, two_factor, token, or deny. The first rule that covers a
+  request decides it. With no rule, a signed-in person who may sign in is let through.
+  """
+  forwardAuthRules: JSON!
   grantTypes: [String!]!
   jwks: JSON
   jwksUri: String
@@ -1305,6 +1313,14 @@ type Mutation {
     consentLifetime: Int
     consentRequired: Boolean
     dpopBoundAccessTokens: Boolean
+
+    """
+    The ordered rules forward auth follows, for an app behind a proxy only. Each
+    rule has `paths` (absolute, with * for one segment and ** for any depth),
+    `methods`, `networks` (addresses or ranges), and `groups` it covers, and an
+    `outcome` of open, one_factor, two_factor, token, or deny. Empty removes them all.
+    """
+    forwardAuthRules: JSON
     grantTypes: [String!]
     jwks: JSON
     jwksUri: String
