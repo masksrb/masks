@@ -22,3 +22,9 @@ generated from: the manage API's GraphQL descriptions and the documentation in
 - Check every claim against the code before writing it down.
 - The repo is public. Leave out real hostnames, addresses, and anything about
   private infrastructure.
+
+## Releases
+
+- A release that needs a step from the operator, such as a new variable or a
+  migration that is run by hand, says so in its notes on GitHub with a line that
+  starts with `Operator:`. The health panel reads that line.

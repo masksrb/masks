@@ -165,6 +165,7 @@ The image runs the Puma web server in front of Rails, on `PORT`. See
 | `RAILS_MAX_THREADS` | `3` | Puma threads in each process. It also sets the size of each database connection pool. When it is unset, each pool holds `5` connections. |
 | `PORT` | `3000` | The port Puma listens on. |
 | `PIDFILE` | none | The file where Puma writes its process ID. |
+| `MASKS_RELEASE_CHECK` | `false` | `true` reads the list of releases from GitHub once a day, and the overview says when a newer version is out. The request carries this server's version and nothing else. See [the health panel](/guides/self-hosting/#the-health-panel). |
 
 ### LDAP
 

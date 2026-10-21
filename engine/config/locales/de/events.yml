@@ -162,6 +162,8 @@ de:
       health:
         failing: "Zustandsprüfung fehlgeschlagen"
         recovered: "Zustandsprüfung wieder in Ordnung"
+      release:
+        available: "Neue Version verfügbar"
       stream:
         created: "Event-Stream hinzugefügt"
         updated: "Event-Stream geändert"

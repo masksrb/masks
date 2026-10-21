@@ -178,6 +178,7 @@ module Masks
       JOB_FAILED = "job.failed".freeze
       HEALTH_FAILING = "health.failing".freeze
       HEALTH_RECOVERED = "health.recovered".freeze
+      RELEASE_AVAILABLE = "release.available".freeze
 
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,

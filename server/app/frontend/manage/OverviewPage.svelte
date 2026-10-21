@@ -35,6 +35,7 @@
       }
       organizations(limit: ${ORGANIZATIONS_SHOWN}) { key name memberCount ownerCount pendingCount }
       health { name status summary details checkedAt changedAt }
+      release { version url operatorStep }
     }
   `;
 
@@ -193,8 +194,20 @@
   <div class="alert alert-error alert-soft text-sm" role="alert">{failure}</div>
 {:else}
   <Page title={data.tenant.name} id={boot.issuer} hero>
-    {#if needs.length || starting.length}
+    {#if needs.length || starting.length || data.release}
       <div class="flex flex-col gap-2">
+        {#if data.release}
+          <div class="callout callout-info" role="status">
+            <div class="callout-words">
+              <strong>{t("health.release.available", { version: data.release.version })}</strong>
+              {#if data.release.operatorStep}<span class="hint">{t("health.release.operator")}</span>{/if}
+            </div>
+            <div class="callout-actions">
+              <a class="btn btn-sm" href={data.release.url} target="_blank" rel="noreferrer noopener">{t("health.release.notes")}</a>
+            </div>
+          </div>
+        {/if}
+
         {#each needs as need (need.key)}
           <div class="callout callout-{need.tone}" role="status">
             <div class="callout-words">

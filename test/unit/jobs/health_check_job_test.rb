@@ -53,6 +53,8 @@ module Masks
 
         assert_equal "Masks::Server::HealthCheckJob", schedule.dig("health", "class")
         assert_equal "every 10 minutes", schedule.dig("health", "schedule")
+        assert_equal "Masks::Server::ReleaseCheckJob", schedule.dig("release_check", "class")
+        assert_equal "every day at 7am", schedule.dig("release_check", "schedule")
       end
     end
   end

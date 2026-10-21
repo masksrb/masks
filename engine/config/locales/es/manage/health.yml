@@ -72,3 +72,7 @@ es:
           fresh: "La clave activa tiene %{days} días y rota cada %{period} días."
           stale: "La clave activa tiene %{days} días, más que su rotación de %{period} días."
           advice: "Rota la clave en la página Configuración, o lee la tarea signing_keys en el registro del servidor."
+      release:
+        available: "La versión %{version} está disponible."
+        operator: "Esta versión necesita un paso de un operador. Lee sus notas antes de actualizar."
+        notes: "Notas de la versión"

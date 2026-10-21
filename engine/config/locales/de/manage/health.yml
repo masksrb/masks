@@ -72,3 +72,7 @@ de:
           fresh: "Der aktive Schlüssel ist %{days} Tage alt und rotiert alle %{period} Tage."
           stale: "Der aktive Schlüssel ist %{days} Tage alt, älter als seine Rotation von %{period} Tagen."
           advice: "Rotieren Sie den Schlüssel auf der Seite Einstellungen, oder lesen Sie den Job signing_keys im Serverprotokoll."
+      release:
+        available: "Version %{version} ist verfügbar."
+        operator: "Diese Version braucht einen Schritt von einem Betreiber. Lesen Sie ihre Hinweise vor dem Upgrade."
+        notes: "Versionshinweise"

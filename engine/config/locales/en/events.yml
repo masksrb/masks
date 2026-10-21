@@ -162,6 +162,8 @@ en:
       health:
         failing: "Health check failing"
         recovered: "Health check recovered"
+      release:
+        available: "New release available"
       stream:
         created: "Event stream added"
         updated: "Event stream changed"

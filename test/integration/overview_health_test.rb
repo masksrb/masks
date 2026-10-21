@@ -3,7 +3,7 @@ module Masks
     require "test_helper"
 
     class OverviewHealthTest < ActionDispatch::IntegrationTest
-      HEALTH = "{ health { name status summary details checkedAt changedAt } }".freeze
+      HEALTH = "{ health { name status summary details checkedAt changedAt } release { version url operatorStep checkedAt } }".freeze
       RUN = "mutation { runHealthChecks { health { name status summary details } } }".freeze
 
       setup do
@@ -49,6 +49,7 @@ module Masks
 
         assert_nil before["errors"]
         assert_empty before.dig("data", "health")
+        assert_nil before.dig("data", "release")
 
         ran = manage(RUN, bearer: bearer)
 
@@ -83,6 +84,26 @@ module Masks
 
         assert_match(/needs/, refused["errors"].first["message"])
         assert_equal 1, within { HealthCheck.count }
+      end
+
+      test "the release is null while the server is current and present once a newer one is remembered" do
+        bearer = manage_bearer(owner, @console)
+        Release.remember!({ "version" => "9.9.9", "url" => "https://github.com/masksrb/masks/releases/tag/server-v9.9.9",
+                            "operator_step" => true, "checked_at" => Time.current.utc.iso8601 })
+
+        release = manage(HEALTH, bearer: bearer).dig("data", "release")
+
+        assert_equal "9.9.9", release["version"]
+        assert_equal "https://github.com/masksrb/masks/releases/tag/server-v9.9.9", release["url"]
+        assert release["operatorStep"]
+        assert release["checkedAt"].present?
+
+        Release.remember!({ "version" => "0.0.1", "url" => "https://github.com/masksrb/masks/releases/tag/server-v0.0.1",
+                            "operator_step" => false, "checked_at" => Time.current.utc.iso8601 })
+
+        assert_nil manage(HEALTH, bearer: bearer).dig("data", "release")
+      ensure
+        Release.forget!
       end
 
       test "a request that arrives at the wrong scheme is noted for the public address check" do

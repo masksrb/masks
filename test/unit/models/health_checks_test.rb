@@ -315,6 +315,7 @@ module Masks
         assert_includes Event::GRAVE, Event::HEALTH_FAILING
         assert_not_includes Event::GRAVE, Event::HEALTH_RECOVERED
         assert_equal "Health check failing", I18n.t("events.actions.health.failing")
+        assert_equal "New release available", I18n.t("events.actions.release.available")
       end
 
       test "checking a tenant stores every check and remembers the failing ones for /up" do

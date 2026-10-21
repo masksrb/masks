@@ -163,6 +163,15 @@ The first five are about the server and show the same result in every tenant. Th
 the tenant. A check that turns failing records a `health.failing` event, and `health.recovered` when
 it is fine again.
 
+#### A new release
+
+Set `MASKS_RELEASE_CHECK` to `true` and masks reads the list of releases from GitHub once a day. When
+a newer server release is out, the overview says so and links to its notes. The request carries this
+server's version and nothing else, and nothing is sent without the variable.
+
+A release whose notes have a line that starts with `Operator:` needs a step from you before or
+after the upgrade. The overview says so, and the `release.available` event carries the flag.
+
 ## Database roles
 
 masks keeps tenants apart with row-level security in Postgres. Row-level security is a rule on
@@ -345,7 +354,8 @@ work again.
 ### Upgrade
 
 1. Take a backup. Migrations do not run backwards.
-2. Read the release notes for anything that needs a step of your own.
+2. Read the release notes for anything that needs a step of your own. A line that starts with
+   `Operator:` is one, and [the health panel](#the-health-panel) can tell you about it.
 3. Change the image tag and restart.
 
 Each boot runs the migrations that have not run yet, so you can skip versions.

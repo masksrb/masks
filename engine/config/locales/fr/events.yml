@@ -162,6 +162,8 @@ fr:
       health:
         failing: "Vérification d'état en échec"
         recovered: "Vérification d'état rétablie"
+      release:
+        available: "Nouvelle version disponible"
       stream:
         created: "Flux d’événements ajouté"
         updated: "Flux d’événements modifié"

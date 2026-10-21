@@ -43,6 +43,11 @@ default: &default
     queue: maintenance
     schedule: every 10 minutes
 
+  release_check:
+    class: Masks::Server::ReleaseCheckJob
+    queue: maintenance
+    schedule: every day at 7am
+
 development:
   <<: *default
 

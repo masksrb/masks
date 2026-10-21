@@ -45,6 +45,7 @@ module Masks
         config.queue_wait = ENV.fetch("MASKS_QUEUE_WAIT", 600).to_i.seconds
         config.finished_job_retention = ENV.fetch("MASKS_FINISHED_JOB_RETENTION", 7 * 24 * 60 * 60).to_i.seconds
         config.failed_job_retention = ENV.fetch("MASKS_FAILED_JOB_RETENTION", 30 * 24 * 60 * 60).to_i.seconds
+        config.release_check = %w[1 true].include?(ENV.fetch("MASKS_RELEASE_CHECK", "false"))
         config
       end
 

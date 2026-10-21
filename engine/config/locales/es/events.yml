@@ -162,6 +162,8 @@ es:
       health:
         failing: "Comprobación de estado fallando"
         recovered: "Comprobación de estado recuperada"
+      release:
+        available: "Nueva versión disponible"
       stream:
         created: "Flujo de eventos añadido"
         updated: "Flujo de eventos cambiado"
