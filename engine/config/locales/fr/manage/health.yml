@@ -1,0 +1,74 @@
+fr:
+  manage:
+    health:
+      title: "État"
+      lede: "Les vérifications tournent toutes les 10 minutes. Chacune dit ce qu'elle a trouvé et quoi faire."
+      check_now: "Vérifier maintenant"
+      checking: "Vérification"
+      checked: "Vérifié %{when}"
+      never: "Les vérifications n'ont pas encore tourné. Elles tournent toutes les 10 minutes dès qu'un worker est lancé."
+      failed: "Les vérifications n'ont pas pu tourner : %{failure}"
+      statuses:
+        ok: "Bon"
+        warning: "À regarder"
+        failing: "En échec"
+      checks:
+        jobs:
+          title: "Tâches de fond"
+          elsewhere: "Les tâches tournent sur un autre serveur."
+          none: "Aucune tâche n'a échoué le dernier jour."
+          failed:
+            one: "Un type de tâche a échoué le dernier jour : %{jobs}."
+            other: "%{count} types de tâche ont échoué le dernier jour : %{jobs}."
+          advice: "Lisez l'erreur dans le journal du serveur. Chaque tâche retourne selon son horaire."
+        worker:
+          title: "Worker"
+          elsewhere: "Les tâches tournent sur un autre serveur."
+          unchecked: "La vérification du worker est désactivée."
+          reporting: "Un worker tourne."
+          silent: "Aucun worker ne s'est signalé depuis %{minutes} minutes."
+          advice: "Lancez le processus de tâches, ou mettez MASKS_JOBS_IN_WEB_SERVER à true pour que le serveur web exécute les tâches."
+        queue:
+          title: "File d'attente"
+          elsewhere: "Les tâches tournent sur un autre serveur."
+          unchecked: "La vérification de la file est désactivée."
+          moving: "Les tâches démarrent à l'heure."
+          stuck: "Une tâche attend de démarrer depuis %{since}, plus de %{minutes} minutes."
+          advice: "Ajoutez un worker, ou montez JOB_CONCURRENCY pour que plus de tâches tournent en même temps."
+        ldap:
+          title: "LDAP"
+          tls: "LDAP répond avec TLS."
+          local: "LDAP ne répond que sur la machine du serveur."
+          plain: "LDAP répond sur le port %{port} sans TLS, donc les mots de passe traversent le réseau en clair."
+          advice: "Définissez MASKS_LDAP_CERT et MASKS_LDAP_KEY, ou retirez MASKS_LDAP_PLAINTEXT."
+        metrics:
+          title: "Métriques"
+          "off": "La page des métriques est désactivée."
+          "on": "La page des métriques répond à une requête qui porte son jeton."
+          short: "Le jeton des métriques fait %{length} caractères, donc il peut être deviné."
+          advice: "Définissez MASKS_METRICS_TOKEN avec au moins %{needed} caractères aléatoires."
+        mail:
+          title: "Courriel"
+          none: "Aucun service de courriel n'est configuré."
+          answers: "Le serveur de courriel répond."
+          silent: "Le serveur de courriel n'a pas répondu : %{error}."
+          advice: "Vérifiez le serveur, le port et le réglage TLS sur la page Messages, et que le serveur accepte les connexions d'ici."
+        origin:
+          title: "Adresse publique"
+          unset: "Aucune adresse publique n'est définie, donc masks suit l'en-tête Host de chaque requête."
+          matches: "Les requêtes arrivent à l'adresse publique de ce locataire."
+          mismatch: "Les requêtes arrivent en %{seen}, mais l'adresse de ce locataire est %{origin}."
+          advice: "Faites envoyer X-Forwarded-Proto et X-Forwarded-Host par le proxy, et ajoutez-le à MASKS_TRUSTED_PROXIES."
+        domains:
+          title: "Domaines"
+          none: "Aucun domaine n'est revendiqué."
+          proven: "Chaque domaine revendiqué a toujours son enregistrement TXT."
+          missing: "L'enregistrement TXT manque pour %{domains}. Une revendication est libérée une semaine après la disparition de son enregistrement."
+          advice: "Remettez l'enregistrement TXT au nom indiqué sur la page Domaines."
+        keys:
+          title: "Clés de signature"
+          missing: "Ce locataire n'a aucune clé de signature active, donc rien ne peut être signé."
+          manual: "Les clés tournent à la main. La clé active a %{days} jours."
+          fresh: "La clé active a %{days} jours et tourne tous les %{period} jours."
+          stale: "La clé active a %{days} jours, au-delà de sa rotation de %{period} jours."
+          advice: "Faites tourner la clé sur la page Paramètres, ou lisez la tâche signing_keys dans le journal du serveur."

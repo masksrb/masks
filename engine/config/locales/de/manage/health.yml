@@ -1,0 +1,74 @@
+de:
+  manage:
+    health:
+      title: "Zustand"
+      lede: "Die Prüfungen laufen alle 10 Minuten. Jede sagt, was sie gefunden hat und was zu tun ist."
+      check_now: "Jetzt prüfen"
+      checking: "Prüft"
+      checked: "Geprüft %{when}"
+      never: "Die Prüfungen sind noch nicht gelaufen. Sie laufen alle 10 Minuten, sobald ein Worker läuft."
+      failed: "Die Prüfungen konnten nicht laufen: %{failure}"
+      statuses:
+        ok: "In Ordnung"
+        warning: "Braucht einen Blick"
+        failing: "Fehlgeschlagen"
+      checks:
+        jobs:
+          title: "Hintergrundjobs"
+          elsewhere: "Jobs laufen auf einem anderen Server."
+          none: "Am letzten Tag ist kein Job fehlgeschlagen."
+          failed:
+            one: "Eine Art Job ist am letzten Tag fehlgeschlagen: %{jobs}."
+            other: "%{count} Arten von Jobs sind am letzten Tag fehlgeschlagen: %{jobs}."
+          advice: "Lesen Sie den Fehler im Serverprotokoll. Jeder Job läuft nach seinem Zeitplan erneut."
+        worker:
+          title: "Worker"
+          elsewhere: "Jobs laufen auf einem anderen Server."
+          unchecked: "Die Worker-Prüfung ist aus."
+          reporting: "Ein Worker läuft."
+          silent: "In den letzten %{minutes} Minuten hat sich kein Worker gemeldet."
+          advice: "Starten Sie den Jobs-Prozess, oder setzen Sie MASKS_JOBS_IN_WEB_SERVER auf true, damit der Webserver die Jobs ausführt."
+        queue:
+          title: "Warteschlange"
+          elsewhere: "Jobs laufen auf einem anderen Server."
+          unchecked: "Die Warteschlangen-Prüfung ist aus."
+          moving: "Jobs starten pünktlich."
+          stuck: "Ein Job wartet seit %{since} auf seinen Start, länger als %{minutes} Minuten."
+          advice: "Fügen Sie einen Worker hinzu, oder erhöhen Sie JOB_CONCURRENCY, damit mehr Jobs gleichzeitig laufen."
+        ldap:
+          title: "LDAP"
+          tls: "LDAP antwortet mit TLS."
+          local: "LDAP antwortet nur auf der eigenen Maschine des Servers."
+          plain: "LDAP antwortet auf Port %{port} ohne TLS, also gehen Passwörter im Klartext durchs Netz."
+          advice: "Setzen Sie MASKS_LDAP_CERT und MASKS_LDAP_KEY, oder entfernen Sie MASKS_LDAP_PLAINTEXT."
+        metrics:
+          title: "Metriken"
+          "off": "Die Metrikseite ist aus."
+          "on": "Die Metrikseite beantwortet Anfragen, die ihr Token tragen."
+          short: "Das Metrik-Token ist %{length} Zeichen lang und lässt sich erraten."
+          advice: "Setzen Sie MASKS_METRICS_TOKEN auf mindestens %{needed} zufällige Zeichen."
+        mail:
+          title: "E-Mail"
+          none: "Kein E-Mail-Dienst ist eingerichtet."
+          answers: "Der Mailserver antwortet."
+          silent: "Der Mailserver hat nicht geantwortet: %{error}."
+          advice: "Prüfen Sie Server, Port und TLS-Einstellung auf der Seite Nachrichten, und ob der Server Verbindungen von hier zulässt."
+        origin:
+          title: "Öffentliche Adresse"
+          unset: "Keine öffentliche Adresse ist gesetzt, also folgt masks dem Host-Header jeder Anfrage."
+          matches: "Anfragen kommen an der öffentlichen Adresse dieses Mandanten an."
+          mismatch: "Anfragen kommen als %{seen} an, aber die Adresse dieses Mandanten ist %{origin}."
+          advice: "Lassen Sie den Proxy X-Forwarded-Proto und X-Forwarded-Host senden, und tragen Sie ihn in MASKS_TRUSTED_PROXIES ein."
+        domains:
+          title: "Domains"
+          none: "Keine Domain ist beansprucht."
+          proven: "Jede beanspruchte Domain hat noch ihren TXT-Eintrag."
+          missing: "Der TXT-Eintrag fehlt für %{domains}. Ein Anspruch wird eine Woche nach dem Verschwinden seines Eintrags freigegeben."
+          advice: "Legen Sie den TXT-Eintrag wieder unter dem Namen an, der auf der Seite Domains steht."
+        keys:
+          title: "Signaturschlüssel"
+          missing: "Dieser Mandant hat keinen aktiven Signaturschlüssel, also kann nichts signiert werden."
+          manual: "Schlüssel werden von Hand rotiert. Der aktive Schlüssel ist %{days} Tage alt."
+          fresh: "Der aktive Schlüssel ist %{days} Tage alt und rotiert alle %{period} Tage."
+          stale: "Der aktive Schlüssel ist %{days} Tage alt, älter als seine Rotation von %{period} Tagen."
+          advice: "Rotieren Sie den Schlüssel auf der Seite Einstellungen, oder lesen Sie den Job signing_keys im Serverprotokoll."

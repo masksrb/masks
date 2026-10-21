@@ -1,0 +1,74 @@
+es:
+  manage:
+    health:
+      title: "Estado"
+      lede: "Las comprobaciones se ejecutan cada 10 minutos. Cada una dice qué encontró y qué hacer."
+      check_now: "Comprobar ahora"
+      checking: "Comprobando"
+      checked: "Comprobado %{when}"
+      never: "Las comprobaciones aún no se han ejecutado. Se ejecutan cada 10 minutos cuando hay un worker en marcha."
+      failed: "Las comprobaciones no pudieron ejecutarse: %{failure}"
+      statuses:
+        ok: "Bien"
+        warning: "Merece un vistazo"
+        failing: "Fallando"
+      checks:
+        jobs:
+          title: "Tareas en segundo plano"
+          elsewhere: "Las tareas se ejecutan en otro servidor."
+          none: "Ninguna tarea falló en el último día."
+          failed:
+            one: "Un tipo de tarea falló en el último día: %{jobs}."
+            other: "%{count} tipos de tarea fallaron en el último día: %{jobs}."
+          advice: "Lee el error en el registro del servidor. Cada tarea vuelve a ejecutarse según su horario."
+        worker:
+          title: "Worker"
+          elsewhere: "Las tareas se ejecutan en otro servidor."
+          unchecked: "La comprobación del worker está desactivada."
+          reporting: "Hay un worker en marcha."
+          silent: "Ningún worker ha informado en los últimos %{minutes} minutos."
+          advice: "Inicia el proceso de tareas, o pon MASKS_JOBS_IN_WEB_SERVER en true para que el servidor web ejecute las tareas."
+        queue:
+          title: "Cola"
+          elsewhere: "Las tareas se ejecutan en otro servidor."
+          unchecked: "La comprobación de la cola está desactivada."
+          moving: "Las tareas empiezan a tiempo."
+          stuck: "Una tarea espera para empezar desde %{since}, más de %{minutes} minutos."
+          advice: "Añade un worker, o sube JOB_CONCURRENCY para que se ejecuten más tareas a la vez."
+        ldap:
+          title: "LDAP"
+          tls: "LDAP responde con TLS."
+          local: "LDAP responde solo en la propia máquina del servidor."
+          plain: "LDAP responde en el puerto %{port} sin TLS, así que las contraseñas cruzan la red en claro."
+          advice: "Define MASKS_LDAP_CERT y MASKS_LDAP_KEY, o quita MASKS_LDAP_PLAINTEXT."
+        metrics:
+          title: "Métricas"
+          "off": "La página de métricas está desactivada."
+          "on": "La página de métricas responde a una petición que lleva su token."
+          short: "El token de métricas tiene %{length} caracteres, así que se puede adivinar."
+          advice: "Define MASKS_METRICS_TOKEN con al menos %{needed} caracteres aleatorios."
+        mail:
+          title: "Correo"
+          none: "No hay ningún servicio de correo configurado."
+          answers: "El servidor de correo responde."
+          silent: "El servidor de correo no respondió: %{error}."
+          advice: "Revisa el servidor, el puerto y el ajuste TLS en la página Mensajes, y que el servidor permita conexiones desde aquí."
+        origin:
+          title: "Dirección pública"
+          unset: "No hay dirección pública definida, así que masks sigue la cabecera Host de cada petición."
+          matches: "Las peticiones llegan a la dirección pública de este inquilino."
+          mismatch: "Las peticiones llegan como %{seen}, pero la dirección de este inquilino es %{origin}."
+          advice: "Haz que el proxy envíe X-Forwarded-Proto y X-Forwarded-Host, y añádelo a MASKS_TRUSTED_PROXIES."
+        domains:
+          title: "Dominios"
+          none: "No hay ningún dominio reclamado."
+          proven: "Cada dominio reclamado conserva su registro TXT."
+          missing: "Falta el registro TXT de %{domains}. Una reclamación se libera una semana después de que desaparezca su registro."
+          advice: "Vuelve a poner el registro TXT en el nombre que muestra la página Dominios."
+        keys:
+          title: "Claves de firma"
+          missing: "Este inquilino no tiene ninguna clave de firma activa, así que no se puede firmar nada."
+          manual: "Las claves se rotan a mano. La clave activa tiene %{days} días."
+          fresh: "La clave activa tiene %{days} días y rota cada %{period} días."
+          stale: "La clave activa tiene %{days} días, más que su rotación de %{period} días."
+          advice: "Rota la clave en la página Configuración, o lee la tarea signing_keys en el registro del servidor."

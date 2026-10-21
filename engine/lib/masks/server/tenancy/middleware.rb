@@ -45,6 +45,7 @@ module Masks
           return unserved if origin.nil?
 
           Current.origin = origin
+          Health.note_origin!(tenant, Forwarded.origin(request.base_url), origin)
           Current.ip_address = request.remote_ip
           Current.user_agent = request.user_agent
 

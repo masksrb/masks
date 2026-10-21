@@ -159,6 +159,9 @@ en:
         updated: "Email template changed"
       job:
         failed: "Background job failed for this tenant"
+      health:
+        failing: "Health check failing"
+        recovered: "Health check recovered"
       stream:
         created: "Event stream added"
         updated: "Event stream changed"

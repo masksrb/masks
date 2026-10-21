@@ -1,6 +1,6 @@
 <script>
   import { t } from "./lib/copy.js";
-  import { since } from "./lib/format.js";
+  import { moment, since } from "./lib/format.js";
   import Events from "./Events.svelte";
   import OrganizationCell from "./OrganizationCell.svelte";
   import OrganizationHeadcount from "./OrganizationHeadcount.svelte";
@@ -34,8 +34,17 @@
         device { id label }
       }
       organizations(limit: ${ORGANIZATIONS_SHOWN}) { key name memberCount ownerCount pendingCount }
+      health { name status summary details checkedAt changedAt }
     }
   `;
+
+  const RUN_CHECKS = `
+    mutation RunHealthChecks {
+      runHealthChecks { health { name status summary details checkedAt changedAt } }
+    }
+  `;
+
+  const TONES = { ok: "good", warning: "warn", failing: "bad" };
 
   const ACTIVITY = `
     query Activity($days: Int) {
@@ -52,6 +61,8 @@
   let failure = $state(null);
   let days = $state(30);
   let skipped = $state([]);
+  let checking = $state(false);
+  let checkFailure = $state(null);
 
   try {
     skipped = JSON.parse(localStorage.getItem(SKIPPED) ?? "[]");
@@ -137,6 +148,34 @@
       label: MARK.format(new Date(`${row.date}T00:00:00`)),
     }));
 
+  const checkedAt = $derived(data?.health.length ? data.health.map((check) => check.checkedAt).sort().at(-1) : null);
+
+  function sentence(check) {
+    const details = check.details ?? {};
+    const values = {
+      ...details,
+      jobs: Array.isArray(details.jobs) ? details.jobs.join(", ") : details.jobs,
+      domains: Array.isArray(details.domains) ? details.domains.join(", ") : details.domains,
+      since: details.since ? moment(details.since) : details.since,
+    };
+
+    return t(`health.checks.${check.name}.${check.summary}`, values);
+  }
+
+  async function runChecks() {
+    checking = true;
+    checkFailure = null;
+
+    try {
+      const answer = await api.query(RUN_CHECKS);
+      data = { ...data, health: answer.runHealthChecks.health };
+    } catch (thrown) {
+      checkFailure = thrown.message;
+    } finally {
+      checking = false;
+    }
+  }
+
   async function load() {
     try {
       data = await api.query(QUERY, { since: new Date(Date.now() - DAY).toISOString() });
@@ -211,6 +250,40 @@
       </div>
 
       <div class="dash-side">
+        <Section title={t("health.title")} lede={t("health.lede")}>
+          {#snippet actions()}
+            <button type="button" class="btn btn-ghost btn-sm" disabled={checking} onclick={runChecks}>
+              {checking ? t("health.checking") : t("health.check_now")}
+            </button>
+          {/snippet}
+
+          {#if checkFailure}
+            <div class="alert alert-error alert-soft text-sm" role="alert">{t("health.failed", { failure: checkFailure })}</div>
+          {/if}
+
+          {#if data.health.length}
+            <ul class="compact-list" aria-label={t("health.title")}>
+              {#each data.health as check (check.name)}
+                <li class="items-start">
+                  <span class="mark mark-{TONES[check.status]} mt-1" role="img" aria-label={t(`health.statuses.${check.status}`)} title={t(`health.statuses.${check.status}`)}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="5" /></svg>
+                  </span>
+                  <div class="flex min-w-0 flex-col">
+                    <span class="text-sm font-medium">{t(`health.checks.${check.name}.title`)}</span>
+                    <span class="text-sm">{sentence(check)}</span>
+                    {#if check.status !== "ok"}
+                      <span class="hint text-xs">{t(`health.checks.${check.name}.advice`, check.details ?? {})}</span>
+                    {/if}
+                  </div>
+                </li>
+              {/each}
+            </ul>
+            <p class="hint text-xs">{t("health.checked", { when: since(checkedAt) })}</p>
+          {:else}
+            <p class="hint">{t("health.never")}</p>
+          {/if}
+        </Section>
+
         <Section title={t("settings.organizations.title")}>
           {#snippet actions()}
             <Link to="/organizations" class="btn btn-ghost btn-sm">

@@ -11,12 +11,12 @@ module Masks
       teardown { ::Rails.application.config.active_job.queue_adapter = @sender }
 
       def failing(names)
-        held = HealthController.method(:failing_jobs)
-        HealthController.define_singleton_method(:failing_jobs) { names }
+        held = Queue.method(:failing_jobs)
+        Queue.define_singleton_method(:failing_jobs) { names }
 
         yield
       ensure
-        HealthController.define_singleton_method(:failing_jobs, held)
+        Queue.define_singleton_method(:failing_jobs, held)
       end
 
       test "jobs are up when nothing failed in the last day" do
@@ -52,15 +52,15 @@ module Masks
       end
 
       def queue(heartbeat: nil, oldest: nil)
-        held_heartbeat = HealthController.method(:worker_heartbeat_at)
-        held_oldest = HealthController.method(:oldest_waiting_at)
-        HealthController.define_singleton_method(:worker_heartbeat_at) { heartbeat }
-        HealthController.define_singleton_method(:oldest_waiting_at) { oldest }
+        held_heartbeat = Queue.method(:worker_heartbeat_at)
+        held_oldest = Queue.method(:oldest_waiting_at)
+        Queue.define_singleton_method(:worker_heartbeat_at) { heartbeat }
+        Queue.define_singleton_method(:oldest_waiting_at) { oldest }
 
         yield
       ensure
-        HealthController.define_singleton_method(:worker_heartbeat_at, held_heartbeat)
-        HealthController.define_singleton_method(:oldest_waiting_at, held_oldest)
+        Queue.define_singleton_method(:worker_heartbeat_at, held_heartbeat)
+        Queue.define_singleton_method(:oldest_waiting_at, held_oldest)
       end
 
       test "the server is down when no worker has reported" do
@@ -116,6 +116,28 @@ module Masks
 
         assert_response :ok
         assert_equal "up", response.body
+      end
+
+      test "up names failing health checks on a second line and keeps its status" do
+        Health.remember_all!({ "mail" => [ "demo" ], "worker" => [ "demo", "acme" ] })
+
+        queue(heartbeat: 10.seconds.ago) { get "/up" }
+
+        assert_response :ok
+        assert_equal "up\nfailing checks: mail (demo), worker", response.body
+      ensure
+        Health.remember_all!({})
+      end
+
+      test "a down server still names its failing checks" do
+        Health.remember_all!({ "keys" => [ "demo" ] })
+
+        queue { get "/up" }
+
+        assert_response :service_unavailable
+        assert_equal "down: no worker has reported in the last 5 minutes\nfailing checks: keys (demo)", response.body
+      ensure
+        Health.remember_all!({})
       end
     end
   end

@@ -59,11 +59,11 @@ class MetricsController < ActionController::Base
       end
 
       def jobs
-        return [] unless HealthController.jobs_run?
+        return [] unless Masks::Server::Queue.run?
 
         [
           gauge("masks_jobs_failed_last_day", "Kinds of background job that failed in the last day.",
-                [ [ nil, HealthController.failing_jobs.size ] ]),
+                [ [ nil, Masks::Server::Queue.failing_jobs.size ] ]),
           gauge("masks_jobs_waiting", "Background jobs ready to run and not yet picked up.",
                 [ [ nil, SolidQueue::ReadyExecution.count ] ])
         ]

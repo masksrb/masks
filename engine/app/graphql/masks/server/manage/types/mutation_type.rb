@@ -100,6 +100,7 @@ module Masks
           field :activate_signing_key, mutation: Mutations::ActivateSigningKey
           field :discard_signing_key, mutation: Mutations::DiscardSigningKey
           field :rotate_signing_key, mutation: Mutations::RotateSigningKey
+          field :run_health_checks, mutation: Mutations::RunHealthChecks
         end
       end
     end

@@ -3,6 +3,7 @@ everywhere:
   - HTML
   - LDAP
   - LDAPS
+  - Worker
   - SAML
   - SMS
   - ID

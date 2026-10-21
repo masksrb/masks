@@ -762,6 +762,45 @@ ALTER SEQUENCE public.groups_id_seq OWNED BY public.groups.id;
 
 
 --
+-- Name: health_checks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.health_checks (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    name character varying NOT NULL,
+    status character varying NOT NULL,
+    summary character varying NOT NULL,
+    details jsonb DEFAULT '{}'::jsonb NOT NULL,
+    checked_at timestamp(6) without time zone NOT NULL,
+    changed_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.health_checks FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: health_checks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.health_checks_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: health_checks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.health_checks_id_seq OWNED BY public.health_checks.id;
+
+
+--
 -- Name: mail_templates; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1686,6 +1725,13 @@ ALTER TABLE ONLY public.groups ALTER COLUMN id SET DEFAULT nextval('public.group
 
 
 --
+-- Name: health_checks id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.health_checks ALTER COLUMN id SET DEFAULT nextval('public.health_checks_id_seq'::regclass);
+
+
+--
 -- Name: mail_templates id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1945,6 +1991,14 @@ ALTER TABLE ONLY public.group_members
 
 ALTER TABLE ONLY public.groups
     ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: health_checks health_checks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.health_checks
+    ADD CONSTRAINT health_checks_pkey PRIMARY KEY (id);
 
 
 --
@@ -2573,6 +2627,13 @@ CREATE UNIQUE INDEX index_groups_on_tenant_id_and_key ON public.groups USING btr
 --
 
 CREATE INDEX index_groups_on_tenant_id_and_source ON public.groups USING btree (tenant_id, source);
+
+
+--
+-- Name: index_health_checks_on_tenant_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_health_checks_on_tenant_id_and_name ON public.health_checks USING btree (tenant_id, name);
 
 
 --
@@ -3562,6 +3623,14 @@ ALTER TABLE ONLY public.avatars
 
 
 --
+-- Name: health_checks fk_rails_ca1ff58970; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.health_checks
+    ADD CONSTRAINT fk_rails_ca1ff58970 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: group_members fk_rails_cb9b886ffb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3804,6 +3873,12 @@ ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: health_checks; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.health_checks ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: mail_templates; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3999,6 +4074,13 @@ CREATE POLICY tenant_isolation ON public.groups USING ((tenant_id = (NULLIF(curr
 
 
 --
+-- Name: health_checks tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.health_checks USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: mail_templates tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -4137,6 +4219,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261020150000'),
+('20261020140000'),
 ('20261020130000'),
 ('20261020120000'),
 ('20261020110000'),

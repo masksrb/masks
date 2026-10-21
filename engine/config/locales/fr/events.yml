@@ -159,6 +159,9 @@ fr:
         updated: "Modèle d’e-mail modifié"
       job:
         failed: "Tâche de fond échouée pour ce locataire"
+      health:
+        failing: "Vérification d'état en échec"
+        recovered: "Vérification d'état rétablie"
       stream:
         created: "Flux d’événements ajouté"
         updated: "Flux d’événements modifié"

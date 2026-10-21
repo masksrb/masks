@@ -159,6 +159,9 @@ de:
         updated: "E-Mail-Vorlage geändert"
       job:
         failed: "Hintergrundjob für diesen Mandanten fehlgeschlagen"
+      health:
+        failing: "Zustandsprüfung fehlgeschlagen"
+        recovered: "Zustandsprüfung wieder in Ordnung"
       stream:
         created: "Event-Stream hinzugefügt"
         updated: "Event-Stream geändert"

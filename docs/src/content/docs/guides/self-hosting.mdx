@@ -125,10 +125,10 @@ CREATE ROLE masks WITH LOGIN PASSWORD '...';
 A health check is a request that a container runtime or a monitor makes again and again to see if a
 service works. masks answers two.
 
-| Path       | Answers                                                                                                                                                                                                                                                                                                      |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Path       | Answers                                                                                                                                                                                                                                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/up`      | `up` while the server can reach its database, job queue, and cache, a worker has reported in the last 5 minutes, and no job has waited more than 10 minutes to start. Otherwise a 503 that starts with `down` and says which of those is wrong. `MASKS_WORKER_SILENCE` and `MASKS_QUEUE_WAIT` set the two times. |
-| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed, and the tenants each one failed for on its last run.                                                                                                                                        |
+| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed, and the tenants each one failed for on its last run.                                                                                                                                            |
 
 - The image carries its own `HEALTHCHECK` on `/up`, so Docker and Compose mark a container
   unhealthy when its worker stops. The example sets the same check for runtimes that read the
@@ -138,6 +138,30 @@ service works. masks answers two.
 - A job that fails for one tenant carries on with the rest, records a `job.failed` event in the
   tenant it failed for, and is named by `/up/jobs` with that tenant.
 - The errors themselves are in the logs.
+- When a health check in the panel below is failing, `/up` adds a second line that names it, such
+  as `failing checks: mail (demo)`. The status code does not change.
+
+### The health panel
+
+The overview in `/manage` has a **Health** panel. A job runs every check every 10 minutes and the
+panel shows each result as a sentence, with what to do when something is wrong. **Check now** runs
+them again.
+
+| Check           | Looks at                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| Background jobs | Whether a kind of job failed in the last day.                                                                   |
+| Worker          | Whether a worker has reported within `MASKS_WORKER_SILENCE`.                                                    |
+| Queue           | Whether a job has waited longer than `MASKS_QUEUE_WAIT` to start.                                               |
+| LDAP            | Whether the directory answers without TLS to the network. See [LDAP](/guides/ldap/).                            |
+| Metrics         | Whether `MASKS_METRICS_TOKEN` is set and at least 24 characters long.                                           |
+| Mail            | Whether the tenant's SMTP server, or the one in `MASKS_SMTP_ADDRESS`, answers a connection. No mail is sent.    |
+| Public address  | Whether requests reach this tenant at its public address. A proxy that drops `X-Forwarded-Proto` shows up here. |
+| Domains         | Whether every claimed domain still has its TXT record.                                                          |
+| Signing keys    | Whether the active key is older than the tenant's rotation period, or missing.                                  |
+
+The first five are about the server and show the same result in every tenant. The rest are about
+the tenant. A check that turns failing records a `health.failing` event, and `health.recovered` when
+it is fine again.
 
 ## Database roles
 
@@ -269,8 +293,8 @@ The metrics that count something in a tenant carry a `tenant` label with its sub
 Two more metrics time the requests the process answered since it started. Each replica reports its
 own figures, so scrape every replica.
 
-| Metric                  | Reports                                                                                  |
-| ----------------------- | ---------------------------------------------------------------------------------------- |
+| Metric                  | Reports                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------- |
 | `masks_request_seconds` | A histogram of how long each request took, from 5 milliseconds to 10 seconds, by route. |
 | `masks_requests_total`  | The requests answered, by route and by status class: `2xx`, `3xx`, `4xx`, or `5xx`.     |
 

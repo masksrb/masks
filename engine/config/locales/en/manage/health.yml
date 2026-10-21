@@ -1,0 +1,74 @@
+en:
+  manage:
+    health:
+      title: "Health"
+      lede: "Checks run every 10 minutes. Each one says what it found and what to do."
+      check_now: "Check now"
+      checking: "Checking"
+      checked: "Checked %{when}"
+      never: "The checks have not run yet. They run every 10 minutes once a worker is up."
+      failed: "The checks could not run: %{failure}"
+      statuses:
+        ok: "Fine"
+        warning: "Needs a look"
+        failing: "Failing"
+      checks:
+        jobs:
+          title: "Background jobs"
+          elsewhere: "Jobs run on another server."
+          none: "No job failed in the last day."
+          failed:
+            one: "One kind of job failed in the last day: %{jobs}."
+            other: "%{count} kinds of job failed in the last day: %{jobs}."
+          advice: "Read the error in the server log. Each job runs again on its schedule."
+        worker:
+          title: "Worker"
+          elsewhere: "Jobs run on another server."
+          unchecked: "The worker check is off."
+          reporting: "A worker is running."
+          silent: "No worker has reported in the last %{minutes} minutes."
+          advice: "Start the jobs process, or set MASKS_JOBS_IN_WEB_SERVER to true so the web server runs jobs."
+        queue:
+          title: "Queue"
+          elsewhere: "Jobs run on another server."
+          unchecked: "The queue check is off."
+          moving: "Jobs start on time."
+          stuck: "A job has waited to start since %{since}, longer than %{minutes} minutes."
+          advice: "Add a worker, or raise JOB_CONCURRENCY so more jobs run at once."
+        ldap:
+          title: "LDAP"
+          tls: "LDAP answers with TLS."
+          local: "LDAP answers only on the server's own machine."
+          plain: "LDAP answers on port %{port} without TLS, so passwords cross the network in the clear."
+          advice: "Set MASKS_LDAP_CERT and MASKS_LDAP_KEY, or unset MASKS_LDAP_PLAINTEXT."
+        metrics:
+          title: "Metrics"
+          "off": "The metrics page is off."
+          "on": "The metrics page answers a request that carries its token."
+          short: "The metrics token is %{length} characters long, so it can be guessed."
+          advice: "Set MASKS_METRICS_TOKEN to at least %{needed} random characters."
+        mail:
+          title: "Mail"
+          none: "No mail service is set up."
+          answers: "The mail server answers."
+          silent: "The mail server did not answer: %{error}."
+          advice: "Check the server, port, and TLS setting on the Messages page, and that the server allows this one to connect."
+        origin:
+          title: "Public address"
+          unset: "No public address is set, so masks follows each request's Host header."
+          matches: "Requests arrive at this tenant's public address."
+          mismatch: "Requests arrive as %{seen}, but this tenant's address is %{origin}."
+          advice: "Have the proxy send X-Forwarded-Proto and X-Forwarded-Host, and list it in MASKS_TRUSTED_PROXIES."
+        domains:
+          title: "Domains"
+          none: "No domain is claimed."
+          proven: "Every claimed domain still has its TXT record."
+          missing: "The TXT record is gone for %{domains}. A claim is released a week after its record disappears."
+          advice: "Put the TXT record back at the name shown on the Domains page."
+        keys:
+          title: "Signing keys"
+          missing: "This tenant has no active signing key, so nothing can be signed."
+          manual: "Keys rotate by hand. The active key is %{days} days old."
+          fresh: "The active key is %{days} days old and rotates every %{period} days."
+          stale: "The active key is %{days} days old, past its %{period} day rotation."
+          advice: "Rotate the key on the Settings page, or read the signing_keys job in the server log."

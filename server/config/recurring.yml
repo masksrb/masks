@@ -38,6 +38,10 @@ default: &default
     class: Masks::Server::RefreshGroupsJob
     queue: maintenance
     schedule: every hour
+  health:
+    class: Masks::Server::HealthCheckJob
+    queue: maintenance
+    schedule: every 10 minutes
 
 development:
   <<: *default

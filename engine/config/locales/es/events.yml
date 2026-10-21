@@ -159,6 +159,9 @@ es:
         updated: "Plantilla de correo cambiada"
       job:
         failed: "Tarea en segundo plano fallida para este inquilino"
+      health:
+        failing: "Comprobación de estado fallando"
+        recovered: "Comprobación de estado recuperada"
       stream:
         created: "Flujo de eventos añadido"
         updated: "Flujo de eventos cambiado"

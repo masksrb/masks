@@ -191,6 +191,10 @@ module Masks
 
           field :event_actions, [ EventActionType ], null: false
 
+          field :health, [ HealthCheckType ], null: false,
+                description: "The latest result of each health check for this tenant and the server it runs on. " \
+                             "Empty until the first scheduled run."
+
           LIMIT = 50
           CEILING = 200
           SPAN = 30
@@ -462,6 +466,10 @@ module Masks
 
           def event_actions
             Masks::Server::Event::ACTIONS.sort
+          end
+
+          def health
+            Masks::Server::HealthCheck.by_name
           end
 
           private
