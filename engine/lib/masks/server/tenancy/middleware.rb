@@ -4,6 +4,7 @@ module Masks
       class Middleware
         UNSERVED = "no tenant is served at this hostname".freeze
         MOVED = "masks answers at %s. To serve it at another address, set MASKS_PUBLIC_ORIGIN_TEMPLATE to that address.".freeze
+        UNKEPT = "This tenant was set up without a kept address. Set MASKS_PUBLIC_ORIGIN_TEMPLATE to the address it answers at.".freeze
         CROWDED = "too many tenants were claimed recently; try again later".freeze
         CLAIM_WINDOW = 1.hour
         TENANTLESS = %w[/up /metrics].freeze
@@ -41,10 +42,13 @@ module Masks
 
           return unserved if tenant.nil?
 
-          origin = origin_for(request, tenant)
+          held = tenant.held_origin
 
-          return moved(tenant.held_origin) if origin.nil? && tenant.held_origin
-          return unserved if origin.nil?
+          return unserved(UNKEPT) if held.nil? && Tenant.pins_origin? && tenant.set_up?
+
+          origin = origin_for(request, tenant, held)
+
+          return unserved(held ? format(MOVED, held) : UNSERVED) if origin.nil?
 
           Current.origin = origin
           Health.note_origin!(tenant, Forwarded.origin(request.base_url), origin)
@@ -64,29 +68,19 @@ module Masks
             host_of(format(template, subdomain: request.host.to_s.split(".").first))&.casecmp?(request.host.to_s)
           end
 
-          def held_at?(origin, request)
-            uri = URI.parse(origin)
-
-            uri.host.to_s.casecmp?(request.host.to_s) && uri.port == request.port
-          rescue URI::InvalidURIError
-            false
-          end
-
           def host_of(origin)
             URI.parse(origin).host
           rescue URI::InvalidURIError
             nil
           end
 
-          def origin_for(request, tenant)
-            if ::Rails.configuration.masks.public_origin_template.nil?
-              return "#{request.base_url}#{request.script_name}" if tenant.held_origin.nil?
-              return tenant.custom_origin if tenant.custom_host&.casecmp?(request.host.to_s)
+          def origin_for(request, tenant, held)
+            untemplated = ::Rails.configuration.masks.public_origin_template.nil?
+            seen = "#{request.base_url}#{request.script_name}"
 
-              return held_at?(tenant.held_origin, request) ? tenant.held_origin : nil
-            end
-
+            return seen if untemplated && held.nil?
             return tenant.custom_origin if tenant.custom_host&.casecmp?(request.host.to_s)
+            return (held if held.casecmp?(seen)) if untemplated
 
             canonical = tenant.templated_origin
 
@@ -116,19 +110,11 @@ module Masks
             ]
           end
 
-          def moved(origin)
+          def unserved(body = UNSERVED)
             [
               404,
               { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store" },
-              [ format(MOVED, origin) ]
-            ]
-          end
-
-          def unserved
-            [
-              404,
-              { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store" },
-              [ UNSERVED ]
+              [ body ]
             ]
           end
       end

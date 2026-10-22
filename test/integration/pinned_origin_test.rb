@@ -3,26 +3,12 @@ module Masks
     require "test_helper"
 
     class PinnedOriginTest < ActionDispatch::IntegrationTest
-      def pinning(pin: true)
-        was_pin = ::Rails.configuration.masks.pin_origin
-        was_tenant = ::Rails.configuration.masks.tenant
-
-        ::Rails.configuration.masks.pin_origin = pin
-        ::Rails.configuration.masks.tenant = @tenant.subdomain
-
-        yield
-      ensure
-        ::Rails.configuration.masks.pin_origin = was_pin
-        ::Rails.configuration.masks.tenant = was_tenant
+      def pinning(pin: true, &)
+        with_masks_config(pin_origin: pin, tenant: @tenant.subdomain, &)
       end
 
-      def with_origin(origin)
-        was = ::Rails.configuration.masks.public_origin_template
-        ::Rails.configuration.masks.public_origin_template = origin
-
-        yield
-      ensure
-        ::Rails.configuration.masks.public_origin_template = was
+      def with_origin(origin, &)
+        with_masks_config(public_origin_template: origin, &)
       end
 
       def discovery
@@ -47,6 +33,7 @@ module Masks
 
           assert set_up!["settled"]
           assert_equal "http://auth.example.test", @tenant.reload.pinned_origin
+          assert_equal "http://auth.example.test", @tenant.public_origin
           assert_equal "http://auth.example.test", discovery["issuer"]
         end
       end
@@ -81,15 +68,6 @@ module Masks
         end
       end
 
-      test "an emailed link carries the kept address whatever host asks" do
-        pinning do
-          host! "auth.example.test"
-          set_up!
-
-          assert_equal "http://auth.example.test", @tenant.reload.public_origin
-        end
-      end
-
       test "an origin template moves a server whose address was kept" do
         pinning do
           host! "auth.example.test"
@@ -100,6 +78,24 @@ module Masks
 
             assert_equal "https://id.example.test", discovery["issuer"]
             assert_equal "https://id.example.test", @tenant.reload.public_origin
+          end
+        end
+      end
+
+      test "a tenant set up without a kept address is refused until a template names one" do
+        create_actor(@tenant, nickname: "owner", password: "a-long-enough-password")
+
+        pinning do
+          host! "attacker.example.test"
+          get "/.well-known/openid-configuration"
+
+          assert_response :not_found
+          assert_match "set up without a kept address", response.body
+
+          with_origin("https://auth.example.test") do
+            host! "auth.example.test"
+
+            assert_equal "https://auth.example.test", discovery["issuer"]
           end
         end
       end
