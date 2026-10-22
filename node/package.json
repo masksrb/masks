@@ -1,6 +1,6 @@
 {
   "name": "@masks/server",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "A masks client for servers: signing people in with the handshake and the code flow, sessions for Next.js, Auth.js, Express, and Hono, client credentials, the device flow, token exchange, DPoP, enrollment, introspection, and checking access tokens.",
   "license": "MIT",
   "repository": {

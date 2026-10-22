@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.12.0](https://github.com/masksrb/masks/compare/masks-server-v0.11.0...masks-server-v0.12.0) (2026-10-22)
+
+
+### Features
+
+* **engine:** a group fills itself from a rule, a provider, or its parent groups ([0eb83d2](https://github.com/masksrb/masks/commit/0eb83d2a8b7b470fdcad6307fc3e2d7b9e3dd56c))
+* **engine:** a person turned away from an app asks for access and a manager or organization owner grants it ([2e17ec5](https://github.com/masksrb/masks/commit/2e17ec5c3db46550c4a970cdb445317bbceeeae9))
+* **engine:** an account makes an app password for one app, which LDAP and forward auth accept in place of the second factor ([5b729a1](https://github.com/masksrb/masks/commit/5b729a154ef60e666764bd9fe6d37865ba4beeb9))
+* **engine:** an opt-in daily check tells the overview when a new release is out ([351b6a2](https://github.com/masksrb/masks/commit/351b6a28753b8ce381fc7cce468e5851119be39f)), closes [#181](https://github.com/masksrb/masks/issues/181)
+* **engine:** each tenant sets its four link lifetimes from the console in place of environment variables ([149d71b](https://github.com/masksrb/masks/commit/149d71b9e278f1dbf0c126225e6dd6c6b2c6579d))
+* **engine:** forward auth follows ordered rules on path, method, network, and group ([edaac64](https://github.com/masksrb/masks/commit/edaac64a59204670bb1ea880a57685f9f2d23096))
+* **engine:** the overview lists health checks that run every ten minutes and say what to do ([1ccaaa4](https://github.com/masksrb/masks/commit/1ccaaa4a655fcf71b4a00905a3eb9c31fd1056f8)), closes [#175](https://github.com/masksrb/masks/issues/175)
+* **server:** the image runs masks with one command, with its own Postgres and the address it was set up at ([2b6a729](https://github.com/masksrb/masks/commit/2b6a7290e76ccdaaa91ef145ac0ff7b8a95c943c))
+
+
+### Fixes
+
+* **engine:** a tenant set up before addresses were kept is refused until a template names its address ([615b244](https://github.com/masksrb/masks/commit/615b2444635ba9bdc76cf376f731b185736778a7))
+
+
+### Refactoring
+
+* **server:** the one-command image shares one roles decision, one loopback check, and one origin comparison ([2ae9b2a](https://github.com/masksrb/masks/commit/2ae9b2a34ebaf03ff3c7efa90dee9ba33e7934f5))
+
 ## [0.11.0](https://github.com/masksrb/masks/compare/masks-server-v0.10.0...masks-server-v0.11.0) (2026-10-20)
 
 

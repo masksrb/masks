@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2](https://github.com/masksrb/masks/compare/go/v0.3.1...go/v0.3.2) (2026-10-22)
+
+
+### Fixes
+
+* **go:** the Go client builds with go1.26.10, past the crypto/x509 advisory GO-2026-6809 ([4685e84](https://github.com/masksrb/masks/commit/4685e845678ed3a609787b55f2aca411b5ebf9c6))
+
+
+### Documentation
+
+* the quickstart and self-hosting guide start from one docker run ([e45c35f](https://github.com/masksrb/masks/commit/e45c35f3027468f9f05a5f964d40956025ed7cea))
+
 ## [0.3.1](https://github.com/masksrb/masks/compare/go/v0.3.0...go/v0.3.1) (2026-10-19)
 
 

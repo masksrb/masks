@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/masksrb/masks/compare/node-v0.3.2...node-v0.3.3) (2026-10-22)
+
+
+### Documentation
+
+* the quickstart and self-hosting guide start from one docker run ([e45c35f](https://github.com/masksrb/masks/commit/e45c35f3027468f9f05a5f964d40956025ed7cea))
+
 ## [0.3.2](https://github.com/masksrb/masks/compare/node-v0.3.1...node-v0.3.2) (2026-10-20)
 
 
