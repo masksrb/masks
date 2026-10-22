@@ -315,7 +315,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.sha }}
         run: |
-          for attempt in $(seq 1 120); do
+          for _ in $(seq 1 120); do
             conclusion="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$SHA" --event push \
               --json status,conclusion --jq '.[0] | select(.status == "completed") | .conclusion')"
             case "$conclusion" in
