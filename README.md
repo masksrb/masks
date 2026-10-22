@@ -28,13 +28,17 @@
 
 ## Run it
 
-The image is `ghcr.io/masksrb/masks`.
+```sh
+docker run --name masks -p 3000:3000 -v masks:/rails/storage ghcr.io/masksrb/masks
+```
 
-- [Host it yourself](https://masks.pages.dev/guides/self-hosting/) with the image, Postgres, and a reverse proxy.
+Open `http://localhost:3000` and enter the setup token from the output.
+
+- [Host it yourself](https://masks.pages.dev/guides/self-hosting/) behind HTTPS, with its own Postgres or yours.
 - [Mount it inside a Rails app](https://masks.pages.dev/reference/ruby/engine-mode/) with the `masks-server` gem.
 - [Build your own masks server](https://masks.pages.dev/reference/ruby/server-mode/) as a Rails app, the way the image is built.
 - [Put it in front of an app](https://masks.pages.dev/guides/forward-auth/) that has no sign-in, with Caddy, Traefik, or nginx.
-- [Try it on your computer](https://masks.pages.dev/quickstart/#try-it-locally) from this repository.
+- [Work on masks](https://masks.pages.dev/quickstart/#try-it-locally) from this repository.
 
 ## Libraries
 

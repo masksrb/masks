@@ -44,7 +44,6 @@ first four from one master key. See [encryption and secrets](/guides/self-hostin
 | `MASKS_PREVIOUS_MASTER_KEY` | none | The master key you used before a rotation. masks can still read columns encrypted with it. The next boot encrypts them again with the current key. Wins over `MASKS_PREVIOUS_MASTER_KEY_FILE` when both are set. |
 | `MASKS_PREVIOUS_MASTER_KEY_FILE` | none | A file that holds the previous master key. |
 | `ENCRYPTION_PREVIOUS_PRIMARY_KEY` | derived | The primary key derived from the previous master key, when you do not set it yourself. |
-| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | none | The public origin (the scheme and host) of each tenant. `%{subdomain}` stands for the tenant's subdomain, as in `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. masks builds the issuer, the registration endpoint, and every link in an email from it. The server answers only hosts that match it and tenants' [custom domains](/guides/self-hosting/#custom-domains). Every other host gets a 404. |
 
 :::caution
 You cannot change `SECRET_KEY_BASE` or the three `ENCRYPTION_` values once masks has written data.
@@ -53,7 +52,7 @@ yourself, with your database backups.
 :::
 
 In development and test, masks uses keys stored in the source code, and it builds links from the
-request's own `Host` header. A build step that boots the app without serving it skips these checks
+request's own `Host` header. It keeps no origin at setup. A build step that boots the app without serving it skips these checks
 with [`SECRET_KEY_BASE_DUMMY`](#rails).
 
 ### Tenants
@@ -63,7 +62,8 @@ A tenant is one separate set of actors, clients, and settings. Each tenant has i
 | Variable | Default | |
 | --- | --- | --- |
 | `MASKS_TENANTS` | none | Declares Multi tenants. Lists the subdomains this server serves, separated by commas or spaces, such as `demo,acme`. The image's entrypoint creates any that do not exist before the server starts. |
-| `MASKS_TENANT` | none | Declares a Single tenant, the only one this server serves. You cannot set it together with `MASKS_TENANTS`. |
+| `MASKS_TENANT` | none | Declares a Single tenant, the only one this server serves. You cannot set it together with `MASKS_TENANTS`. The image's entrypoint sets it to `masks` when `MASKS_TENANTS` is unset and `MASKS_PUBLIC_ORIGIN_TEMPLATE` has no `%{subdomain}`. |
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | none | The public origin (the scheme and host) of each tenant. `%{subdomain}` stands for the tenant's subdomain, as in `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. masks builds the issuer, the registration endpoint, and every link in an email from it. The server answers only hosts that match it and tenants' [custom domains](/guides/self-hosting/#custom-domains). Every other host gets a 404. Without it, each tenant keeps the origin its **Set up** screen was opened at, and answers only there. See [the public address](/guides/self-hosting/#the-public-address). |
 | `MASKS_CONFIG` | none | A YAML file of apps, groups, and tenant settings. masks applies it on every boot. See [declaring apps in a file](/guides/self-hosting/#declaring-apps-in-a-file). |
 | `MASKS_METRICS_TOKEN` | none | Turns on `/metrics` for Prometheus. `/metrics` then answers only a request that carries this token. See [metrics](/guides/self-hosting/#metrics). |
 | `MASKS_ON_DEMAND_TLS` | `false` | `true` opens `/tls/allowed`, which a proxy asks before it issues a certificate for a tenant's custom host. It answers from the server's own address, outside the hosts `MASKS_PUBLIC_ORIGIN_TEMPLATE` allows. See [certificates on demand](/guides/self-hosting/#certificates-on-demand). |
@@ -140,19 +140,21 @@ reason, the production server refuses to serve requests as a role that is either
 
 | Variable | Default | |
 | --- | --- | --- |
-| `POSTGRES_HOST` | `127.0.0.1` | |
+| `POSTGRES_HOST` | `127.0.0.1` | When it is unset, the container image runs its own PostgreSQL inside the container. See [one container](/guides/self-hosting/#one-container). |
 | `POSTGRES_PORT` | `5432` in production, `5435` otherwise | Development and test use the port the dev stack publishes by default. |
 | `POSTGRES_USER` | `masks` | The role that serves requests. |
-| `POSTGRES_PASSWORD` | `masks` | |
-| `MASKS_MIGRATION_USER` | none | The role that owns the schema. Before it starts the server, the container image's entrypoint runs `db:prepare` and `masks:grants` as this role. The entrypoint does not start without it. Required in production. |
-| `MASKS_MIGRATION_PASSWORD` | none | The password for `MASKS_MIGRATION_USER`. |
+| `POSTGRES_PASSWORD` | `masks` | Derived from the master key when masks creates the roles. |
+| `MASKS_MIGRATION_USER` | none | The role that owns the schema. Before it starts the server, the container image's entrypoint runs `db:prepare` and `masks:grants` as this role. The entrypoint does not start without it. It is `masks_owner` when masks creates the roles. |
+| `MASKS_MIGRATION_PASSWORD` | none | The password for `MASKS_MIGRATION_USER`. Derived from the master key when masks creates the roles. |
+| `POSTGRES_ADMIN_USER` | `postgres` | A role that can create roles on your PostgreSQL server. With `POSTGRES_ADMIN_PASSWORD`, the entrypoint creates the two roles masks connects as, and sets their passwords, on every boot. |
+| `POSTGRES_ADMIN_PASSWORD` | none | The password for `POSTGRES_ADMIN_USER`. Leave it unset to create the roles yourself. |
 | `MASKS_SERVING_USER` | none | The role that `bin/rails masks:grants` gives table access to. The entrypoint sets it to `POSTGRES_USER`. |
 | `POSTGRES_DATABASE` | `masks_production` | The primary database's name in production. The cache and queue databases add `_cache` and `_queue` to it. Development and test use fixed names. |
 
 ### Processes
 
 The image runs the Puma web server in front of Rails, on `PORT`. See
-[self-hosting](/guides/self-hosting/#example-composeyml).
+[self-hosting](/guides/self-hosting/#what-it-runs).
 
 | Variable | Default | |
 | --- | --- | --- |
@@ -185,8 +187,8 @@ some apps use to look up accounts and check passwords. See [LDAP](/guides/ldap/)
 | --- | --- | --- |
 | `RAILS_ENV` | `production` in the image | `production`, `development`, or `test`. |
 | `RAILS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `fatal`. Production only. |
-| `RAILS_ASSUME_SSL` | `true` | Treats every request as HTTPS. Use it when a proxy in front of masks handles TLS. Production only. |
-| `RAILS_FORCE_SSL` | `true` | Redirects HTTP to HTTPS and sends the `Strict-Transport-Security` header. Production only. |
+| `RAILS_ASSUME_SSL` | `true` | Treats every request as HTTPS, except a request to `localhost`, a `.localhost` name, `127.0.0.1`, or `[::1]`. Use it when a proxy in front of masks handles TLS. Production only. |
+| `RAILS_FORCE_SSL` | `true` | Redirects HTTP to HTTPS and sends the `Strict-Transport-Security` header. It skips the same local names as `RAILS_ASSUME_SSL`. Production only. |
 | `MASKS_TRUSTED_PROXIES` | none | The addresses or address ranges of the proxies in front of masks, separated by commas. masks adds them to the private ranges Rails already trusts. |
 | `SECRET_KEY_BASE_DUMMY` | unset | Boots with a throwaway secret and skips the production checks above. Use it for build steps only. A server running with it set is not secure. |
 

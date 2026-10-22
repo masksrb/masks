@@ -3,8 +3,53 @@ title: Self-hosting
 description: Run the masks server in production.
 ---
 
-masks comes as a container image, `ghcr.io/masksrb/masks`. Point it at a Postgres server, and it
-migrates its databases each time it boots.
+masks comes as a container image, `ghcr.io/masksrb/masks`. It runs on its own, or with a Postgres
+server of yours. It migrates its databases each time it boots.
+
+## One container
+
+```sh
+docker run --name masks -p 3000:3000 -v masks:/rails/storage ghcr.io/masksrb/masks
+```
+
+1. Run the command.
+2. Find the setup token in the output. It is on a line like
+   `masks: masks is not set up. Its setup token is 7Hq2…`.
+3. Open `http://localhost:3000` and follow the **Set up** screen.
+
+The container runs its own Postgres. Its data and the [master key](#the-master-key) live in the
+`masks` volume, so the container can be removed and started again without losing anything.
+
+masks answers plain HTTP only at `localhost`. To reach it from other computers, put a proxy that
+serves HTTPS in front of it. This Compose file runs masks with Caddy, which gets the certificate:
+
+```yaml
+services:
+  masks:
+    image: ghcr.io/masksrb/masks:0.11.0
+    volumes:
+      - masks:/rails/storage
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    command: caddy reverse-proxy --from auth.example.com --to masks:3000
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - caddy:/data
+
+volumes:
+  masks:
+  caddy:
+```
+
+Open `https://auth.example.com` first. masks keeps the address the **Set up** screen was opened at.
+See [the public address](#the-public-address).
 
 ## What it runs
 
@@ -15,16 +60,19 @@ which holds three databases named from `POSTGRES_DATABASE`:
 - a cache
 - a job queue
 
-The only file it keeps on local disk is the master key.
+When `POSTGRES_HOST` is unset, the image runs Postgres 17 inside the container. It listens only on a
+socket inside the container, and its files are in `/rails/storage/postgres`. When the server stops,
+Postgres stops too.
 
 - Background jobs, such as mail and retries, run in the web process by default. To move them to a
-  second container that runs `bin/jobs`, set `MASKS_JOBS_IN_WEB_SERVER=false`.
+  second container that runs `bin/jobs`, set `MASKS_JOBS_IN_WEB_SERVER=false`. That needs a Postgres
+  server of your own.
 - The job queue stays bounded. A daily prune removes finished jobs after 7 days and failed jobs
   after 30 days. `MASKS_FINISHED_JOB_RETENTION` and `MASKS_FAILED_JOB_RETENTION` change those
   times, in seconds. A failed job is in `/up/jobs` and the logs until then.
 - The web process also serves [LDAP](/guides/ldap/) for apps that sign people in only over LDAP.
 
-CI times a first sign-in on every push. It starts the image on an empty Postgres, waits for `/up`,
+CI times a first sign-in on every push. It starts the image with the command above, waits for `/up`,
 then creates the first manager and signs in. The seconds for each step are in the build job's
 summary on GitHub Actions. `./dev first-sign-in` runs the same check on your computer against any
 image, and fails when the whole thing takes longer than 120 seconds.
@@ -33,38 +81,29 @@ image, and fails when the whole thing takes longer than 120 seconds.
 
 | Tag                            | Pushed on                                          | Platforms                                |
 | ------------------------------ | -------------------------------------------------- | ---------------------------------------- |
-| `:<version>`, such as `:0.8.0` | A server release.                                  | amd64, arm64                             |
+| `:<version>`, such as `:0.11.0` | A server release.                                  | amd64, arm64                             |
 | `:latest`                      | A server release. Moved to that release's version. | amd64, arm64                             |
 | `:main`                        | Every push to main.                                | amd64, and arm64 too on a server release |
 | `:sha-<commit>`                | Every push to main, named by the full commit hash. | amd64, and arm64 too on a server release |
 
-Pin a version, as the example below does. Read
+Pin a version, as the examples do. Read
 [CHANGELOG.md](https://github.com/masksrb/masks/blob/main/server/CHANGELOG.md) before you move to a
 new one.
 
-## Example `compose.yml`
+## Your own Postgres
 
-This Compose file runs masks, Postgres, and Caddy. Caddy is a web server that gets TLS certificates
-and passes each request on to masks.
+This Compose file runs masks with a Postgres server of its own and Caddy in front.
 
 ```yaml
 services:
   masks:
-    image: ghcr.io/masksrb/masks:0.8.0
+    image: ghcr.io/masksrb/masks:0.11.0
     environment:
       POSTGRES_HOST: postgres
-      POSTGRES_USER: masks
-      POSTGRES_PASSWORD: ...
+      POSTGRES_ADMIN_PASSWORD: ...
       POSTGRES_DATABASE: masks
-      MASKS_MIGRATION_USER: masks_owner
-      MASKS_MIGRATION_PASSWORD: ...
-      MASKS_TENANTS: acme
-      MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
     volumes:
-      - masks-storage:/rails/storage
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:3000/up"]
-      interval: 30s
+      - masks:/rails/storage
     depends_on:
       - postgres
     logging:
@@ -75,50 +114,48 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ...
     volumes:
       - postgres:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d:ro
 
   caddy:
     image: caddy:2-alpine
+    command: caddy reverse-proxy --from auth.example.com --to masks:3000
     ports:
       - "443:443"
       - "80:80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-    depends_on:
-      - masks
+      - caddy:/data
 
 volumes:
+  masks:
   postgres:
-  masks-storage:
-  caddy-data:
+  caddy:
 ```
 
-The `Caddyfile` names each tenant's host:
-
-```
-acme.auth.example.com {
-  reverse_proxy masks:3000
-}
-```
-
-Caddy gets a certificate for each host it names. A wildcard host such as `*.auth.example.com` needs
-a DNS challenge, and a Caddy build with your DNS provider's module.
-
-`initdb/01-roles.sql` creates the two [database roles](#database-roles) masks connects as. Postgres
-runs it once, when its volume is first set up.
-
-```sql
-CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
-CREATE ROLE masks WITH LOGIN PASSWORD '...';
-```
-
+- `POSTGRES_ADMIN_PASSWORD` is the password of the `postgres` superuser. The entrypoint uses it to
+  create the two [database roles](#database-roles) masks connects as, and to set their passwords.
+  Use `POSTGRES_ADMIN_USER` for another role that can create roles.
+- To create the roles yourself, leave `POSTGRES_ADMIN_PASSWORD` unset and set `POSTGRES_USER`,
+  `POSTGRES_PASSWORD`, `MASKS_MIGRATION_USER`, and `MASKS_MIGRATION_PASSWORD`.
 - The `logging` options cap the masks container's log, so a repeating fault cannot fill the disk.
 - Every variable the server reads is in [ENV vars](/reference/environment/).
+
+## The public address
+
+The public address, or origin, is the scheme and host that apps and browsers use to reach masks. It
+is the issuer, and every link in an email starts with it.
+
+Without `MASKS_PUBLIC_ORIGIN_TEMPLATE`, masks learns the address from the **Set up** screen:
+
+- Before setup, masks answers at any address.
+- When the first account is created, masks keeps the address the screen was opened at.
+- After that, masks answers only there and at the tenant's [custom domains](#custom-domains). Any
+  other address gets a 404 that names the kept address.
+
+To move masks to a new address, set `MASKS_PUBLIC_ORIGIN_TEMPLATE` to it, such as
+`https://id.example.com`. The template wins over the kept address. To serve many tenants, each at
+its own subdomain, use a template with `%{subdomain}`. See [tenants](#tenants).
 
 ### Health checks
 
@@ -189,10 +226,12 @@ So masks connects as two roles.
 
 On every boot, the image's entrypoint:
 
-1. Runs `db:prepare` and `masks:grants` as the migration role.
-2. Runs `masks:tenants`, which creates the declared tenants and prints the setup token of each one
+1. Creates both roles, and sets their passwords, when it runs its own Postgres or holds
+   `POSTGRES_ADMIN_PASSWORD`. Their passwords are derived from the master key.
+2. Runs `db:prepare` and `masks:grants` as the migration role.
+3. Runs `masks:tenants`, which creates the declared tenants and prints the setup token of each one
    that is not set up yet.
-3. Starts the server as the serving role.
+4. Starts the server as the serving role.
 
 Two checks stop a server that is set up wrong:
 
@@ -225,7 +264,7 @@ On first boot, the image's entrypoint generates a master key and writes it to
 
 What to know about the master key:
 
-- Keep its path on a volume, as the [example](#example-composeyml) does.
+- Keep its path on a volume, as the [examples](#one-container) do.
 - A secret set as an environment variable takes precedence over the derived one.
 - To keep the key elsewhere, use `MASKS_MASTER_KEY` or `MASKS_MASTER_KEY_FILE`. See
   [ENV vars](/reference/environment/#required-in-production).
@@ -322,6 +361,14 @@ Back up the primary database and the master key together.
 
 ### Back up
 
+In [one container](#one-container), dump the primary database from inside it:
+
+```sh
+docker exec masks pg_dump --host=/rails/tmp/postgres --format=custom masks_production > masks.dump
+```
+
+With your own Postgres:
+
 1. Dump the primary database as a Postgres superuser. Row-level security stops every other role from
    reading all the rows, and the dump fails.
 
@@ -347,6 +394,14 @@ Restore as the migration role, so the migration role owns every table again.
 
 3. Start the server with the same master key.
 
+In [one container](#one-container), load the dump into the running container, then restart it:
+
+```sh
+docker exec -i masks pg_restore --host=/rails/tmp/postgres --dbname=masks_production \
+  --clean --if-exists --no-owner --role=masks_owner < masks.dump
+docker restart masks
+```
+
 Its first boot creates the cache and queue databases and grants the serving role what it needs.
 Everyone keeps their passkeys and second factors. Sessions that were live at the time of the dump
 work again.
@@ -368,13 +423,17 @@ With more than one replica:
 
 ## Tenants
 
-A tenant is a separate set of accounts, clients, and signing keys at its own subdomain. The example
-declares one tenant, `acme`, with `MASKS_TENANTS`.
+A tenant is a separate set of accounts, clients, and signing keys at its own subdomain. The
+examples serve one tenant, `masks`. The image declares it when nothing else does.
 
-- To serve more tenants, name each one in `MASKS_TENANTS`, such as `acme,demo`, and add each host
-  to the `Caddyfile`.
-- To serve one tenant, set `MASKS_TENANT` instead.
-- With neither set, masks creates tenants on its own as requests for new hosts arrive.
+To serve more tenants:
+
+1. Set `MASKS_PUBLIC_ORIGIN_TEMPLATE` to a template with `%{subdomain}`, such as
+   `https://%{subdomain}.auth.example.com`.
+2. Name each tenant in `MASKS_TENANTS`, such as `acme,demo`. With `MASKS_TENANTS` unset, masks
+   creates a tenant for each new subdomain that a request arrives at.
+3. Point each host at the proxy. A wildcard host such as `*.auth.example.com` needs a DNS
+   challenge, and a Caddy build with your DNS provider's module.
 
 See [declaring tenants](/guides/core-concepts/#declaring-tenants) for each mode, and
 [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for the setup token.
@@ -411,7 +470,7 @@ Caddy can issue each custom host a certificate on demand. Before it issues one, 
   }
 }
 
-acme.auth.example.com {
+auth.example.com {
   reverse_proxy masks:3000
 }
 
@@ -480,14 +539,14 @@ and backup codes.
 
    ```yaml
    environment:
-     MASKS_RECOVER: acme/owner
+     MASKS_RECOVER: masks/owner
    ```
 
 2. Restart the server. At boot, masks removes that account's authenticator app, backup codes,
    passkeys, and sign-in codes. It signs the account out everywhere and prints a link to the logs:
 
    ```
-   masks: acme: owner has no second factors now and every session is signed out. This link sets a new password once: https://acme.auth.example.com/reset/...
+   masks: masks: owner has no second factors now and every session is signed out. This link sets a new password once: https://auth.example.com/reset/...
    ```
 
 3. Open the link and choose a password.
@@ -512,7 +571,7 @@ See [processes](/reference/environment/#processes).
 2. Fetch the tenant's discovery document:
 
    ```sh
-   curl https://acme.auth.example.com/.well-known/openid-configuration
+   curl https://auth.example.com/.well-known/openid-configuration
    ```
 
    It confirms the tenant's issuer, keys, and public origin.

@@ -28,8 +28,9 @@ In Server mode, your app is a masks server and nothing else.
 4. Set up the database roles, as described below.
 5. Set the Active Record encryption keys, `config.active_record.encryption.primary_key` and
    `key_derivation_salt`. masks encrypts each tenant's secret columns under a key derived from them.
-6. Set `MASKS_PUBLIC_ORIGIN_TEMPLATE`, such as `https://auth.example.com`. masks builds the issuer
-   and every link it emails from it. Outside development and test, masks does not boot without it.
+6. Optionally, set `MASKS_PUBLIC_ORIGIN_TEMPLATE`, such as `https://auth.example.com`. masks builds
+   the issuer and every link it emails from it. Without it, each tenant keeps the address its
+   **Set up** screen was opened at. See [the public address](/guides/self-hosting/#the-public-address).
 7. Run `bin/rails db:prepare`.
 8. Run `bin/rails masks:tenants`. It creates each tenant that `MASKS_TENANTS` or `MASKS_TENANT`
    names, and prints the setup token of each tenant that is not set up yet.

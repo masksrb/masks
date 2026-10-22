@@ -33,10 +33,13 @@ is an error.
 
 - With Single and Multi, `bin/rails masks:tenants` creates the tenants. The container image runs it
   on every boot.
+- The container image declares a Single tenant, `masks`, when neither is set and
+  `MASKS_PUBLIC_ORIGIN_TEMPLATE` has no `%{subdomain}`.
 - In every mode, masks answers only the hostnames that `MASKS_PUBLIC_ORIGIN_TEMPLATE` names, and
   the tenants' [custom domains](/guides/self-hosting/#custom-domains). Any other hostname gets a 404
   with the body `no tenant is served at this hostname`.
-- Outside development, `MASKS_PUBLIC_ORIGIN_TEMPLATE` is required.
+- Without the template, each tenant answers only at the address its **Set up** screen was opened
+  at. See [the public address](/guides/self-hosting/#the-public-address).
 
 With Dynamic, the template decides how many tenants masks creates:
 
