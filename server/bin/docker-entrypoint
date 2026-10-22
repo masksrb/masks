@@ -1,32 +1,150 @@
 #!/bin/bash -e
 
+bundled_bin=/usr/lib/postgresql/17/bin
+bundled_data=/rails/storage/postgres
+bundled_socket=/rails/tmp/postgres
+
+serving=false
+if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
+  serving=true
+fi
+
+held_roles=false
+if [ -z "$POSTGRES_HOST" ] || [ -n "$POSTGRES_ADMIN_PASSWORD" ]; then
+  held_roles=true
+fi
+
 if [ -z "$SECRET_KEY_BASE_DUMMY" ]; then
   secrets="$(./bin/derive-secrets)"
   eval "$secrets"
 fi
 
-if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
+bundled=false
+if [ -z "$POSTGRES_HOST" ] && [ -z "$SECRET_KEY_BASE_DUMMY" ]; then
+  bundled=true
+  export POSTGRES_HOST="$bundled_socket"
+  export POSTGRES_PORT=5432
+fi
+
+if [ "$held_roles" == "true" ]; then
+  export POSTGRES_USER="${POSTGRES_USER:-masks}"
+  export MASKS_MIGRATION_USER="${MASKS_MIGRATION_USER:-masks_owner}"
+fi
+
+if [ -z "$MASKS_TENANT$MASKS_TENANTS" ] && [[ "$MASKS_PUBLIC_ORIGIN_TEMPLATE" != *"%{subdomain}"* ]]; then
+  export MASKS_TENANT=masks
+fi
+
+start_postgres() {
+  if [ -s "$bundled_data/PG_VERSION" ] && [ "$(cat "$bundled_data/PG_VERSION")" != "17" ]; then
+    echo "masks: $bundled_data holds Postgres $(cat "$bundled_data/PG_VERSION") data, and this image runs Postgres 17." >&2
+    echo "masks: Restore a backup into this image, or run the image that wrote it." >&2
+    exit 1
+  fi
+
+  if [ ! -s "$bundled_data/PG_VERSION" ]; then
+    echo "masks: creating the database in $bundled_data"
+    "$bundled_bin/initdb" -D "$bundled_data" -U rails -E UTF8 --locale=C.UTF-8 --auth=reject > /dev/null
+  fi
+
+  cat > "$bundled_data/pg_hba.conf" <<HBA
+local all rails peer
+local all all scram-sha-256
+HBA
+
+  mkdir -p "$bundled_socket"
+  setsid "$bundled_bin/postgres" -D "$bundled_data" -c listen_addresses= -c unix_socket_directories="$bundled_socket" \
+    -c log_checkpoints=off &
+  postgres_pid=$!
+  trap stop_postgres EXIT
+}
+
+stop_postgres() {
+  if [ -n "$postgres_pid" ] && kill -0 "$postgres_pid" 2> /dev/null; then
+    kill -INT "$postgres_pid"
+    wait "$postgres_pid" || true
+  fi
+}
+
+wait_for_postgres() {
+  for _ in $(seq 1 120); do
+    pg_isready -q -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" -d postgres && return 0
+    sleep 0.5
+  done
+
+  echo "masks: Postgres at $POSTGRES_HOST did not answer within 60 seconds." >&2
+  exit 1
+}
+
+hold_roles() {
+  psql -X -q -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" -d postgres "$@" <<'SQL'
+\getenv owner MASKS_MIGRATION_USER
+\getenv owner_password MASKS_MIGRATION_PASSWORD
+\getenv serving POSTGRES_USER
+\getenv serving_password POSTGRES_PASSWORD
+SELECT format('CREATE ROLE %I', :'owner') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'owner') \gexec
+SELECT format('CREATE ROLE %I', :'serving') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'serving') \gexec
+SELECT format('ALTER ROLE %I WITH LOGIN CREATEDB NOSUPERUSER NOCREATEROLE NOBYPASSRLS PASSWORD %L', :'owner', :'owner_password') \gexec
+SELECT format('ALTER ROLE %I WITH LOGIN NOCREATEDB NOSUPERUSER NOCREATEROLE NOBYPASSRLS PASSWORD %L', :'serving', :'serving_password') \gexec
+SQL
+}
+
+if [ "$serving" == "true" ]; then
   if [ -z "$MASKS_MIGRATION_USER" ]; then
     echo "masks: MASKS_MIGRATION_USER is not set. masks migrates as one Postgres role and serves as another," >&2
     echo "masks: so the role that answers requests never owns the tables row-level security protects." >&2
-    echo "masks: Set MASKS_MIGRATION_USER and MASKS_MIGRATION_PASSWORD to the role that owns the schema." >&2
+    echo "masks: Set MASKS_MIGRATION_USER and MASKS_MIGRATION_PASSWORD to the role that owns the schema," >&2
+    echo "masks: or set POSTGRES_ADMIN_PASSWORD and masks creates both roles itself." >&2
     exit 1
   fi
 
-  serving="${POSTGRES_USER:-masks}"
+  serving_user="${POSTGRES_USER:-masks}"
 
-  if [ "$MASKS_MIGRATION_USER" == "$serving" ]; then
-    echo "masks: MASKS_MIGRATION_USER and POSTGRES_USER are both $serving. They name two roles." >&2
+  if [ "$MASKS_MIGRATION_USER" == "$serving_user" ]; then
+    echo "masks: MASKS_MIGRATION_USER and POSTGRES_USER are both $serving_user. They name two roles." >&2
     exit 1
   fi
 
-  MASKS_SERVING_USER="$serving" \
+  if [ "$bundled" == "true" ]; then
+    start_postgres
+    wait_for_postgres
+    hold_roles -U rails
+  else
+    wait_for_postgres
+    if [ "$held_roles" == "true" ]; then
+      PGPASSWORD="$POSTGRES_ADMIN_PASSWORD" hold_roles -U "${POSTGRES_ADMIN_USER:-postgres}"
+    fi
+  fi
+
+  MASKS_SERVING_USER="$serving_user" \
     POSTGRES_USER="$MASKS_MIGRATION_USER" \
     POSTGRES_PASSWORD="$MASKS_MIGRATION_PASSWORD" \
     sh -c './bin/rails db:prepare && ./bin/rails masks:grants'
 
   ./bin/rails masks:tenants
   ./bin/rails runner 'Masks::Server::RefreshAuthenticatorsJob.perform_later if Masks::Server::Authenticator.none?'
+fi
+
+if [ "$bundled" == "true" ] && [ "$serving" == "true" ]; then
+  "$@" &
+  server_pid=$!
+  trap 'kill -TERM "$server_pid" 2> /dev/null' TERM INT
+
+  while true; do
+    ended=""
+    code=0
+    wait -n -p ended "$server_pid" "$postgres_pid" || code=$?
+    [ -n "$ended" ] && break
+  done
+
+  if [ "$ended" == "$postgres_pid" ]; then
+    echo "masks: Postgres stopped, so the server stops too." >&2
+    kill -TERM "$server_pid"
+    wait "$server_pid" || true
+    exit 1
+  fi
+
+  exit "$code"
 fi
 
 exec "${@}"

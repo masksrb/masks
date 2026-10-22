@@ -40,8 +40,9 @@ module Masks
 
           engine? ? say_engine_database : say_server_database
 
-          say "In production, set MASKS_PUBLIC_ORIGIN_TEMPLATE to #{origin_example}, so the issuer and every"
-          say "emailed link are built from it and never from a request's Host header."
+          say "In production, masks keeps the address its setup screen was first opened at, and builds the"
+          say "issuer and every emailed link from it. To name the address yourself, set"
+          say "MASKS_PUBLIC_ORIGIN_TEMPLATE to #{origin_example}."
           say ""
           say "Then run bin/rails db:prepare and bin/rails masks:tenants, and open #{login_path} to set up"
           say "the first account with the setup token masks prints."

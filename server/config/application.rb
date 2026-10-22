@@ -13,12 +13,13 @@ Bundler.require(*Rails.groups)
 
 require_relative "../lib/error_pages"
 require_relative "../lib/request_metrics"
+require_relative "../lib/assume_ssl"
 
 module Server
   class Application < Rails::Application
     config.load_defaults 8.1
 
-    config.autoload_lib(ignore: %w[assets tasks error_pages.rb request_metrics.rb])
+    config.autoload_lib(ignore: %w[assets tasks error_pages.rb request_metrics.rb assume_ssl.rb])
 
     config.i18n.available_locales = Dir[Masks::Server::Engine.root.join("config/locales/*/")].map do |path|
       File.basename(path).to_sym

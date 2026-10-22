@@ -1533,7 +1533,8 @@ CREATE TABLE public.tenants (
     invitation_lifetime integer DEFAULT 604800 NOT NULL,
     organization_invitation_lifetime integer DEFAULT 1209600 NOT NULL,
     password_reset_lifetime integer DEFAULT 1800 NOT NULL,
-    email_verification_lifetime integer DEFAULT 172800 NOT NULL
+    email_verification_lifetime integer DEFAULT 172800 NOT NULL,
+    pinned_origin character varying
 );
 
 
@@ -4218,6 +4219,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261021100000'),
 ('20261020150000'),
 ('20261020140000'),
 ('20261020130000'),

@@ -3,6 +3,7 @@ module Masks
     module Tenancy
       class Middleware
         UNSERVED = "no tenant is served at this hostname".freeze
+        MOVED = "masks answers at %s. To serve it at another address, set MASKS_PUBLIC_ORIGIN_TEMPLATE to that address.".freeze
         CROWDED = "too many tenants were claimed recently; try again later".freeze
         CLAIM_WINDOW = 1.hour
         TENANTLESS = %w[/up /metrics].freeze
@@ -42,6 +43,7 @@ module Masks
 
           origin = origin_for(request, tenant)
 
+          return moved(tenant.held_origin) if origin.nil? && tenant.held_origin
           return unserved if origin.nil?
 
           Current.origin = origin
@@ -62,6 +64,14 @@ module Masks
             host_of(format(template, subdomain: request.host.to_s.split(".").first))&.casecmp?(request.host.to_s)
           end
 
+          def held_at?(origin, request)
+            uri = URI.parse(origin)
+
+            uri.host.to_s.casecmp?(request.host.to_s) && uri.port == request.port
+          rescue URI::InvalidURIError
+            false
+          end
+
           def host_of(origin)
             URI.parse(origin).host
           rescue URI::InvalidURIError
@@ -69,7 +79,13 @@ module Masks
           end
 
           def origin_for(request, tenant)
-            return "#{request.base_url}#{request.script_name}" if ::Rails.configuration.masks.public_origin_template.nil?
+            if ::Rails.configuration.masks.public_origin_template.nil?
+              return "#{request.base_url}#{request.script_name}" if tenant.held_origin.nil?
+              return tenant.custom_origin if tenant.custom_host&.casecmp?(request.host.to_s)
+
+              return held_at?(tenant.held_origin, request) ? tenant.held_origin : nil
+            end
+
             return tenant.custom_origin if tenant.custom_host&.casecmp?(request.host.to_s)
 
             canonical = tenant.templated_origin
@@ -97,6 +113,14 @@ module Masks
               429,
               { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store", "retry-after" => CLAIM_WINDOW.to_i.to_s },
               [ CROWDED ]
+            ]
+          end
+
+          def moved(origin)
+            [
+              404,
+              { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store" },
+              [ format(MOVED, origin) ]
             ]
           end
 

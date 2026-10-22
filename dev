@@ -116,9 +116,9 @@ FIRST_SIGN_IN_PASSWORD = "a-long-enough-password-for-the-first-manager"
 class FirstSignIn
   Refused = Class.new(StandardError)
 
-  def initialize(port:, tenant:)
+  def initialize(port:, host: "localhost:#{port}")
     @http = Net::HTTP.new("127.0.0.1", port.to_i)
-    @host = "#{tenant}.localhost:#{port}"
+    @host = host
     @cookies = {}
     @csrf = ""
   end
@@ -206,7 +206,6 @@ def first_sign_in(args)
   unless system("docker", "image", "inspect", image, out: File::NULL, err: File::NULL)
     run!("docker", "pull", image)
   end
-  stack.call("pull", "--quiet", "postgres") || die("postgres could not be pulled")
   stack.call("down", "-v", "--remove-orphans")
 
   started = clock.call
@@ -225,7 +224,7 @@ def first_sign_in(args)
   end
   booted = clock.call
 
-  FirstSignIn.new(port: FIRST_SIGN_IN_PORT, tenant: "acme").set_up!(token: FIRST_SIGN_IN_TOKEN)
+  FirstSignIn.new(port: FIRST_SIGN_IN_PORT).set_up!(token: FIRST_SIGN_IN_TOKEN)
   signed_in = clock.call
 
   boot = booted - started

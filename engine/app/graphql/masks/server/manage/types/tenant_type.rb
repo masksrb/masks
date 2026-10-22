@@ -9,7 +9,7 @@ module Masks
           field :origins, [ String ], null: false, description: "Every origin this tenant answers on, each its own issuer."
 
           def origins
-            [ object.templated_origin, object.custom_origin ].compact
+            [ object.templated_origin || object.held_origin, object.custom_origin ].compact
           end
           field :name, String, null: false
           field :named_by, String, null: false

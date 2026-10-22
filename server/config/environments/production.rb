@@ -11,9 +11,11 @@ Rails.application.configure do
 
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
-  config.assume_ssl = ENV.fetch("RAILS_ASSUME_SSL", "true") == "true"
+  config.middleware.insert 1, AssumeSsl if ENV.fetch("RAILS_ASSUME_SSL", "true") == "true"
 
   config.force_ssl = ENV.fetch("RAILS_FORCE_SSL", "true") == "true"
+  config.ssl_options = { redirect: { exclude: ->(request) { AssumeSsl.loopback?(request) } } }
+  config.session_store :cookie_store, key: "_server_session", secure: false
 
   config.log_tags = [ :request_id ]
   config.logger   = ActiveSupport::TaggedLogging.logger(STDOUT)

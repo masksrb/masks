@@ -169,7 +169,7 @@ module Masks
       end
 
       def origin_result
-        return ok("origin", "unset") if ::Rails.configuration.masks.public_origin_template.nil?
+        return ok("origin", "unset") if Current.tenant&.public_origin.nil?
 
         noted = ::Rails.cache.read(origin_key(Current.tenant))
 

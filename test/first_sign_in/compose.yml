@@ -1,35 +1,9 @@
 name: masks-first-sign-in
 
 services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - ../../server/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 1s
-      timeout: 5s
-      retries: 30
-
   masks:
     image: ${MASKS_IMAGE:-masks:dev}
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: masks
-      POSTGRES_PASSWORD: masks
-      POSTGRES_DATABASE: masks
-      MASKS_MIGRATION_USER: masks_owner
-      MASKS_MIGRATION_PASSWORD: masks_owner
-      MASKS_TENANTS: acme
-      MASKS_PUBLIC_ORIGIN_TEMPLATE: http://%{subdomain}.localhost:${MASKS_FIRST_SIGN_IN_PORT:-5557}
       MASKS_SETUP_TOKEN: ${MASKS_FIRST_SIGN_IN_TOKEN:-first-sign-in-setup-token-not-for-real-use}
-      RAILS_ASSUME_SSL: "false"
-      RAILS_FORCE_SSL: "false"
     ports:
       - "${MASKS_FIRST_SIGN_IN_PORT:-5557}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy

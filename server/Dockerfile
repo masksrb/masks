@@ -7,8 +7,10 @@ FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 WORKDIR /rails
 
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips42t64 postgresql-client && \
+RUN mkdir -p /etc/postgresql-common/createcluster.d && \
+    echo "create_main_cluster = false" > /etc/postgresql-common/createcluster.d/masks.conf && \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips42t64 postgresql-17 postgresql-client && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -70,6 +72,8 @@ COPY --chown=rails:rails --from=build /rails /rails
 RUN mkdir -p /rails/storage && chown rails:rails /rails/storage
 
 USER 1000:1000
+
+VOLUME /rails/storage
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 

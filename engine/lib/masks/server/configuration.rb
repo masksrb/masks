@@ -25,6 +25,7 @@ module Masks
         config.themes_path = ENV["MASKS_THEMES_PATH"].presence
         config.docs_url = ENV.fetch("MASKS_DOCS_URL", "https://masks.pages.dev")
         config.public_origin_template = ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"].presence
+        config.pin_origin = !::Rails.env.local?
         config.tenant = ENV["MASKS_TENANT"].presence
         config.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
         config.dynamic_client_scopes = ENV["MASKS_DYNAMIC_CLIENT_SCOPES"].presence
@@ -118,12 +119,6 @@ module Masks
           raise "MASKS_MAIL_FROM is set but MASKS_SMTP_ADDRESS is not. Mail would be handed to a " \
                 "local sendmail that is not there, and every invitation and password reset would " \
                 "be dropped without an error anyone sees."
-        end
-
-        if config.public_origin_template.nil?
-          raise "MASKS_PUBLIC_ORIGIN_TEMPLATE is required outside development. Without it the " \
-                "issuer, the registration endpoint and every emailed link follow the Host header, " \
-                "so anyone who can reach this server can have a password reset delivered to theirs."
         end
 
         if config.setup_token && config.setup_token.length < 24

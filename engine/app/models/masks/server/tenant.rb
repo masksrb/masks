@@ -131,7 +131,11 @@ module Masks
       end
 
       def public_origin
-        custom_origin || templated_origin
+        custom_origin || templated_origin || held_origin
+      end
+
+      def held_origin
+        pinned_origin if self.class.pins_origin?
       end
 
       def templated_origin
@@ -270,6 +274,10 @@ module Masks
 
         def resolve(host)
           serving(host) || named(host)
+        end
+
+        def pins_origin?
+          ::Rails.configuration.masks.public_origin_template.nil? && ::Rails.configuration.masks.pin_origin
         end
 
         def served_domain
@@ -429,7 +437,11 @@ module Masks
       end
 
       def set_up!
-        update!(setup_token: nil) if setup_token.present?
+        changes = {}
+        changes[:setup_token] = nil if setup_token.present?
+        changes[:pinned_origin] = Current.origin if self.class.pins_origin? && pinned_origin.blank? && Current.origin.present?
+
+        update!(changes) if changes.any?
       end
 
       def setup_announcement
