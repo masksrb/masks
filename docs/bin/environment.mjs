@@ -14,7 +14,7 @@ const SOURCES = [
 
 const SKIPPED = /(^|\/)(node_modules|\.suite|tmp|vendor)(\/|$)/;
 
-const INTERNAL = new Set(["PATH", "BUNDLE_GEMFILE", "DEFAULT_TEST"]);
+const INTERNAL = new Set(["PATH", "BUNDLE_GEMFILE", "DEFAULT_TEST", "MASKS_HOLDS_ROLES"]);
 
 const DEPENDENCIES = new Set([
   "SECRET_KEY_BASE",

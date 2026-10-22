@@ -437,11 +437,10 @@ module Masks
       end
 
       def set_up!
-        changes = {}
-        changes[:setup_token] = nil if setup_token.present?
-        changes[:pinned_origin] = Current.origin if self.class.pins_origin? && pinned_origin.blank? && Current.origin.present?
+        self.setup_token = nil
+        self.pinned_origin ||= Current.origin.presence if self.class.pins_origin?
 
-        update!(changes) if changes.any?
+        save! if changed?
       end
 
       def setup_announcement

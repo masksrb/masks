@@ -116,9 +116,9 @@ FIRST_SIGN_IN_PASSWORD = "a-long-enough-password-for-the-first-manager"
 class FirstSignIn
   Refused = Class.new(StandardError)
 
-  def initialize(port:, host: "localhost:#{port}")
+  def initialize(port:)
     @http = Net::HTTP.new("127.0.0.1", port.to_i)
-    @host = host
+    @host = "localhost:#{port}"
     @cookies = {}
     @csrf = ""
   end

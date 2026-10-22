@@ -132,6 +132,16 @@ module Masks
         travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: params }
       end
 
+      def with_masks_config(**settings)
+        config = ::Rails.configuration.masks
+        was = settings.keys.index_with { |key| config[key] }
+
+        settings.each { |key, value| config[key] = value }
+        yield
+      ensure
+        was&.each { |key, value| config[key] = value }
+      end
+
       def set_up!(tenant: @tenant, **params)
         post "/login", params: { event: "signup", token: tenant.setup_token!,
                                  nickname: "owner", email: "owner@example.invalid",
