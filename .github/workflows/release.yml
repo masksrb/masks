@@ -306,8 +306,27 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      actions: read
 
     steps:
+      - name: Wait for CI to pass on this commit
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          for attempt in $(seq 1 120); do
+            conclusion="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$SHA" --event push \
+              --json status,conclusion --jq '.[0] | select(.status == "completed") | .conclusion')"
+            case "$conclusion" in
+              success) exit 0 ;;
+              "") sleep 30 ;;
+              *) echo "::error::CI ended in $conclusion on $SHA, so no image is pushed"; exit 1 ;;
+            esac
+          done
+          echo "::error::CI did not finish on $SHA within an hour"
+          exit 1
+
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.release-please.outputs.server_tag || github.sha }}
