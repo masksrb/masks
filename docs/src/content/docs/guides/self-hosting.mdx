@@ -26,7 +26,7 @@ serves HTTPS in front of it. This Compose file runs masks with Caddy, which gets
 ```yaml
 services:
   masks:
-    image: ghcr.io/masksrb/masks:0.11.0
+    image: ghcr.io/masksrb/masks:0.12.0
     volumes:
       - masks:/rails/storage
     logging:
@@ -81,7 +81,7 @@ image, and fails when the whole thing takes longer than 120 seconds.
 
 | Tag                            | Pushed on                                          | Platforms                                |
 | ------------------------------ | -------------------------------------------------- | ---------------------------------------- |
-| `:<version>`, such as `:0.11.0` | A server release.                                  | amd64, arm64                             |
+| `:<version>`, such as `:0.12.0` | A server release.                                  | amd64, arm64                             |
 | `:latest`                      | A server release. Moved to that release's version. | amd64, arm64                             |
 | `:main`                        | Every push to main.                                | amd64, and arm64 too on a server release |
 | `:sha-<commit>`                | Every push to main, named by the full commit hash. | amd64, and arm64 too on a server release |
@@ -97,7 +97,7 @@ This Compose file runs masks with a Postgres server of its own and Caddy in fron
 ```yaml
 services:
   masks:
-    image: ghcr.io/masksrb/masks:0.11.0
+    image: ghcr.io/masksrb/masks:0.12.0
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_ADMIN_PASSWORD: ...
