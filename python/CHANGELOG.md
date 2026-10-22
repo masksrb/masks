@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.3](https://github.com/masksrb/masks/compare/python-v0.3.2...python-v0.3.3) (2026-10-22)
+
+
+### Fixes
+
+* **python:** the client locks certifi 2026.10.19, past PYSEC-2026-4320 ([649ea10](https://github.com/masksrb/masks/commit/649ea10c83fe2c96bc511348fe1467559b235729))
+
+
+### Documentation
+
+* the quickstart and self-hosting guide start from one docker run ([e45c35f](https://github.com/masksrb/masks/commit/e45c35f3027468f9f05a5f964d40956025ed7cea))
+
 ## [0.3.2](https://github.com/masksrb/masks/compare/python-v0.3.1...python-v0.3.2) (2026-10-20)
 
 
