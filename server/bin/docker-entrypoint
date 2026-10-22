@@ -44,10 +44,10 @@ start_postgres() {
 
   if [ ! -s "$bundled_data/PG_VERSION" ]; then
     echo "masks: creating the database in $bundled_data"
-    "$bundled_bin/initdb" -D "$bundled_data" -U rails -E UTF8 --locale=C.UTF-8 --auth=reject > /dev/null
+    "$bundled_bin/initdb" -D "$bundled_data" -U rails -E UTF8 --locale=C.UTF-8 --auth=reject >/dev/null
   fi
 
-  cat > "$bundled_data/pg_hba.conf" <<HBA
+  cat >"$bundled_data/pg_hba.conf" <<HBA
 local all rails peer
 local all all scram-sha-256
 HBA
@@ -60,7 +60,7 @@ HBA
 }
 
 stop_postgres() {
-  if [ -n "$postgres_pid" ] && kill -0 "$postgres_pid" 2> /dev/null; then
+  if [ -n "$postgres_pid" ] && kill -0 "$postgres_pid" 2>/dev/null; then
     kill -INT "$postgres_pid"
     wait "$postgres_pid" || true
   fi
