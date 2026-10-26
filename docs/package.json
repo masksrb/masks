@@ -14,12 +14,12 @@
     "reference": "node bin/reference.mjs src/content/docs/reference/javascript/client.mdx && node bin/parity.mjs"
   },
   "dependencies": {
-    "@astrojs/react": "^7.1.0",
+    "@astrojs/react": "^7.1.1",
     "@astrojs/starlight": "^0.42.6",
     "@graphiql/react": "^0.39.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "astro": "^7.4.0",
+    "astro": "^7.4.2",
     "graphiql": "^5.4.0",
     "graphql": "^17.0.2",
     "react": "^19.3.1",
