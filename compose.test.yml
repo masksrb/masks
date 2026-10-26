@@ -32,7 +32,7 @@ services:
         condition: service_healthy
 
   client:
-    image: ruby:4.0.7
+    image: ruby:4.0.8
     working_dir: /masks/client
     command:
       [

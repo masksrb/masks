@@ -89,7 +89,7 @@ services:
 
   mongodb:
     logging: *logging
-    image: ${MONGODB_IMAGE:-mongo:9.0.2}
+    image: ${MONGODB_IMAGE:-mongo:9.0.4}
     volumes:
       - mongo:/data/db
 
@@ -124,7 +124,7 @@ services:
   runner:
     logging: *logging
     profiles: ["runner"]
-    image: python:3.14-alpine
+    image: python:3.15-alpine
     environment:
       CONFORMANCE_SERVER: https://nginx:8443/
       CONFORMANCE_SERVER_MTLS: https://nginx:8444/
