@@ -8,7 +8,8 @@ speaks the standard protocols that apps use to sign people in and get tokens.
 
 ## Run it
 
-You need Docker.
+You need a container runtime, such as Docker or Podman. The commands here use `docker`, and
+Podman accepts the same ones.
 
 1. Start masks:
 
@@ -28,8 +29,8 @@ The container runs its own Postgres, and keeps everything in the `masks` volume.
 ## Try it locally
 
 The repository runs masks, Postgres, and this documentation on your computer with `./dev`. Use it
-to work on masks itself. You need Ruby and Docker Compose. On a Mac,
-[Colima](https://github.com/abiosoft/colima) runs Docker.
+to work on masks itself. You need Ruby and a container runtime that answers `docker compose`, such as
+Docker or Podman. On a Mac, [Colima](https://github.com/abiosoft/colima) runs one.
 
 1. Clone the repository and start the stack:
 
