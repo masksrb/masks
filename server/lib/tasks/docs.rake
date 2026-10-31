@@ -15,7 +15,7 @@ namespace :docs do
 
     environment = "#{docs}/src/content/docs/reference/environment.mdx"
     table = [ "| Variable | Limit | Default | Counts |", "| --- | --- | --- | --- |", *Masks::Server::Throttle.reference ]
-    page = File.read(environment).sub(/<!-- limits -->.*<!-- \/limits -->/m, "<!-- limits -->\n#{table.join("\n")}\n<!-- /limits -->")
+    page = File.read(environment).sub(%r{\{/\* limits \*/\}.*\{/\* /limits \*/\}}m, "{/* limits */}\n#{table.join("\n")}\n{/* /limits */}")
     File.write(environment, page)
   end
 end

@@ -98,7 +98,7 @@ Set a budget with its variable, or under `limits:` in the file `MASKS_CONFIG` na
 name. The variable wins when both are set. The window does not change. This table is generated from
 the budgets masks keeps, so it lists every one.
 
-<!-- limits -->
+{/* limits */}
 | Variable | Limit | Default | Counts |
 | --- | --- | --- | --- |
 | `MASKS_ATTEMPT_LIMIT` | `attempt` | 10 in 3 minutes | Sign-in attempts from one IP address. Includes sign-in through a provider, failed LDAP binds, and app passwords. |
@@ -122,7 +122,7 @@ the budgets masks keeps, so it lists every one.
 | `MASKS_ACCESS_REQUEST_LIMIT` | `access_request` | 1 in 1 hour | Times one account asks for access to one app. |
 | `MASKS_SIGNAL_LIMIT` | `signal` | 600 in 1 minute | Security events received from one IP address. |
 | `MASKS_SCIM_LIMIT` | `scim` | 600 in 1 minute | SCIM provisioning requests from one IP address. |
-<!-- /limits -->
+{/* /limits */}
 
 ### Mail
 
