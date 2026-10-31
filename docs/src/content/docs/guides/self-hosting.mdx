@@ -184,17 +184,18 @@ The overview in `/manage` has a **Health** panel. A job runs every check every 1
 panel shows each result as a sentence, with what to do when something is wrong. **Check now** runs
 them again.
 
-| Check           | Looks at                                                                                                        |
-| --------------- | --------------------------------------------------------------------------------------------------------------- |
-| Background jobs | Whether a kind of job failed in the last day.                                                                   |
-| Worker          | Whether a worker has reported within `MASKS_WORKER_SILENCE`.                                                    |
-| Queue           | Whether a job has waited longer than `MASKS_QUEUE_WAIT` to start.                                               |
-| LDAP            | Whether the directory answers without TLS to the network. See [LDAP](/guides/ldap/).                            |
-| Metrics         | Whether `MASKS_METRICS_TOKEN` is set and at least 24 characters long.                                           |
-| Mail            | Whether the tenant's SMTP server, or the one in `MASKS_SMTP_ADDRESS`, answers a connection. No mail is sent.    |
-| Public address  | Whether requests reach this tenant at its public address. A proxy that drops `X-Forwarded-Proto` shows up here. |
-| Domains         | Whether every claimed domain still has its TXT record.                                                          |
-| Signing keys    | Whether the active key is older than the tenant's rotation period, missing, or left to rotate by hand. |
+| Check           | Looks at                                                                                                                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Background jobs | Whether a kind of job failed in the last day.                                                                                                                                                        |
+| Worker          | Whether a worker has reported within `MASKS_WORKER_SILENCE`.                                                                                                                                         |
+| Queue           | Whether a job has waited longer than `MASKS_QUEUE_WAIT` to start.                                                                                                                                    |
+| LDAP            | Whether the directory answers without TLS to the network. See [LDAP](/guides/ldap/).                                                                                                                 |
+| Metrics         | Whether `MASKS_METRICS_TOKEN` is set and at least 24 characters long.                                                                                                                                |
+| Mail            | Whether the tenant's SMTP server, or the one in `MASKS_SMTP_ADDRESS`, answers a connection. No mail is sent.                                                                                         |
+| Public address  | Whether requests reach this tenant at its public address. A proxy that drops `X-Forwarded-Proto` shows up here.                                                                                      |
+| Domains         | Whether every claimed domain still has its TXT record.                                                                                                                                               |
+| Signing keys    | Whether the active key is older than the tenant's rotation period, missing, or left to rotate by hand.                                                                                               |
+| Reverse proxy   | Whether forwarded headers came from an address outside `MASKS_TRUSTED_PROXIES`, whether a trusted proxy forwards plain HTTP, and whether every event in the last hour came from one private address. |
 
 The first five are about the server and show the same result in every tenant. The rest are about
 the tenant. A check that turns failing records a `health.failing` event, and `health.recovered` when
@@ -529,17 +530,17 @@ apps:
     refresh_token_lifetime: 604800
 ```
 
-|                                                                                                        |                                                                                                                           |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `name`, `accent_color`                                                                                 | The tenant's name and color, as under **Branding** in `/manage`.                                                          |
-| `invitation_lifetime`, `organization_invitation_lifetime`, `password_reset_lifetime`, `email_verification_lifetime` | Seconds each [emailed link](/guides/features/#link-lifetimes) stays valid, as under **Links** in `/manage`. |
-| An app's key                                                                                           | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                           |
-| `preset`, `url`, `slug`                                                                                | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                  |
-| `redirect_uris`, `scopes`                                                                              | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                         |
-| `name` under an app                                                                                    | The app's name. Without it, masks uses the preset's name or the app's key.                                                |
-| `client_secret_env`                                                                                    | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
-| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime`, `refresh_token_absolute_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds.                                  |
-| `groups`                                                                                               | Each group's name, and the nicknames or emails of its members. A member must already have an account.                     |
+|                                                                                                                     |                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`, `accent_color`                                                                                              | The tenant's name and color, as under **Branding** in `/manage`.                                                                                                  |
+| `invitation_lifetime`, `organization_invitation_lifetime`, `password_reset_lifetime`, `email_verification_lifetime` | Seconds each [emailed link](/guides/features/#link-lifetimes) stays valid, as under **Links** in `/manage`.                                                       |
+| An app's key                                                                                                        | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                                                                   |
+| `preset`, `url`, `slug`                                                                                             | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                                                          |
+| `redirect_uris`, `scopes`                                                                                           | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                                                                 |
+| `name` under an app                                                                                                 | The app's name. Without it, masks uses the preset's name or the app's key.                                                                                        |
+| `client_secret_env`                                                                                                 | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once.                                         |
+| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime`, `refresh_token_absolute_lifetime`              | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds.                                                                          |
+| `groups`                                                                                                            | Each group's name, and the nicknames or emails of its members. A member must already have an account.                                                             |
 
 - An app in the file is approved, and actors are not asked to consent to it.
 - Applying the file adds and updates. It never removes an app, a group, or a member the file no

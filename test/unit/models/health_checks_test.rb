@@ -275,6 +275,62 @@ module Masks
         assert_equal [ "failing", "missing" ], result(:keys).then { |r| [ r.status, r.summary ] }
       end
 
+      test "proxy is quiet, or names the untrusted forwarder, the plain proxy, or the one private address" do
+        Health.forget_proxy!
+
+        assert_equal [ "ok", "quiet" ], result(:proxy).then { |r| [ r.status, r.summary ] }
+
+        Health.note_proxy!("untrusted", "203.0.113.9")
+        Health.note_proxy!("plain", "10.0.0.2")
+        found = result(:proxy)
+
+        assert_equal [ "warning", "untrusted" ], [ found.status, found.summary ]
+        assert_equal [ "203.0.113.9" ], found.details["addresses"]
+
+        Health.forget_proxy!
+        Health.note_proxy!("plain", "10.0.0.2")
+        found = result(:proxy)
+
+        assert_equal [ "warning", "plain" ], [ found.status, found.summary ]
+        assert_equal [ "10.0.0.2" ], found.details["addresses"]
+      ensure
+        Health.forget_proxy!
+      end
+
+      test "proxy notices when every event in the last hour came from one private address, at a public origin only" do
+        Health.forget_proxy!
+        actor = create_actor(@tenant)
+
+        setting(:public_origin_template, "https://%{subdomain}.auth.test") do
+          within { 19.times { Event.record!(Event::EMAIL_VERIFIED, actor: actor, ip_address: "172.18.0.2") } }
+          assert_equal "quiet", result(:proxy).summary, "too few events to say anything"
+
+          within { Event.record!(Event::EMAIL_VERIFIED, actor: actor, ip_address: "172.18.0.2") }
+          found = result(:proxy)
+
+          assert_equal [ "warning", "one" ], [ found.status, found.summary ]
+          assert_equal({ "address" => "172.18.0.2", "count" => 20 }, found.details)
+
+          within { Event.record!(Event::EMAIL_VERIFIED, actor: actor, ip_address: "198.51.100.7") }
+          assert_equal "quiet", result(:proxy).summary, "a second address means the proxy passes addresses on"
+        end
+
+        setting(:public_origin_template, "http://%{subdomain}.localhost:3000") do
+          within { 25.times { Event.record!(Event::EMAIL_VERIFIED, actor: actor, ip_address: "127.0.0.1") } }
+          assert_equal "quiet", result(:proxy).summary, "a loopback origin is development, where one address is normal"
+        end
+      end
+
+      test "proxy says nothing about a single public address, which is a home behind one router" do
+        actor = create_actor(@tenant)
+
+        setting(:public_origin_template, "https://%{subdomain}.auth.test") do
+          within { 25.times { Event.record!(Event::EMAIL_VERIFIED, actor: actor, ip_address: "198.51.100.7") } }
+
+          assert_equal "quiet", result(:proxy).summary
+        end
+      end
+
       def events(action)
         within { Event.where(action: action).order(:id).to_a }
       end

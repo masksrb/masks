@@ -10,11 +10,19 @@ module Masks
       end
 
       SERVER = %w[jobs worker queue ldap metrics].freeze
-      TENANT = %w[mail origin domains keys].freeze
+      TENANT = %w[mail origin domains keys proxy].freeze
       NAMES = (SERVER + TENANT).freeze
 
       FAILING_KEY = "masks:health:failing".freeze
       ORIGIN_PREFIX = "masks:health:origin:".freeze
+      PROXY_KEY = "masks:health:proxy".freeze
+      PROXY_ADDRESSES = 5
+      PROXY_LOG = {
+        "untrusted" => "proxy: forwarded headers arrived from %{address}, which MASKS_TRUSTED_PROXIES does not list, so they were ignored",
+        "plain" => "proxy: %{address} forwards requests as plain http; have it send X-Forwarded-Proto: https"
+      }.freeze
+      ONE_ADDRESS_FLOOR = 20
+      LOOPBACK = /\A(?:(?:.+\.)?localhost|127(?:\.\d{1,3}){3}|\[::1\])\z/i
       KEEP = 1.day
       NOTE_EVERY = 10.minutes
       SMTP_TIMEOUT = 5
@@ -37,7 +45,7 @@ module Masks
       end
 
       def tenant_results
-        [ mail_result, origin_result, domains_result, keys_result ]
+        [ mail_result, origin_result, domains_result, keys_result, proxy_result ]
       end
 
       def store!(results)
@@ -201,6 +209,65 @@ module Masks
 
       def origin_key(tenant)
         "#{ORIGIN_PREFIX}#{tenant.id}"
+      end
+
+      def note_proxy!(kind, address)
+        return if address.blank? || !PROXY_LOG.key?(kind)
+
+        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        key = "proxy:#{kind}:#{address}"
+        last = noted[key]
+
+        return if last && now - last < NOTE_EVERY
+
+        noted[key] = now
+        ::Rails.logger.warn(format(PROXY_LOG.fetch(kind), address: address))
+
+        held = ::Rails.cache.read(PROXY_KEY) || {}
+        seen = (held[kind] ||= {})
+        seen[address] = Time.current.utc.iso8601 if seen.key?(address) || seen.size < PROXY_ADDRESSES
+        ::Rails.cache.write(PROXY_KEY, held, expires_in: KEEP)
+      end
+
+      def forget_proxy!
+        noted.keys.grep(/\Aproxy:/).each { |key| noted.delete(key) }
+        ::Rails.cache.delete(PROXY_KEY)
+      end
+
+      def proxy_result
+        held = ::Rails.cache.read(PROXY_KEY) || {}
+        untrusted = held["untrusted"].to_h.keys.sort
+        plain = held["plain"].to_h.keys.sort
+
+        return warning("proxy", "untrusted", addresses: untrusted) if untrusted.any?
+        return warning("proxy", "plain", addresses: plain) if plain.any?
+
+        address, count = sole_private_address
+
+        return warning("proxy", "one", address: address, count: count) if address
+
+        ok("proxy", "quiet")
+      end
+
+      def sole_private_address
+        origin = Current.tenant&.public_origin
+
+        return if origin.nil? || URI.parse(origin).host.to_s.match?(LOOPBACK)
+
+        recent = Event.where(created_at: 1.hour.ago..).where.not(ip_address: [ nil, "" ])
+        addresses = recent.distinct.limit(2).pluck(:ip_address)
+
+        return unless addresses.size == 1
+
+        count = recent.count
+
+        return if count < ONE_ADDRESS_FLOOR
+
+        address = IPAddr.new(addresses.first)
+
+        [ addresses.first, count ] if address.private? || address.loopback? || address.link_local?
+      rescue IPAddr::InvalidAddressError, URI::InvalidURIError
+        nil
       end
 
       def domains_result

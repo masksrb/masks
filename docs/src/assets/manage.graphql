@@ -759,7 +759,7 @@ type HealthCheck {
   details: JSON!
 
   """
-  jobs, worker, queue, ldap, metrics, mail, origin, domains, or keys.
+  jobs, worker, queue, ldap, metrics, mail, origin, domains, keys, or proxy.
   """
   name: ID!
 

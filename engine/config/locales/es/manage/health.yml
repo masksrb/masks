@@ -65,6 +65,13 @@ es:
           proven: "Cada dominio reclamado conserva su registro TXT."
           missing: "Falta el registro TXT de %{domains}. Una reclamación se libera una semana después de que desaparezca su registro."
           advice: "Vuelve a poner el registro TXT en el nombre que muestra la página Dominios."
+        proxy:
+          title: "Proxy inverso"
+          quiet: "Las cabeceras reenviadas llegan solo desde proxies de confianza, por HTTPS."
+          untrusted: "Llegaron cabeceras reenviadas desde %{addresses}, que no figura en MASKS_TRUSTED_PROXIES, así que se ignoraron. Todos los visitantes detrás de ese proxy comparten una dirección y un mismo límite."
+          plain: "El proxy en %{addresses} reenvía las peticiones como HTTP sin cifrar. masks marca sus cookies solo para HTTPS, así que los navegadores las descartan y el inicio de sesión se repite en bucle."
+          one: "Los %{count} eventos de la última hora llegaron todos desde %{address}, una dirección privada, que casi seguro es el propio proxy."
+          advice: "Añade el proxy a MASKS_TRUSTED_PROXIES y haz que envíe X-Forwarded-For y X-Forwarded-Proto. Busca en el registro del servidor las líneas que empiezan por proxy:."
         keys:
           title: "Claves de firma"
           missing: "Este inquilino no tiene ninguna clave de firma activa, así que no se puede firmar nada."

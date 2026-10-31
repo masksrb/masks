@@ -65,6 +65,13 @@ de:
           proven: "Jede beanspruchte Domain hat noch ihren TXT-Eintrag."
           missing: "Der TXT-Eintrag fehlt für %{domains}. Ein Anspruch wird eine Woche nach dem Verschwinden seines Eintrags freigegeben."
           advice: "Legen Sie den TXT-Eintrag wieder unter dem Namen an, der auf der Seite Domains steht."
+        proxy:
+          title: "Reverse-Proxy"
+          quiet: "Weitergeleitete Header kommen nur von vertrauten Proxys, über HTTPS."
+          untrusted: "Weitergeleitete Header kamen von %{addresses}, das nicht in MASKS_TRUSTED_PROXIES steht, und wurden deshalb ignoriert. Alle Besucher hinter diesem Proxy teilen sich eine Adresse und ein Kontingent."
+          plain: "Der Proxy unter %{addresses} leitet Anfragen als einfaches HTTP weiter. masks markiert seine Cookies nur für HTTPS, also verwerfen Browser sie, und Anmeldungen laufen im Kreis."
+          one: "Alle %{count} Ereignisse der letzten Stunde kamen von %{address}, einer privaten Adresse, also höchstwahrscheinlich vom Proxy selbst."
+          advice: "Tragen Sie den Proxy in MASKS_TRUSTED_PROXIES ein und lassen Sie ihn X-Forwarded-For und X-Forwarded-Proto senden. Suchen Sie im Serverprotokoll nach Zeilen, die mit proxy: beginnen."
         keys:
           title: "Signaturschlüssel"
           missing: "Dieser Mandant hat keinen aktiven Signaturschlüssel, also kann nichts signiert werden."

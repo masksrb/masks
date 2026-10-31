@@ -65,6 +65,13 @@ fr:
           proven: "Chaque domaine revendiqué a toujours son enregistrement TXT."
           missing: "L'enregistrement TXT manque pour %{domains}. Une revendication est libérée une semaine après la disparition de son enregistrement."
           advice: "Remettez l'enregistrement TXT au nom indiqué sur la page Domaines."
+        proxy:
+          title: "Proxy inverse"
+          quiet: "Les en-têtes transmis ne viennent que de proxys de confiance, en HTTPS."
+          untrusted: "Des en-têtes transmis sont arrivés de %{addresses}, qui ne figure pas dans MASKS_TRUSTED_PROXIES, et ont donc été ignorés. Tous les visiteurs derrière ce proxy partagent une adresse et une même limite."
+          plain: "Le proxy à %{addresses} transmet les requêtes en HTTP non chiffré. masks réserve ses cookies au HTTPS, donc les navigateurs les rejettent et la connexion tourne en boucle."
+          one: "Les %{count} événements de la dernière heure viennent tous de %{address}, une adresse privée, qui est presque sûrement le proxy lui-même."
+          advice: "Ajoutez le proxy à MASKS_TRUSTED_PROXIES et faites-lui envoyer X-Forwarded-For et X-Forwarded-Proto. Cherchez dans le journal du serveur les lignes qui commencent par proxy:."
         keys:
           title: "Clés de signature"
           missing: "Ce locataire n'a aucune clé de signature active, donc rien ne peut être signé."

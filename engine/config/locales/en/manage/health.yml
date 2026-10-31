@@ -65,6 +65,13 @@ en:
           proven: "Every claimed domain still has its TXT record."
           missing: "The TXT record is gone for %{domains}. A claim is released a week after its record disappears."
           advice: "Put the TXT record back at the name shown on the Domains page."
+        proxy:
+          title: "Reverse proxy"
+          quiet: "Forwarded headers come only from trusted proxies, over HTTPS."
+          untrusted: "Forwarded headers came from %{addresses}, which MASKS_TRUSTED_PROXIES does not list, so they were ignored. Every visitor behind that proxy shares one address and one set of rate limits."
+          plain: "The proxy at %{addresses} forwards requests as plain HTTP. masks marks its cookies for HTTPS only, so browsers drop them and sign-ins loop."
+          one: "All %{count} events in the last hour came from %{address}, a private address, which is most likely the proxy itself."
+          advice: "List the proxy in MASKS_TRUSTED_PROXIES and have it send X-Forwarded-For and X-Forwarded-Proto. Search the server log for lines that start with proxy:."
         keys:
           title: "Signing keys"
           missing: "This tenant has no active signing key, so nothing can be signed."

@@ -201,6 +201,11 @@ Set `MASKS_TRUSTED_PROXIES` when a proxy on a public address, such as a CDN (con
 network), forwards requests to masks. If you leave it unset, every visitor appears to come from
 that proxy's address, and they all share one set of rate limits.
 
+masks notices both mistakes. When forwarded headers arrive from an address it does not trust, or a
+trusted proxy forwards plain HTTP without redirecting to HTTPS, masks writes a line that starts with
+`proxy:` to the log and the **Reverse proxy** check on the [health panel](/guides/self-hosting/#the-health-panel)
+names the address. An untrusted visitor's forwarded headers, the scheme among them, are ignored.
+
 ### Outbound calls
 
 masks refuses to call an address on a private, loopback, or reserved network. This applies when it:
