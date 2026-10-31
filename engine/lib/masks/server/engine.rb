@@ -20,7 +20,8 @@ module Masks
         Configuration.validate!(
           app.config.masks,
           local: ::Rails.env.local?,
-          building: ENV["SECRET_KEY_BASE_DUMMY"].present?
+          building: ENV["SECRET_KEY_BASE_DUMMY"].present?,
+          cache_store: app.config.cache_store
         )
 
         middleware.insert_before Tenancy::Middleware, Isolation if app.config.masks.mode == :engine

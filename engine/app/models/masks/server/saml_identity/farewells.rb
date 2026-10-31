@@ -11,6 +11,7 @@ module Masks
           held = ::Rails.cache.read(key)
 
           return nil unless held.is_a?(Hash) && held["client_id"] == client.client_id
+          return nil unless Replay.first?("saml-farewell", request_id, within: client.id, expires_in: WAIT)
 
           ::Rails.cache.delete(key)
           new(held["steps"], held["finish"])

@@ -23,6 +23,19 @@ class InstallGeneratorTest < Rails::Generators::TestCase
     assert_file "config/routes.rb", %r{mount Masks::Server::Engine, at: "/auth"}
   end
 
+  test "engine mode says every process must share one cache store" do
+    output = run_generator %w[--at /auth]
+
+    assert_match "share one cache store", output
+    assert_match "refuses to boot on", output
+  end
+
+  test "server mode leaves the cache store to the image" do
+    output = run_generator %w[--mode server]
+
+    assert_no_match "share one cache store", output
+  end
+
   test "engine mode on a subdomain mounts masks at the root of that host" do
     run_generator %w[--host auth.example.com]
 

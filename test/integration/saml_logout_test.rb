@@ -237,6 +237,29 @@ module Masks
         assert_equal 0, live_sessions
       end
 
+      test "a LogoutResponse carries the browser along the chain once" do
+        other = settings(entity: OTHER, acs: OTHER_ACS, slo: OTHER_SLO)
+        application(OTHER, OTHER_ACS, OTHER_SLO)
+
+        sign_in_as(@actor)
+        saml = signed_in_to
+        signed_in_to(other)
+
+        held = settings
+        request = logout_request(held, name_id: saml.name_id, session_index: saml.sessionindex)
+        get request.create(held).delete_prefix(origin)
+
+        asked = asked_to_leave(other)
+
+        leave(other, asked)
+        assert_response :success
+
+        leave(other, asked)
+        assert_response :bad_request
+        assert_match "answers nothing masks is waiting on", response.body
+        assert within { Replay.where(kind: "saml-farewell").exists? }
+      end
+
       test "an application ending a session this browser does not hold tells the other applications from the server" do
         other = settings(entity: OTHER, acs: OTHER_ACS, slo: OTHER_SLO)
         application(OTHER, OTHER_ACS, OTHER_SLO)

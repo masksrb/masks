@@ -39,6 +39,7 @@ module Masks
           say ""
 
           engine? ? say_engine_database : say_server_database
+          say_cache_store if engine?
 
           say "In production, masks keeps the address its setup screen was first opened at, and builds the"
           say "issuer and every emailed link from it. To name the address yourself, set"
@@ -103,6 +104,24 @@ module Masks
             say "masks_actor and require_masks_actor!." unless subdomain?
             say "On a subdomain, sign this app in with the masks gem's Masks::Rails, as any other client." if subdomain?
             say ""
+          end
+
+          def say_cache_store
+            say "masks holds one-time sign-in state, rate limits, and health findings in Rails.cache, so"
+            say "every process that serves it must share one cache store, such as :solid_cache_store,"
+            say ":redis_cache_store or :mem_cache_store. In production, masks refuses to boot on"
+            say ":memory_store or :null_store."
+
+            if Configuration.unshared_cache_store?(cache_store)
+              say ""
+              say "This app's cache_store is #{Array(cache_store).first.inspect}. Change it before you deploy.", :yellow
+            end
+
+            say ""
+          end
+
+          def cache_store
+            ::Rails.application&.config&.cache_store if defined?(::Rails.application)
           end
 
           def say_server_database

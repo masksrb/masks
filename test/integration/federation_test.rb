@@ -161,6 +161,8 @@ module Masks
         get location
 
         assert_nil signed_in_actor
+        assert within(@tenant) { Replay.where(kind: "provider-callback").exists? },
+               "the redeem was not claimed in the database, so two requests at once could both redeem it"
       end
 
       test "somebody signed in links a provider from their account page" do

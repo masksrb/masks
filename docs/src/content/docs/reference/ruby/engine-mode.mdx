@@ -65,6 +65,18 @@ Its role must hold neither `SUPERUSER` nor `BYPASSRLS`.
 rows, keeps tenants apart, and those roles get around it. masks checks the role the first time it
 enters a tenant, and refuses to go on while the role holds either one.
 
+## A cache every process shares
+
+masks holds one-time sign-in state in `Rails.cache`: a provider's callback on its way back to the
+browser, the steps of a SAML logout, rate limits, and health findings. Every process that serves
+masks must read the same cache, so the store has to be one they share, such as `:solid_cache_store`,
+`:redis_cache_store` or `:mem_cache_store`. In production, masks refuses to boot on `:memory_store`
+or `:null_store`, which each process keeps to itself. The install generator says so when the app it
+runs in uses one of those.
+
+masks' own database decides whether a one-time value has been redeemed, so a cache that two
+requests read at the same moment still lets only one of them through.
+
 ## Signing your own people in
 
 When masks is mounted at a path, it shares your app's origin. Your controllers read the signed-in

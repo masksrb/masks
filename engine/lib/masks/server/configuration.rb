@@ -4,6 +4,7 @@ module Masks
   module Server
     module Configuration
       MODES = %i[server engine].freeze
+      UNSHARED_CACHE_STORES = %i[memory_store null_store].freeze
 
       module_function
 
@@ -88,7 +89,11 @@ module Masks
         }.compact
       end
 
-      def validate!(config, local:, building:)
+      def unshared_cache_store?(cache_store)
+        UNSHARED_CACHE_STORES.include?(Array(cache_store).first&.to_sym)
+      end
+
+      def validate!(config, local:, building:, cache_store: nil)
         unless MODES.include?(config.mode)
           raise "masks runs in server or engine mode, and config.masks.mode is #{config.mode.inspect}."
         end
@@ -130,6 +135,14 @@ module Masks
         if config.mode == :engine && config.database.nil?
           raise "masks in engine mode needs a database of its own. Set config.masks.database to " \
                 "the name of a database.yml entry whose role cannot bypass row-level security."
+        end
+
+        if unshared_cache_store?(cache_store)
+          raise "config.cache_store is #{Array(cache_store).first.inspect}, which every process keeps " \
+                "to itself. masks holds one-time sign-in state, rate limits, and health findings in " \
+                "Rails.cache, so a provider's callback redeemed in one process is lost in the next. " \
+                "Use a store every process shares, such as :solid_cache_store, :redis_cache_store " \
+                "or :mem_cache_store."
         end
       end
     end

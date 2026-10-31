@@ -108,6 +108,8 @@ module Masks
         end
 
         def take_posted(handle)
+          return {} unless Replay.first?("provider-callback", handle, expires_in: POSTED_WINDOW)
+
           key = posted_key(handle)
           held = ::Rails.cache.read(key)
           ::Rails.cache.delete(key)
