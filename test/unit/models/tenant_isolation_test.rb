@@ -41,6 +41,18 @@ module Masks
         end
       end
 
+      test "a switch inside a transaction names the tenant for that transaction, and a switch outside one for the session" do
+        local = []
+        other = other_tenant
+
+        ActiveSupport::Notifications.subscribed(->(*, payload) { local << payload[:binds]&.last }, "sql.active_record") do
+          within(other) { Current.tenant }
+        end
+
+        assert_equal [ true, true ], local.select { |value| [ true, false ].include?(value) },
+                     "a test runs inside a transaction, so both the switch in and the switch back are local to it"
+      end
+
       test "a tenant cannot write a row belonging to another" do
         assert_raises(ActiveRecord::StatementInvalid) do
           within(other_tenant) do

@@ -239,6 +239,23 @@ Two checks stop a server that is set up wrong:
 - The server refuses to answer a request while its role is a superuser, has `BYPASSRLS`, or owns a
   table that row-level security protects.
 
+### Connection poolers
+
+masks names the tenant on its Postgres connection with `set_config`, and row-level security reads
+that name on every query. A pooler such as PgBouncer or PgCat keeps the name only in session mode,
+where one client holds one server connection for as long as it is connected. In transaction mode,
+each transaction may run on a different server connection, so the tenant named on one is missing
+from the next, and a query would see no rows, or another tenant's rows.
+
+The first time it enters a tenant, masks checks which mode it is in. It names a value on one
+connection, uses another connection, and reads the value back. When the value is gone, masks refuses
+to go on, with an error that begins "this server reaches Postgres through a pooler". Connect masks to
+Postgres directly, or run the pooler in session mode.
+
+Inside a transaction, masks names the tenant for that transaction only, so work you wrap in one
+transaction is safe behind any pooler. A request is not one transaction, so this does not make
+transaction mode safe.
+
 ## Encryption and secrets
 
 For each tenant, the database holds accounts, sign-in factors, clients, tokens, signing keys, and

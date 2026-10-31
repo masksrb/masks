@@ -23,6 +23,17 @@ class EngineModeTest
     assert_equal "http://auth.app.test", JSON.parse(response.body)["issuer"]
   end
 
+  test "the host's own connections never carry a tenant, only the provider's do" do
+    actor = create_actor
+
+    assert_nil ActiveRecord::Base.connection.select_value("SELECT current_setting('masks.tenant_id', true)"),
+               "the checkout hook named a tenant on the host app's pool"
+    assert_equal tenant.id.to_s, Masks::Server::Tenant.switch(tenant) {
+      Masks::Server::ApplicationRecord.connection.select_value("SELECT current_setting('masks.tenant_id', true)")
+    }
+    assert_equal actor.id, Masks::Server::Tenant.switch(tenant) { Masks::Server::Actor.find(actor.id).id }
+  end
+
   test "a host page sends a stranger to the provider's sign-in, and back" do
     get "/dashboard"
 

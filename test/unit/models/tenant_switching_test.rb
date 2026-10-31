@@ -210,6 +210,42 @@ module Masks
         borrowed { |connection| connection.select_value("SELECT current_setting('masks.tenant_id', true)").to_s }
       end
 
+      test "a direct connection to Postgres is not mistaken for a transaction pooler" do
+        assert_not Tenant.pooled?
+      end
+
+      test "a pooler that moves the connection between statements is refused before any tenant is entered" do
+        held = Tenant.instance_variable_get(:@isolated)
+        Tenant.instance_variable_set(:@isolated, nil)
+
+        connection = Tenant.connection
+        connection.define_singleton_method(:select_value) { |*| "another connection" }
+
+        error = assert_raises(Tenant::Pooled) { Tenant.switch(@tenant) { flunk "entered a tenant on a pooled connection" } }
+
+        assert_match "session mode", error.message
+        assert_nil Tenant.instance_variable_get(:@isolated)
+      ensure
+        connection&.singleton_class&.send(:remove_method, :select_value)
+        Tenant.instance_variable_set(:@isolated, held)
+      end
+
+      test "inside a transaction the tenant is named for that transaction only" do
+        ActiveRecord::Base.connection_pool.release_connection
+
+        borrowed do |connection|
+          connection.exec_query("SELECT set_config('masks.tenant_id', '', false)", "probe")
+
+          connection.transaction do
+            connection.exec_query("SELECT set_config('masks.tenant_id', $1, true)", "probe", [ @tenant.id.to_s ])
+
+            assert_equal @tenant.id.to_s, connection.uncached { connection.select_value("SELECT current_setting('masks.tenant_id', true)") }
+          end
+
+          assert_equal "", connection.uncached { connection.select_value("SELECT current_setting('masks.tenant_id', true)") }.to_s
+        end
+      end
+
       test "a connection handed back still naming a tenant names only the borrower's tenant when it is taken again" do
         ActiveRecord::Base.connection_pool.release_connection
 

@@ -31,6 +31,21 @@ module Masks
         end
       end
 
+      class Pooled < StandardError
+        def initialize(message = nil)
+          super(
+            message ||
+            "this server reaches Postgres through a pooler that hands out a different server " \
+            "connection for each transaction. The tenant masks sets on one connection is gone from " \
+            "the next, so a query would see no tenant's rows, or another tenant's. Connect masks to " \
+            "Postgres directly, or run the pooler in session mode."
+          )
+        end
+      end
+
+      POOL_PROBE = "masks.pool_probe".freeze
+      POOL_PROBE_ROUNDS = 3
+
       encrypts :pairwise_salt, :setup_token, key_provider: Server.tenant_key_provider
 
       attribute :uuid, default: -> { SecureRandom.uuid }
@@ -348,8 +363,26 @@ module Masks
 
           raise Exposed, held&.fetch("rolname", nil) unless held && held["bypasses"] == false
           raise Owner, held["rolname"] if held["owns"] && guards_ownership?
+          raise Pooled if pooled?
 
           @isolated = true
+        end
+
+        def pooled?
+          return false if connection_pool.size < 2
+
+          POOL_PROBE_ROUNDS.times do
+            mine = SecureRandom.hex(8)
+            connection.exec_query("SELECT set_config($1, $2, false)", "probe", [ POOL_PROBE, mine ])
+
+            return false unless touched_another_connection?
+
+            return true unless connection.select_value("SELECT current_setting('#{POOL_PROBE}', true)") == mine
+          end
+
+          false
+        rescue ActiveRecord::ConnectionTimeoutError
+          false
         end
 
         def role_privileges
@@ -383,22 +416,33 @@ module Masks
         end
 
         def clear!
-          enter(nil)
+          enter(nil, for_transaction: false)
         end
 
         private
 
-          def enter(tenant)
+          def enter(tenant, for_transaction: connection.transaction_open?)
             Current.tenant = tenant
 
             connection.exec_query(
-              "SELECT set_config($1, $2, false)", "tenant",
-              [ TenantIsolation::SETTING, tenant&.id.to_s ]
+              "SELECT set_config($1, $2, $3)", "tenant",
+              [ TenantIsolation::SETTING, tenant&.id.to_s, for_transaction ]
             )
 
             connection.clear_query_cache
           rescue ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionFailed
             nil
+          end
+
+          def touched_another_connection?
+            other = connection_pool.checkout
+
+            return false if other.equal?(connection)
+
+            other.exec_query("SELECT set_config($1, $2, false)", "probe", [ POOL_PROBE, "another connection" ])
+            true
+          ensure
+            connection_pool.checkin(other) if other
           end
       end
 

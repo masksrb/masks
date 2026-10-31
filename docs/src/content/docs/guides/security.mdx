@@ -34,6 +34,8 @@ So masks checks its database role the first time it enters a tenant:
 - It refuses to run as a role that holds either privilege.
 - Outside development and test, it also refuses a role that owns a table that row-level security
   protects. Engine mode skips this check.
+- It refuses a connection pooler in transaction mode, which drops the tenant between one statement
+  and the next. See [connection poolers](/guides/self-hosting/#connection-poolers).
 
 This is why the server migrates as one role and serves as another. See
 [database roles](/guides/self-hosting/#database-roles).

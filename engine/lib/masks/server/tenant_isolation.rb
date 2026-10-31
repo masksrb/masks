@@ -4,9 +4,21 @@ module Masks
       SETTING = "masks.tenant_id".freeze
 
       def self.adopt(connection)
+        return unless masks?(connection)
+
         connection.exec_query("SELECT set_config($1, $2, false)", "tenant", [ SETTING, Current.tenant&.id.to_s ])
       rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionFailed
         nil
+      end
+
+      def self.masks?(connection)
+        database = Server.config.database
+
+        return true if database.nil?
+
+        pool = connection.pool
+
+        pool.respond_to?(:db_config) && pool.db_config.name == database.to_s
       end
 
       def enable_row_level_security(table)
