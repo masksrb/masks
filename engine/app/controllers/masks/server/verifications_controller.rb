@@ -1,10 +1,9 @@
 module Masks
   module Server
     class VerificationsController < ApplicationController
-      rate_limit to: ::Rails.configuration.masks.recovery_limit,
-                 within: 15.minutes,
+      rate_limit **Throttle.limits(:recovery),
                  by: -> { [ current_tenant.id, current_actor&.id ].join(":") },
-                 with: -> { redirect_to root_path, alert: t("verifications.too_many_requests") }
+                 with: Throttle.refused(:recovery) { redirect_to root_path, alert: t("verifications.too_many_requests") }
 
       before_action :require_actor
 

@@ -3,18 +3,18 @@ module Masks
     class EnrollmentsController < ApplicationController
       include TokenPresented
 
-      rate_limit to: 30, within: 1.minute,
+      rate_limit **Throttle.limits(:enrollment),
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> {
+                 with: Throttle.refused(:enrollment) {
                    render json: {
                      "error" => "too_many_requests",
                      "error_description" => "too many enrollment tokens asked for from this address"
                    }, status: :too_many_requests
                  }
 
-      rate_limit to: 60, within: 1.hour, only: :create, name: "app",
+      rate_limit **Throttle.limits(:app_enrollment), only: :create, name: "app",
                  by: -> { [ current_tenant.id, claimed_client_id ].join(":") },
-                 with: -> {
+                 with: Throttle.refused(:app_enrollment) {
                    render json: {
                      "error" => "too_many_requests",
                      "error_description" => "too many enrollment tokens asked for by this app"

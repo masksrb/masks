@@ -24,7 +24,7 @@ module Masks
       end
 
       test "a flood without a csrf token is rate limited rather than refused as forgery" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
 
         with_forgery_protection do
           statuses = Array.new(limit + 2) { attempt }
@@ -36,7 +36,7 @@ module Masks
       end
 
       test "the limiter is what refuses, and it refuses before the password is checked" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
 
         limit.times { attempt }
 
@@ -44,8 +44,20 @@ module Masks
         assert_nil within(@tenant) { @actor.reload.last_login_at }
       end
 
+      test "a flood records one limit.reached event for the budget, address, and window, not one per request" do
+        limit = Throttle.limit(:account_attempt)
+
+        (limit + 3).times { attempt }
+
+        reached = within(@tenant) { Event.where(action: Event::LIMIT_REACHED).to_a }
+
+        assert_equal 1, reached.size
+        assert_equal "account_attempt", reached.first.details["limit"]
+        assert_equal "127.0.0.1", reached.first.ip_address
+      end
+
       test "the per-identifier budget is separate from the per-address one" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
         other = create_actor(@tenant, nickname: "second")
 
         limit.times { attempt }
@@ -55,7 +67,7 @@ module Masks
       end
 
       test "rewording the identifier does not open a fresh budget for the same account" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
         nickname = @actor.nickname
         email = "owner@example.com"
         within(@tenant) { @actor.update!(email: email) }
@@ -67,7 +79,7 @@ module Masks
       end
 
       test "one tenant cannot exhaust another's budget" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
         elsewhere = Tenant.create!(subdomain: "acme-#{SecureRandom.hex(4)}", name: "Acme")
         theirs = create_actor(elsewhere)
 

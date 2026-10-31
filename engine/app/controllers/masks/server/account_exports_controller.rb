@@ -1,9 +1,9 @@
 module Masks
   module Server
     class AccountExportsController < ApplicationController
-      rate_limit to: 5, within: 1.hour, only: :create,
+      rate_limit **Throttle.limits(:export), only: :create,
                  by: -> { [ current_tenant.id, current_actor&.id || request.remote_ip ].join(":") },
-                 with: -> { redirect_to root_path(anchor: "export"), alert: t("account_export.throttled") }
+                 with: Throttle.refused(:export) { redirect_to root_path(anchor: "export"), alert: t("account_export.throttled") }
 
       def create
         actor = current_actor

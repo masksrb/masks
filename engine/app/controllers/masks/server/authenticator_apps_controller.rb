@@ -1,10 +1,9 @@
 module Masks
   module Server
     class AuthenticatorAppsController < ApplicationController
-      rate_limit to: ::Rails.configuration.masks.account_attempt_limit,
-                 within: 3.minutes,
+      rate_limit **Throttle.limits(:account_attempt),
                  by: -> { [ current_tenant.id, current_actor&.id ].join(":") },
-                 with: -> { refuse(t("authenticator_apps.too_many_attempts")) },
+                 with: Throttle.refused(:account_attempt) { refuse(t("authenticator_apps.too_many_attempts")) },
                  only: :create
 
       before_action :require_actor

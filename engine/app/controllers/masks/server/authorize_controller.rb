@@ -9,9 +9,9 @@ module Masks
         refuse(bad_request(:invalid_request_object, refusal.message))
       end
 
-      rate_limit to: 1, within: 1.hour, only: :ask,
+      rate_limit **Throttle.limits(:access_request), only: :ask,
                  by: -> { [ current_tenant.id, current_actor&.id, refused_request(params[:rid])&.client_id ].join(":") },
-                 with: -> { redirect_to authorize_refused_path(rid: params[:rid]), alert: t("authorize.error.slow_down") }
+                 with: Throttle.refused(:access_request) { redirect_to authorize_refused_path(rid: params[:rid]), alert: t("authorize.error.slow_down") }
 
       def show
         authorization = Authorization.from_request(request)

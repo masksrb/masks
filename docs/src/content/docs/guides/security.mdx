@@ -111,8 +111,10 @@ A rate limit counts attempts over a period of time. Once the count reaches the l
 more. An API answers with the HTTP status 429 (Too Many Requests). A page in the browser shows a
 message.
 
-The limits on sign-in attempts, codes, registrations, device codes, and new tenants are settings.
-See [rate limits](/reference/environment/#rate-limits) for each one and its default.
+Every limit is a named budget with a default. An operator sets one with its environment variable or
+under `limits:` in `MASKS_CONFIG`. Each time a budget runs out, masks records one `limit.reached`
+event for that budget, address, and window, so a flood shows up in the activity as one line. See
+[rate limits](/reference/environment/#rate-limits) for every budget and its default.
 
 These limits are fixed:
 

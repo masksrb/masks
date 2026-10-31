@@ -6,10 +6,10 @@ module Masks
 
       before_action :establish_device
 
-      rate_limit to: ::Rails.configuration.masks.device_code_limit, within: 3.minutes,
+      rate_limit **Throttle.limits(:device_code),
                  if: -> { params[:user_code].present? },
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { asking(UNKNOWN, status: :too_many_requests) }
+                 with: Throttle.refused(:device_code) { asking(UNKNOWN, status: :too_many_requests) }
 
       def show
         return asking(params[:refused].presence) if params[:user_code].blank?

@@ -541,6 +541,7 @@ apps:
 | `client_secret_env`                                                                                                 | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once.                                         |
 | `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime`, `refresh_token_absolute_lifetime`              | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds.                                                                          |
 | `groups`                                                                                                            | Each group's name, and the nicknames or emails of its members. A member must already have an account.                                                             |
+| `limits`                                                                                                            | Each [rate limit](/reference/environment/#rate-limits) by name, and its count. Applies to the whole server, so it sits at the top of the file, beside `tenants:`. |
 
 - An app in the file is approved, and actors are not asked to consent to it.
 - Applying the file adds and updates. It never removes an app, a group, or a member the file no

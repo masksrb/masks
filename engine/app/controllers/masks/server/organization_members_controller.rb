@@ -7,9 +7,9 @@ module Masks
         back(alert: t("organization_members.owners_only", organization: @organization.name))
       end
 
-      rate_limit to: 30, within: 1.minute, only: %i[create resend],
+      rate_limit **Throttle.limits(:invitation), only: %i[create resend],
                  by: -> { [ current_tenant.id, current_actor&.id || request.remote_ip ].join(":") },
-                 with: -> { back(alert: t("organization_members.slow_down")) }
+                 with: Throttle.refused(:invitation) { back(alert: t("organization_members.slow_down")) }
 
       before_action :require_actor
       before_action :require_membership

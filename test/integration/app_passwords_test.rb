@@ -261,14 +261,14 @@ module Masks
         host! host_for(@tenant)
         ::Rails.cache.clear
 
-        ::Rails.configuration.masks.account_attempt_limit.times do
+        Throttle.limit(:account_attempt).times do
           forwarded("#{APP}/", identifier: "ada", secret: AppPassword.grouped("a" * AppPassword::LENGTH))
           assert_response :unauthorized
         end
 
         forwarded("#{APP}/", identifier: "ada", secret: secret)
         assert_response :too_many_requests
-        assert events(Event::LOGIN_THROTTLED).any?
+        assert events(Event::LIMIT_REACHED).any?
 
         post "/login", params: { event: "identify", identifier: "ada" }, as: :json
         post "/login", params: { event: "password", password: "password" }, as: :json

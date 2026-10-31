@@ -8,26 +8,22 @@ module Masks
 
       skip_forgery_protection
 
-      rate_limit to: ::Rails.configuration.masks.attempt_limit,
-                 within: 3.minutes, only: :update, if: -> { verifying? },
+      rate_limit **Throttle.limits(:attempt), only: :update, if: -> { verifying? },
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { too_many("too-many-attempts") }
+                 with: Throttle.refused(:attempt) { too_many("too-many-attempts") }
 
-      rate_limit to: ::Rails.configuration.masks.account_attempt_limit,
-                 within: 3.minutes, only: :update, name: "identifier", if: -> { verifying? },
+      rate_limit **Throttle.limits(:account_attempt), only: :update, name: "identifier", if: -> { verifying? },
                  by: -> { [ current_tenant.id, attempted_account ].join(":") },
-                 with: -> { too_many("too-many-attempts-for-account") }
+                 with: Throttle.refused(:account_attempt) { too_many("too-many-attempts-for-account") }
 
-      rate_limit to: ::Rails.configuration.masks.recovery_limit,
-                 within: 15.minutes, only: :update, name: "recovery",
+      rate_limit **Throttle.limits(:recovery), only: :update, name: "recovery",
                  if: -> { Login.limit_for(params[:event]) == :sending },
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { too_many("too-many-attempts") }
+                 with: Throttle.refused(:recovery) { too_many("too-many-attempts") }
 
-      rate_limit to: ::Rails.configuration.masks.attempt_limit,
-                 within: 3.minutes, only: %i[provider posted_provider], name: "provider",
+      rate_limit **Throttle.limits(:attempt), only: %i[provider posted_provider], name: "provider",
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { too_many("too-many-attempts") }
+                 with: Throttle.refused(:attempt) { too_many("too-many-attempts") }
 
       before_action :refuse_blocked_agent
       before_action :verify_authenticity_token, except: :posted_provider

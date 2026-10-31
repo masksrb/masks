@@ -3,7 +3,6 @@ module Masks
     module AppPasswords
       FACTOR = "app_password".freeze
       THROTTLED = "throttled".freeze
-      WINDOW = 3.minutes
       SCOPE = "masks/server/logins".freeze
 
       Outcome = Data.define(:actor, :refusal) do
@@ -21,10 +20,11 @@ module Masks
           return refused(nil, identifier, "factor-not-offered", via, client) unless client&.app_passwords? && !client.archived?
 
           actor = Actor.locate(identifier)
-          keys = [ account_key(tenant, actor, identifier), address_key(tenant, ip_address) ]
+          keys = { account_attempt: [ account_key(tenant, actor, identifier), "identifier" ], attempt: [ address_key(tenant, ip_address), nil ] }
+          exceeded = keys.find { |limit, (by, named)| Throttle.exceeded?(limit, by, scope: SCOPE, named: named) }&.first
 
-          if throttled?(keys)
-            Event.record!(Event::LOGIN_THROTTLED, actor: actor, by: nil, client: client, identifier: identifier, via: via)
+          if exceeded
+            Throttle.hit!(exceeded, actor: actor, client: client, address: ip_address, identifier: identifier, via: via)
             return Outcome.new(actor: nil, refusal: THROTTLED)
           end
 
@@ -60,21 +60,15 @@ module Masks
           end
 
           def account_key(tenant, actor, identifier)
-            [ "rate-limit", SCOPE, "identifier", tenant.id, actor&.id || identifier.to_s.strip.downcase ].join(":")
+            [ tenant.id, actor&.id || identifier.to_s.strip.downcase ].join(":")
           end
 
           def address_key(tenant, ip_address)
-            [ "rate-limit", SCOPE, tenant.id, ip_address ].join(":")
-          end
-
-          def throttled?(keys)
-            limits = [ ::Rails.configuration.masks.account_attempt_limit, ::Rails.configuration.masks.attempt_limit ]
-
-            keys.zip(limits).any? { |key, limit| ::Rails.cache.read(key).to_i >= limit }
+            [ tenant.id, ip_address ].join(":")
           end
 
           def failed!(keys)
-            keys.each { |key| ::Rails.cache.increment(key, 1, expires_in: WINDOW) }
+            keys.each { |limit, (by, named)| Throttle.count!(limit, by, scope: SCOPE, named: named) }
           end
       end
     end

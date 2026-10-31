@@ -92,7 +92,7 @@ module Masks
       end
 
       test "wrong app passwords count toward the account's limit, and the right one is throttled after" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
         wrong = AppPassword.grouped("b" * AppPassword::LENGTH)
 
         limit.times { assert_equal 49, service(@for_nas).bind(alice, wrong).code }
@@ -101,7 +101,7 @@ module Masks
 
         assert_equal 53, result.code
         assert_match "too many", result.message
-        assert events(Event::LOGIN_THROTTLED).any?
+        assert events(Event::LIMIT_REACHED).any?
       end
 
       test "a credential's app is listed and chosen in the manage API" do

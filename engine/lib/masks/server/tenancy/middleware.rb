@@ -6,7 +6,6 @@ module Masks
         MOVED = "masks answers at %s. To serve it at another address, set MASKS_PUBLIC_ORIGIN_TEMPLATE to that address.".freeze
         UNKEPT = "This tenant was set up without a kept address. Set MASKS_PUBLIC_ORIGIN_TEMPLATE to the address it answers at.".freeze
         CROWDED = "too many tenants were claimed recently; try again later".freeze
-        CLAIM_WINDOW = 1.hour
         TENANTLESS = %w[/up /metrics].freeze
         TLS_ASK = "/tls/allowed".freeze
 
@@ -94,18 +93,16 @@ module Masks
           end
 
           def crowded?(request)
-            window = Time.current.to_i / CLAIM_WINDOW.to_i
-            from_here = ::Rails.cache.increment("tenant-claims:#{window}:#{request.remote_ip}", 1, expires_in: CLAIM_WINDOW)
-            from_anywhere = ::Rails.cache.increment("tenant-claims:#{window}", 1, expires_in: CLAIM_WINDOW)
+            here = Throttle.crowded?(:claim, "claims:#{request.remote_ip}")
+            anywhere = Throttle.crowded?(:claim_ceiling, "claims")
 
-            from_here.to_i > ::Rails.configuration.masks.claim_limit ||
-              from_anywhere.to_i > ::Rails.configuration.masks.claim_ceiling
+            (here || anywhere).tap { |crowded| Throttle.hit!(here ? :claim : :claim_ceiling, address: request.remote_ip) if crowded }
           end
 
           def crowded
             [
               429,
-              { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store", "retry-after" => CLAIM_WINDOW.to_i.to_s },
+              { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store", "retry-after" => Throttle.budget(:claim).within.to_i.to_s },
               [ CROWDED ]
             ]
           end

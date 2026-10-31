@@ -13,13 +13,6 @@ module Masks
         config.mode = ENV.fetch("MASKS_MODE", "server").to_sym
         config.database = nil
         config.secret = nil
-        config.attempt_limit = ENV.fetch("MASKS_ATTEMPT_LIMIT", 10).to_i
-        config.account_attempt_limit = ENV.fetch("MASKS_ACCOUNT_ATTEMPT_LIMIT", 5).to_i
-        config.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
-        config.recovery_limit = ENV.fetch("MASKS_RECOVERY_LIMIT", 5).to_i
-        config.device_code_limit = ENV.fetch("MASKS_DEVICE_CODE_LIMIT", 30).to_i
-        config.claim_limit = ENV.fetch("MASKS_CLAIM_LIMIT", 3).to_i
-        config.claim_ceiling = ENV.fetch("MASKS_CLAIM_CEILING", 30).to_i
         config.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
         config.recover = ENV["MASKS_RECOVER"].presence
         config.config_path = ENV["MASKS_CONFIG"].presence

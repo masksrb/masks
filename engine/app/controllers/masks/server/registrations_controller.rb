@@ -3,9 +3,9 @@ module Masks
     class RegistrationsController < ApplicationController
       skip_forgery_protection
 
-      rate_limit to: ::Rails.configuration.masks.registration_limit, within: 10.minutes, only: :create,
+      rate_limit **Throttle.limits(:registration), only: :create,
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> {
+                 with: Throttle.refused(:registration) {
                    render json: {
                      "error" => "too_many_requests",
                      "error_description" => "too many registrations from this address"

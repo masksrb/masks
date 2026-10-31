@@ -4,9 +4,9 @@ module Masks
       skip_forgery_protection
       before_action -> { request.session_options[:skip] = true }, only: %i[check callback]
 
-      rate_limit to: 30, within: 1.minute, only: %i[start callback],
+      rate_limit **Throttle.limits(:forward_auth), only: %i[start callback],
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { head :too_many_requests }
+                 with: Throttle.refused(:forward_auth) { head :too_many_requests }
 
       def check
         target = Forwarded.target(request)

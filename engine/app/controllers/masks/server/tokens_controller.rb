@@ -9,9 +9,9 @@ module Masks
 
       skip_forgery_protection
 
-      rate_limit to: 60, within: 1.minute,
+      rate_limit **Throttle.limits(:token),
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { slow_down }
+                 with: Throttle.refused(:token) { slow_down }
 
       def create
         return unsupported_grant_type unless Client::GRANT_TYPES.include?(params[:grant_type].to_s)

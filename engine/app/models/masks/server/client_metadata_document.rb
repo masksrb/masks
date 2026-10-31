@@ -12,7 +12,6 @@ module Masks
       LONGEST = 24.hours
       REFUSAL_LIFETIME = 5.minutes
       NAME_LIMIT = 100
-      WINDOW = 10.minutes
       TENANT_FACTOR = 10
       AUTH_METHODS = %w[none private_key_jwt].freeze
       DEFAULT_AUTH_METHOD = "none".freeze
@@ -62,14 +61,11 @@ module Masks
         end
 
         def crowded?
-          limit = ::Rails.configuration.masks.registration_limit
-          key = "masks:client-metadata-documents:#{Current.tenant&.id}:#{Time.current.to_i / WINDOW.to_i}"
-          here = ::Rails.cache.increment("#{key}:#{Current.ip_address}", 1, expires_in: WINDOW)
-          anywhere = ::Rails.cache.increment(key, 1, expires_in: WINDOW)
+          tenant = Current.tenant&.id
+          here = Throttle.crowded?(:registration, "documents:#{tenant}:#{Current.ip_address}")
+          anywhere = Throttle.crowded?(:registration, "documents:#{tenant}", times: TENANT_FACTOR)
 
-          (here.to_i > limit || anywhere.to_i > limit * TENANT_FACTOR).tap do |crowded|
-            ::Rails.logger.info("masks: too many new client metadata documents") if crowded
-          end
+          (here || anywhere).tap { |crowded| Throttle.hit!(:registration, document: true) if crowded }
         end
 
         def refusal_key(client_id)

@@ -27,6 +27,15 @@ module Masks
                      "applying again prints no new secret"
       end
 
+      test "limits at the top of the file belong to the server, and are not read as a tenant's settings" do
+        said = apply({ "limits" => { "token" => 5 }, "tenants" => { @tenant.subdomain => { "name" => "Declared" } } })
+
+        assert_empty said
+        assert_equal "Declared", @tenant.reload.name
+
+        assert_empty apply({ "limits" => { "token" => 5 } }), "a file with only limits declares nothing about any tenant"
+      end
+
       test "a secret named by an environment variable is the one the app can use" do
         named = "DECLARED_TEST_SECRET"
         ENV[named] = "a-secret-the-app-already-has"

@@ -2,7 +2,6 @@ module Masks
   module Server
     module Ldap
       class Gate
-        WINDOW = 3.minutes
         VIA = "ldap".freeze
 
         Bound = Data.define(:kind, :tenant, :dn, :subject, :client_id) do
@@ -30,7 +29,7 @@ module Masks
           password = password.to_s
           return anonymous if name.blank? && password.empty?
           return refused(Protocol::UNWILLING_TO_PERFORM, "unauthenticated binds are refused") if password.empty?
-          return throttled if failures(ip_key) >= ::Rails.configuration.masks.attempt_limit
+          return throttled(:attempt) if Throttle.exceeded?(:attempt, ip_key)
 
           dn = parse(name)
           tenant = dn && Directory.tenant_for(dn)
@@ -93,8 +92,8 @@ module Masks
           def person(tenant, directory, uid, password)
             account = account_key(tenant, uid)
 
-            if failures(account) >= ::Rails.configuration.masks.account_attempt_limit
-              Event.record!(Event::LOGIN_THROTTLED, actor: Actor.locate(uid), by: nil, identifier: uid, via: VIA)
+            if Throttle.exceeded?(:account_attempt, account)
+              Throttle.hit!(:account_attempt, actor: Actor.locate(uid), address: @ip_address, identifier: uid, via: VIA)
               return throttled
             end
 
@@ -102,7 +101,7 @@ module Masks
             return app_password(tenant, directory, uid, password, account) if actor.nil? && app_password?(password)
 
             if actor.nil?
-              failed!(ip_key, account)
+              failed!(account)
               return refuse(uid, "password")
             end
 
@@ -125,7 +124,7 @@ module Masks
             return throttled if outcome.throttled?
             return bound(tenant, directory, outcome.actor, factor: AppPasswords::FACTOR) if outcome.actor
 
-            failed!(ip_key, account) if outcome.wrong?
+            failed!(account) if outcome.wrong?
             invalid
           end
 
@@ -159,7 +158,7 @@ module Masks
 
           def decoy(password)
             BCrypt::Password.new(Actor.decoy_digest) == password
-            failed!(ip_key)
+            Throttle.count!(:attempt, ip_key)
             invalid
           end
 
@@ -167,7 +166,9 @@ module Masks
             refused(Protocol::INVALID_CREDENTIALS, "invalid credentials")
           end
 
-          def throttled
+          def throttled(limit = nil)
+            Throttle.hit!(limit, address: @ip_address) if limit
+
             refused(Protocol::UNWILLING_TO_PERFORM, "too many attempts; wait a few minutes")
           end
 
@@ -176,19 +177,16 @@ module Masks
           end
 
           def ip_key
-            "ldap-attempts:ip:#{@ip_address}"
+            "ldap:#{@ip_address}"
           end
 
           def account_key(tenant, uid)
-            "ldap-attempts:#{tenant.id}:#{Digest::SHA256.hexdigest(uid.to_s.strip.downcase)}"
+            "ldap:#{tenant.id}:#{Digest::SHA256.hexdigest(uid.to_s.strip.downcase)}"
           end
 
-          def failures(key)
-            ::Rails.cache.read(key).to_i
-          end
-
-          def failed!(*keys)
-            keys.each { |key| ::Rails.cache.increment(key, 1, expires_in: WINDOW) }
+          def failed!(account)
+            Throttle.count!(:attempt, ip_key)
+            Throttle.count!(:account_attempt, account)
           end
       end
     end

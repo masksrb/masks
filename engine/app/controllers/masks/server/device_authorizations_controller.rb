@@ -4,9 +4,9 @@ module Masks
       include RackOAuth2Endpoint
       include TokenPresented
 
-      rate_limit to: 60, within: 1.minute,
+      rate_limit **Throttle.limits(:device_authorization),
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { slow_down }
+                 with: Throttle.refused(:device_authorization) { slow_down }
 
       def create
         client = authenticate_client!

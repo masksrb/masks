@@ -206,7 +206,7 @@ module Masks
         with_mailer do
           policy!
 
-          ::Rails.configuration.masks.recovery_limit.times do
+          Throttle.limit(:recovery).times do
             event("identify", identifier: "ada@example.com")
             fresh!
           end
@@ -214,7 +214,7 @@ module Masks
           body = event("identify", identifier: "ada@example.com")
 
           assert_includes body["warnings"], "too-many-codes"
-          assert_equal ::Rails.configuration.masks.recovery_limit, ActionMailer::Base.deliveries.size
+          assert_equal Throttle.limit(:recovery), ActionMailer::Base.deliveries.size
         end
       end
 

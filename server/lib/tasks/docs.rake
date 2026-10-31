@@ -12,5 +12,10 @@ namespace :docs do
     File.open("#{docs}/src/assets/manage.graphql", "w") do |sdl|
       sdl.puts Masks::Server::ManageSchema.to_definition.strip
     end
+
+    environment = "#{docs}/src/content/docs/reference/environment.mdx"
+    table = [ "| Variable | Limit | Default | Counts |", "| --- | --- | --- | --- |", *Masks::Server::Throttle.reference ]
+    page = File.read(environment).sub(/<!-- limits -->.*<!-- \/limits -->/m, "<!-- limits -->\n#{table.join("\n")}\n<!-- /limits -->")
+    File.write(environment, page)
   end
 end

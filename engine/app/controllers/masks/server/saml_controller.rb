@@ -5,9 +5,9 @@ module Masks
 
       skip_forgery_protection only: %i[sso slo]
 
-      rate_limit to: 60, within: 1.minute, only: %i[sso initiate slo],
+      rate_limit **Throttle.limits(:saml), only: %i[sso initiate slo],
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { refuse("too many sign-in requests from this address", status: :too_many_requests) }
+                 with: Throttle.refused(:saml) { refuse("too many sign-in requests from this address", status: :too_many_requests) }
 
       rescue_from SamlIdentity::Refused do |refusal|
         refuse(refusal.message)

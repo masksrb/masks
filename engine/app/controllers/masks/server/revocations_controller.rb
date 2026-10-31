@@ -3,9 +3,9 @@ module Masks
     class RevocationsController < ApplicationController
       include TokenPresented
 
-      rate_limit to: 120, within: 1.minute,
+      rate_limit **Throttle.limits(:revocation),
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> {
+                 with: Throttle.refused(:revocation) {
                    render json: {
                      "error" => "slow_down",
                      "error_description" => "too many revocation requests from this address"

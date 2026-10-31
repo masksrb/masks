@@ -5,9 +5,9 @@ module Masks
 
       INACTIVE = { "active" => false }.freeze
 
-      rate_limit to: 120, within: 1.minute,
+      rate_limit **Throttle.limits(:introspection),
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                 with: -> { render json: INACTIVE, status: :too_many_requests }
+                 with: Throttle.refused(:introspection) { render json: INACTIVE, status: :too_many_requests }
 
       def create
         client = authenticate_client!

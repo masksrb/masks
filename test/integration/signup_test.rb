@@ -279,7 +279,7 @@ module Masks
         assert_equal "confirm-phone", sign_up(phone: "+15551234567")["prompt"]
 
         within(@tenant) do
-          (::Rails.configuration.masks.recovery_limit - 1).times do
+          (Throttle.limit(:recovery) - 1).times do
             ConfirmationCode.open!(actor: created, channel: ConfirmationCode::PHONE, address: created.phone)
           end
         end
@@ -301,7 +301,7 @@ module Masks
 
         refused = nil
 
-        (::Rails.configuration.masks.recovery_limit + 1).times do |n|
+        (Throttle.limit(:recovery) + 1).times do |n|
           event("confirm:change-phone")
           event("confirm:add-phone", phone: "+1555000#{1000 + n}")
 
@@ -309,7 +309,7 @@ module Masks
         end
 
         assert_equal 429, refused
-        assert_operator Senders::SmsLog.deliveries.size, :<=, ::Rails.configuration.masks.recovery_limit
+        assert_operator Senders::SmsLog.deliveries.size, :<=, Throttle.limit(:recovery)
       end
 
       test "an existing account missing a phone the policy now requires is asked for one" do

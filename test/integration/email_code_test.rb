@@ -139,14 +139,14 @@ module Masks
       end
 
       test "too many codes for one account looks the same as an address with no account" do
-        ::Rails.configuration.masks.recovery_limit.times do |sent|
+        Throttle.limit(:recovery).times do |sent|
           travel((ConfirmationCode::RESEND_AFTER + 1.second) * sent) do
             event("identify", identifier: "ada@example.com")
             event("email-code:send")
           end
         end
 
-        travel((ConfirmationCode::RESEND_AFTER + 1.second) * ::Rails.configuration.masks.recovery_limit) do
+        travel((ConfirmationCode::RESEND_AFTER + 1.second) * Throttle.limit(:recovery)) do
           body = event("email-code:send")
 
           assert_equal "email-code", body["prompt"]

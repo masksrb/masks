@@ -90,18 +90,39 @@ variable here that does not pin anything.
 
 ### Rate limits
 
-Each limit counts requests for each tenant within a fixed time window. A request over the limit
-gets the HTTP status 429 (Too Many Requests).
+Every limit is a named budget: a count of requests within a fixed window, kept for each tenant. A
+request over the budget gets the HTTP status 429 (Too Many Requests), and masks records one
+`limit.reached` event for that budget, address, and window.
 
-| Variable | Default | |
-| --- | --- | --- |
-| `MASKS_ATTEMPT_LIMIT` | `10` | Sign-in attempts from one IP address in 3 minutes. Includes sign-in through a provider and failed LDAP binds. |
-| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | `5` | Sign-in attempts against one account in 3 minutes, from any IP address. Includes failed LDAP binds. Also limits how often a signed-in account changes its password, email address, or phone number, adds an authenticator app, or approves a sign-in on another device. |
-| `MASKS_RECOVERY_LIMIT` | `5` | Codes and links sent by email or text message in 15 minutes. Counted by IP address during sign-in, and by account for every address or phone number a code goes to, including a phone added or changed during sign-in. |
-| `MASKS_REGISTRATION_LIMIT` | `10` | Dynamic client registrations from one IP address in 10 minutes. Also limits new [client metadata documents](/guides/features/#a-client-named-by-its-metadata-document). |
-| `MASKS_DEVICE_CODE_LIMIT` | `30` | Device user codes entered from one IP address in 3 minutes. |
-| `MASKS_CLAIM_LIMIT` | `3` | Tenants claimed from one IP address in an hour. Applies when a subdomain template claims a tenant on its first visit. Counted across the whole server. |
-| `MASKS_CLAIM_CEILING` | `30` | Tenants claimed from all IP addresses together in an hour, under the same template. Counted across the whole server. |
+Set a budget with its variable, or under `limits:` in the file `MASKS_CONFIG` names, by the limit's
+name. The variable wins when both are set. The window does not change. This table is generated from
+the budgets masks keeps, so it lists every one.
+
+<!-- limits -->
+| Variable | Limit | Default | Counts |
+| --- | --- | --- | --- |
+| `MASKS_ATTEMPT_LIMIT` | `attempt` | 10 in 3 minutes | Sign-in attempts from one IP address. Includes sign-in through a provider, failed LDAP binds, and app passwords. |
+| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | `account_attempt` | 5 in 3 minutes | Sign-in attempts against one account, from any IP address. Includes failed LDAP binds and app passwords. Also how often a signed-in account changes its password, email address, or phone number, adds an authenticator app, or approves a sign-in on another device. |
+| `MASKS_RECOVERY_LIMIT` | `recovery` | 5 in 15 minutes | Codes and links sent by email or text message. Counted by IP address during sign-in, and by account for every address or phone number a code goes to, including a phone added or changed during sign-in. |
+| `MASKS_REGISTRATION_LIMIT` | `registration` | 10 in 10 minutes | Dynamic client registrations from one IP address, and new client metadata documents. |
+| `MASKS_DEVICE_CODE_LIMIT` | `device_code` | 30 in 3 minutes | Device user codes entered from one IP address. |
+| `MASKS_CLAIM_LIMIT` | `claim` | 3 in 1 hour | Tenants claimed from one IP address, when a subdomain template claims a tenant on its first visit. Counted across the whole server. |
+| `MASKS_CLAIM_CEILING` | `claim_ceiling` | 30 in 1 hour | Tenants claimed from all IP addresses together, under the same template. Counted across the whole server. |
+| `MASKS_TOKEN_LIMIT` | `token` | 60 in 1 minute | Token requests from one IP address. |
+| `MASKS_PUSHED_AUTHORIZATION_LIMIT` | `pushed_authorization` | 60 in 1 minute | Pushed authorization requests from one IP address. |
+| `MASKS_DEVICE_AUTHORIZATION_LIMIT` | `device_authorization` | 60 in 1 minute | Device authorization requests from one IP address. |
+| `MASKS_INTROSPECTION_LIMIT` | `introspection` | 120 in 1 minute | Token introspections from one IP address. |
+| `MASKS_REVOCATION_LIMIT` | `revocation` | 120 in 1 minute | Token revocations from one IP address. |
+| `MASKS_SAML_LIMIT` | `saml` | 60 in 1 minute | SAML sign-in and logout requests from one IP address. |
+| `MASKS_FORWARD_AUTH_LIMIT` | `forward_auth` | 30 in 1 minute | Forward auth sign-ins started or finished from one IP address. |
+| `MASKS_ENROLLMENT_LIMIT` | `enrollment` | 30 in 1 minute | Enrollment tokens redeemed from one IP address. |
+| `MASKS_APP_ENROLLMENT_LIMIT` | `app_enrollment` | 60 in 1 hour | Enrollment tokens one app mints. |
+| `MASKS_INVITATION_LIMIT` | `invitation` | 30 in 1 minute | Organization invitations one account sends or sends again. |
+| `MASKS_EXPORT_LIMIT` | `export` | 5 in 1 hour | Account exports one account asks for. |
+| `MASKS_ACCESS_REQUEST_LIMIT` | `access_request` | 1 in 1 hour | Times one account asks for access to one app. |
+| `MASKS_SIGNAL_LIMIT` | `signal` | 600 in 1 minute | Security events received from one IP address. |
+| `MASKS_SCIM_LIMIT` | `scim` | 600 in 1 minute | SCIM provisioning requests from one IP address. |
+<!-- /limits -->
 
 ### Mail
 

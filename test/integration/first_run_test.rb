@@ -384,7 +384,7 @@ module Masks
       test "one address claims only a few tenants an hour under a wildcard template" do
         with_nothing_deployed do
           with_public_origin_template("http://%{subdomain}.auth.test") do
-            ::Rails.configuration.masks.claim_limit.times do |at|
+            Throttle.limit(:claim).times do |at|
               reset!
               host! "claimed#{at}.auth.test"
               get "/login"
@@ -396,7 +396,7 @@ module Masks
             get "/login"
 
             assert_response :too_many_requests
-            assert_equal ::Rails.configuration.masks.claim_limit, Tenant.count
+            assert_equal Throttle.limit(:claim), Tenant.count
           end
         end
       end

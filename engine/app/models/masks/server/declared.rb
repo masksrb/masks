@@ -21,7 +21,7 @@ module Masks
       def initialize(document)
         raise Invalid, "the declared configuration must be a mapping" unless document.is_a?(Hash)
 
-        @document = document
+        @document = document.except("limits")
       end
 
       def apply!
@@ -33,6 +33,8 @@ module Masks
       private
 
         def tenants
+          return [] if @document.empty?
+
           if @document.key?("tenants")
             @document.fetch("tenants").map do |subdomain, declared|
               [ Tenant.active.find_by(subdomain: subdomain) || raise(Invalid, "no tenant called #{subdomain}"), declared || {} ]

@@ -60,8 +60,9 @@ module Masks
         assert_equal Health::NAMES.sort, checks.map { |check| check["name"] }
         assert_equal %w[ok], checks.map { |check| check["status"] }.uniq
         assert_equal "elsewhere", checks.find { |check| check["name"] == "jobs" }["summary"]
-        assert_equal "manual", checks.find { |check| check["name"] == "keys" }["summary"]
-        assert_equal 0, checks.find { |check| check["name"] == "keys" }.dig("details", "days")
+        assert_equal "fresh", checks.find { |check| check["name"] == "keys" }["summary"]
+        assert_equal({ "days" => 0, "period" => 90 }, checks.find { |check| check["name"] == "keys" }["details"])
+        assert_equal "quiet", checks.find { |check| check["name"] == "proxy" }["summary"]
 
         after = manage(HEALTH, bearer: bearer)
 

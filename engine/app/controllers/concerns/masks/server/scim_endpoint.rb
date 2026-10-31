@@ -8,9 +8,9 @@ module Masks
 
         skip_forgery_protection
 
-        rate_limit to: 600, within: 1.minute,
+        rate_limit **Throttle.limits(:scim),
                    by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
-                   with: -> { scim_error(Scim::Error.new(:too_many_requests, "too many provisioning requests from this address")) }
+                   with: Throttle.refused(:scim) { scim_error(Scim::Error.new(:too_many_requests, "too many provisioning requests from this address")) }
 
         rescue_from Scim::Error, with: :scim_error
         before_action :require_provisioner

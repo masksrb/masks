@@ -5,11 +5,10 @@ module Masks
 
       before_action :require_trusted_device
 
-      rate_limit to: ::Rails.configuration.masks.account_attempt_limit,
-                 within: 3.minutes,
+      rate_limit **Throttle.limits(:account_attempt),
                  only: :create,
                  by: -> { [ current_tenant.id, current_actor&.id ].join(":") },
-                 with: -> { refuse(t("sign_in_approvals.too_many_attempts")) }
+                 with: Throttle.refused(:account_attempt) { refuse(t("sign_in_approvals.too_many_attempts")) }
 
       def create
         approval = SignInApproval.matching(actor: current_actor, code: params[:code], from: current_device)

@@ -265,19 +265,19 @@ module Masks
       end
 
       test "repeated failures for one account are throttled, even with the right password next" do
-        limit = ::Rails.configuration.masks.account_attempt_limit
+        limit = Throttle.limit(:account_attempt)
         limit.times { connect.bind(person_dn("alice"), "wrong") }
 
         result = connect.bind(person_dn("alice"), "password")
 
         assert_equal 53, result.code
         assert_match "too many", result.message
-        assert events(Event::LOGIN_THROTTLED).any?
+        assert events(Event::LIMIT_REACHED).any?
         assert_equal 0, connect.bind(person_dn("bob"), "password").code
       end
 
       test "repeated failures from one address are throttled" do
-        limit = ::Rails.configuration.masks.attempt_limit
+        limit = Throttle.limit(:attempt)
         limit.times { |index| connect.bind("cn=guess#{index},ou=services,#{base}", "wrong") }
 
         assert_equal 53, connect.bind("cn=jellyfin,ou=services,#{base}", @secret).code

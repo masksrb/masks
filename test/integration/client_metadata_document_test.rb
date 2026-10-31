@@ -29,7 +29,7 @@ module Masks
       end
 
       test "an address that names too many new documents is turned away before masks fetches them" do
-        limit = ::Rails.configuration.masks.registration_limit
+        limit = Throttle.limit(:registration)
         stub_request(:get, %r{\Ahttps://app\.example\.com/client/}).to_return(
           status: 200, headers: { "Content-Type" => "application/json" },
           body: ->(request) { { client_id: "https://app.example.com#{request.uri.path}", redirect_uris: [ OidcFlow::REDIRECT_URI ] }.to_json }

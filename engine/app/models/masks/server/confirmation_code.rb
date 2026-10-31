@@ -31,7 +31,7 @@ module Masks
 
         def inbox_crowded?(address:, ip: nil)
           recent = inbox.where(created_at: WINDOW.ago..)
-          limit = ::Rails.configuration.masks.recovery_limit
+          limit = Throttle.limit(:recovery)
 
           recent.where("payload->>'address' = ?", address).count >= limit ||
             (ip.present? && recent.where("payload->>'ip' = ?", ip).count >= limit * INBOX_PER_IP)
@@ -40,7 +40,7 @@ module Masks
         def crowded?(actor:, channel:)
           where(actor_id: actor.id, created_at: WINDOW.ago..)
             .where("payload->>'channel' = ?", channel)
-            .count >= ::Rails.configuration.masks.recovery_limit
+            .count >= Throttle.limit(:recovery)
         end
 
         def inbox
