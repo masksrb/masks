@@ -1,5 +1,4 @@
 <script>
-import TenantMark from "../shared/TenantMark.svelte";
 import Action from "../shared/Action.svelte";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
@@ -9,6 +8,7 @@ import { ranked } from "../lib/scopes.js";
 let { login } = $props();
 
 const scopes = $derived(ranked(login.consent?.scopes ?? []));
+const all = $derived([...scopes.hot, ...scopes.rest]);
 const audience = $derived(login.consent?.audience ?? []);
 const details = $derived(login.consent?.details ?? []);
 const client = $derived(login.client?.name ?? "");
@@ -19,13 +19,10 @@ const links = $derived(
     ["privacy", login.t("privacy")],
   ].filter(([key]) => login.client?.[key]),
 );
-
 </script>
 
-<div class="auth-pair">
+<div class="auth-solo">
   <ClientMark client={login.client} />
-  <span class="auth-wire"></span>
-  <TenantMark tenant={login.auth.tenant} />
 </div>
 
 <Head {login} title={login.t("title", { client })} />
@@ -38,48 +35,30 @@ const links = $derived(
   <div class="ledger-row">
     <span class="ledger-label">{login.t("access")}</span>
 
-    {#if !scopes.hot.length && !scopes.rest.length}
+    {#if all.length}
+      <ul class="plain-list">
+        {#each all as [scope, description] (scope)}
+          <li>{description}</li>
+        {/each}
+      </ul>
+    {:else}
       <p class="empty">{login.t("no_access")}</p>
     {/if}
-
-    <ul class="grant-scopes">
-      {#each scopes.hot as [scope, description] (scope)}
-        <li class="grant-scope grant-scope-hot">
-          <span>{description}</span>
-          <span class="chip-key">{scope}</span>
-        </li>
-      {/each}
-
-      {#if scopes.hot.length && scopes.rest.length}
-        <li class="grant-scope-split"></li>
-      {/if}
-
-      {#each scopes.rest as [scope, description] (scope)}
-        <li class="grant-scope">
-          <span>{description}</span>
-          <span class="chip-key">{scope}</span>
-        </li>
-      {/each}
-    </ul>
   </div>
 
   {#if audience.length}
     <div class="ledger-row">
-      <span class="ledger-label">{login.t("audience")}</span>
-      {#each audience as resource (resource)}
-        <span class="ledger-value aside-mono">{resource}</span>
-      {/each}
+      <span class="aside">{login.t("audience", { resources: audience.join(", ") })}</span>
     </div>
   {/if}
 
   {#if details.length}
     <div class="ledger-row">
       <span class="ledger-label">{login.t("details")}</span>
-      <ul class="grant-scopes">
+      <ul class="plain-list">
         {#each details as detail, index (index)}
-          <li class="grant-scope grant-scope-hot grant-detail">
-            <span>{detail.label}</span>
-            <span class="chip-key">{detail.type}</span>
+          <li>
+            {detail.label}
             {#if detail.fields.length}
               <dl class="grant-fields">
                 {#each detail.fields as [name, value] (name)}
@@ -93,22 +72,40 @@ const links = $derived(
       </ul>
     </div>
   {/if}
-
-  {#if login.client?.returnsTo}
-    <div class="ledger-row">
-      <span class="ledger-label">{login.t("returns_to")}</span>
-      <span class="ledger-value aside-mono">{login.client.returnsTo}</span>
-    </div>
-  {/if}
 </div>
 
-{#if links.length}
-  <p class="aside client-links">
-    {#each links as [key, label] (key)}
-      <a class="textlink" href={login.client[key]} rel="noopener noreferrer" target="_blank">{label}</a>
-    {/each}
-  </p>
-{/if}
+<details class="disclosure handshake-more">
+  <summary class="textlink">{login.t("more")}</summary>
+
+  <div class="slab">
+    <div class="ledger-row">
+      <span class="ledger-label">{login.t("scopes")}</span>
+      <ul class="grant-scopes">
+        {#each all as [scope, description] (scope)}
+          <li class="grant-scope">
+            <span>{description}</span>
+            <span class="chip-key">{scope}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
+
+    {#if login.client?.returnsTo}
+      <div class="ledger-row">
+        <span class="ledger-label">{login.t("returns_to")}</span>
+        <span class="ledger-value aside-mono">{login.client.returnsTo}</span>
+      </div>
+    {/if}
+
+    {#if links.length}
+      <p class="aside client-links">
+        {#each links as [key, label] (key)}
+          <a class="textlink" href={login.client[key]} rel="noopener noreferrer" target="_blank">{label}</a>
+        {/each}
+      </p>
+    {/if}
+  </div>
+</details>
 
 <div class="action-row">
   <Action

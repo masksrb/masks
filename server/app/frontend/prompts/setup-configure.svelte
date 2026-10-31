@@ -22,7 +22,7 @@ function onsubmit(event) {
 </script>
 
 <div class="setup flow" class:setup-ready={ready}>
-  <SignupHead {login} at={3} mark={login.actor?.identifier ?? ""} />
+  <SignupHead {login} at={3} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">
@@ -32,11 +32,6 @@ function onsubmit(event) {
         <input type="text" name="called" class="control" autofocus bind:value={called} />
         <span class="field-hint">{login.t("called_hint")}</span>
       </label>
-
-      <div class="ledger-row">
-        <span class="ledger-label">{login.t("origin")}</span>
-        <span class="ledger-value aside-mono">{origin}</span>
-      </div>
     </div>
 
     <Action
@@ -50,6 +45,7 @@ function onsubmit(event) {
   </form>
 
   <p class="aside">
+    {login.t("origin", { origin })}
     {login.t("once")}
     {#if docs}
       <a class="textlink" href={docs} rel="noopener" target="_blank">{login.t("docs")}</a>

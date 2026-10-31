@@ -17,18 +17,38 @@ const offers = $derived(enrolment.offers ?? { otp: true, passkey: true, backupCo
 const secured = $derived(!enrolment.required);
 const issued = $derived(codes.issued ?? []);
 const sendable = $derived(Object.entries(enrolment.codes ?? {}));
-
 const passkeyable = $derived(offers.passkey && available());
 
+const ways = $derived(
+  [
+    offers.otp && !otp.enabled && ["otp", login.t("otp"), login.t("otp_about")],
+    passkeyable && !passkeys.verified && ["passkey", login.t("passkey"), login.t("passkey_about")],
+    ...sendable
+      .filter(([, row]) => !row.enabled)
+      .map(([factor, row]) => [factor, login.t(`codes_${factor}`), login.t(`codes_${factor}_about`, { to: row.to })]),
+  ].filter(Boolean),
+);
+
+const on = $derived(
+  [
+    otp.enabled && login.t("otp"),
+    passkeys.count > 0 && login.t("passkeys_some", { count: passkeys.count }),
+    ...sendable.filter(([, row]) => row.enabled).map(([factor]) => login.t(`codes_${factor}`)),
+  ].filter(Boolean),
+);
+
+let picked = $state(null);
 let entered = $state({ "enrol:otp": "", "enrol:code": "" });
 let kept = $state(false);
 let copied = $state(false);
 
+const anything = $derived(on.length > 0);
+const choosing = $derived(picked === null || !ways.some(([key]) => key === picked));
+const sentFactor = $derived(sendable.find(([, row]) => row.sent)?.[0] ?? null);
+const showing = $derived(choosing ? (sentFactor ?? null) : picked);
 const ready = $derived(secured && (issued.length === 0 || kept));
-const anything = $derived(
-  Boolean(otp.enabled || passkeys.count > 0 || sendable.some(([, row]) => row.enabled)),
-);
-const lede = $derived(enrolment.required ? login.t("lede") : login.t("lede_optional"));
+const title = $derived(anything ? login.t("on_title") : login.t("title"));
+const lede = $derived(anything ? login.t("on_lede") : enrolment.required ? login.t("lede") : login.t("lede_optional"));
 
 const complete = (name) => entered[name].replace(/\D/g, "").length === 6;
 
@@ -40,7 +60,9 @@ function turnOn(submitted, name) {
   const code = entered[name];
   entered[name] = "";
 
-  login.submit(name, { code });
+  login.submit(name, { code }).then(() => {
+    picked = null;
+  });
 }
 
 const origin = typeof location === "undefined" ? "" : location.origin;
@@ -94,50 +116,96 @@ function done(event) {
   </form>
 {/snippet}
 
+{#snippet otherWay()}
+  {#if ways.length > 1 || anything}
+    <button type="button" class="textlink ledger-link" onclick={() => (picked = null)}>{login.t("another_way")}</button>
+  {/if}
+{/snippet}
+
 <div class="flow" class:setup={signingUp} class:setup-ready={signingUp && ready}>
   {#if signingUp}
-    <SignupHead {login} at={2} mark={login.actor?.identifier ?? ""} />
+    <SignupHead {login} at={2} />
 
     <p class="aside">{lede}</p>
   {:else}
-    <Head
-      {login}
-      title={login.t("title")}
-      {lede}
-    />
+    <Head {login} {title} {lede} />
 
     <Identified {login} />
   {/if}
 
-  <div class="slab">
-    {#if offers.otp}
-    <div class="ledger-row ledger-step" class:ledger-step-done={otp.enabled}>
-      <span class="ledger-label">{login.t("otp")}</span>
+  {#if anything && showing === null}
+    <div class="slab">
+      <div class="ledger-row">
+        <span class="ledger-label">{login.t("on_label")}</span>
+        <ul class="plain-list">
+          {#each on as way (way)}
+            <li>{way}</li>
+          {/each}
+        </ul>
+      </div>
 
-      {#if otp.enabled}
-        <span class="ledger-value">{login.t("otp_on")}</span>
-      {:else}
+      {#if offers.backupCodes}
+        <div class="ledger-row">
+          <span class="ledger-label">{login.t("backup_codes")}</span>
+
+          {#if issued.length > 0}
+            <ol class="codes">
+              {#each issued as held (held)}
+                <li>{held}</li>
+              {/each}
+            </ol>
+            <span class="field-hint">{login.t("backup_codes_hint")}</span>
+            <div class="codes-actions">
+              <button type="button" class="textlink" onclick={copy}>
+                {copied ? login.t("copied") : login.t("copy")}
+              </button>
+              <a class="textlink" href={saved} download="backup-codes-{host}.txt">{login.t("download")}</a>
+            </div>
+          {:else if codes.remaining > 0}
+            <span class="field-hint">{login.t("backup_codes_left", { count: codes.remaining })}</span>
+          {/if}
+        </div>
+      {/if}
+
+      {#if ways.length}
+        <div class="ledger-row">
+          <button type="button" class="textlink ledger-link" onclick={() => (picked = ways[0][0])}>{login.t("add_way")}</button>
+        </div>
+      {/if}
+    </div>
+  {:else if showing === null}
+    <ul class="ways">
+      {#each ways as [key, name, about] (key)}
+        <li>
+          <button type="button" class="way" onclick={() => (picked = key)}>
+            <span class="way-title">{name}</span>
+            <span class="way-about">{about}</span>
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {:else if showing === "otp"}
+    <div class="slab">
+      <div class="ledger-row">
+        <span class="ledger-label">{login.t("otp")}</span>
         <div class="enrol">
           <a class="enrol-qr" href={otp.uri} aria-label={login.t("open")}>{@html otp.qr}</a>
           <div class="enrol-key">
             <span class="field-hint">{login.t("scan_hint")}</span>
-            <span class="aside-mono enrol-secret">{otp.secret}</span>
+            <span class="enrol-secret">{otp.secret}</span>
           </div>
         </div>
 
         {@render codeForm("enrol:otp")}
-      {/if}
-    </div>
-    {/if}
+      </div>
 
-    {#if passkeyable}
-      <div class="ledger-row ledger-step" class:ledger-step-done={passkeys.verified}>
+      <div class="ledger-row">{@render otherWay()}</div>
+    </div>
+  {:else if showing === "passkey"}
+    <div class="slab">
+      <div class="ledger-row">
         <span class="ledger-label">{login.t("passkeys")}</span>
-        <span class="field-hint">
-          {passkeys.count > 0
-            ? login.t("passkeys_some", { count: passkeys.count })
-            : login.t("passkeys_none")}
-        </span>
+        <span class="field-hint">{login.t("passkey_about")}</span>
 
         <PasskeyButton
           {login}
@@ -145,56 +213,34 @@ function done(event) {
           label={passkeys.count > 0 ? login.t("add_another_passkey") : login.t("add_passkey")}
         />
       </div>
-    {/if}
 
-    {#each sendable as [factor, row] (factor)}
-      <div class="ledger-row ledger-step" class:ledger-step-done={row.enabled}>
-        <span class="ledger-label">{login.t(`codes_${factor}`)}</span>
+      <div class="ledger-row">{@render otherWay()}</div>
+    </div>
+  {:else}
+    {@const row = enrolment.codes?.[showing] ?? {}}
+    <div class="slab">
+      <div class="ledger-row">
+        <span class="ledger-label">{login.t(`codes_${showing}`)}</span>
 
-        {#if row.enabled}
-          <span class="ledger-value">{login.t("otp_on")}</span>
-        {:else if row.sent}
+        {#if row.sent}
           <span class="field-hint">{login.t("sent_to", { to: row.to })}</span>
 
           {@render codeForm("enrol:code")}
         {:else}
-          <span class="field-hint">{login.t(`codes_${factor}_hint`, { to: row.to })}</span>
+          <span class="field-hint">{login.t(`codes_${showing}_about`, { to: row.to })}</span>
 
           <Action
             {login}
             quiet
             label={login.t("send_code")}
-            onclick={() => login.submit("enrol:code-send", { factor })}
+            onclick={() => login.submit("enrol:code-send", { factor: showing })}
           />
         {/if}
       </div>
-    {/each}
 
-    {#if offers.backupCodes}
-    <div class="ledger-row ledger-step" class:ledger-step-done={issued.length > 0 || codes.remaining > 0}>
-      <span class="ledger-label">{login.t("backup_codes")}</span>
-
-      {#if issued.length > 0}
-        <ol class="codes">
-          {#each issued as held (held)}
-            <li class="aside-mono">{held}</li>
-          {/each}
-        </ol>
-        <span class="field-hint">{login.t("backup_codes_hint")}</span>
-        <div class="codes-actions">
-          <button type="button" class="textlink" onclick={copy}>
-            {copied ? login.t("copied") : login.t("copy")}
-          </button>
-          <a class="textlink" href={saved} download="backup-codes-{host}.txt">{login.t("download")}</a>
-        </div>
-      {:else if codes.remaining > 0}
-        <span class="field-hint">{login.t("backup_codes_left", { count: codes.remaining })}</span>
-      {:else}
-        <span class="field-hint">{login.t("backup_codes_waiting")}</span>
-      {/if}
+      <div class="ledger-row">{@render otherWay()}</div>
     </div>
-    {/if}
-  </div>
+  {/if}
 
   <form class="flow" onsubmit={done}>
     {#if issued.length > 0}
@@ -204,13 +250,15 @@ function done(event) {
       </label>
     {/if}
 
-    <Action
-      {login}
-      type="submit"
-      {ready}
-      busy={login.loading}
-      label={anything || enrolment.required ? login.t("done") : login.t("skip")}
-      working={login.t("working")}
-    />
+    {#if anything || !enrolment.required}
+      <Action
+        {login}
+        type="submit"
+        {ready}
+        busy={login.loading}
+        label={anything || enrolment.required ? login.t("done") : login.t("skip")}
+        working={login.t("working")}
+      />
+    {/if}
   </form>
 </div>

@@ -4,8 +4,7 @@
 <% done = ->(field) { " ledger-step-done" if value.(field).present? } %>
 
 <div class="setup flow">
-  <%= render "masks/server/logins/signup_head", login: login, at: 1,
-                                   mark: value.("nickname").presence || value.("email") %>
+  <%= render "masks/server/logins/signup_head", login: login, at: 1 %>
 
   <%= form_with url: login_path, method: :post, id: "signup", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
@@ -51,13 +50,6 @@
           <%= render "masks/server/logins/hint", login: login, field: "phone" %>
         </label>
       <% end %>
-
-      <% if login.signing_up["firstRun"] %>
-        <div class="ledger-row">
-          <span class="ledger-label"><%= t("logins.signing_up.origin") %></span>
-          <span class="ledger-value aside-mono"><%= Masks::Server::Current.origin %></span>
-        </div>
-      <% end %>
     </div>
 
     <% if signup["work"] %>
@@ -71,6 +63,7 @@
 
   <% if login.signing_up["firstRun"] %>
     <p class="aside">
+      <%= t("logins.signing_up.origin", origin: Masks::Server::Current.origin) %>
       <%= t("logins.signing_up.once") %>
       <%= link_to t("logins.signing_up.docs"), Rails.configuration.masks.docs_url,
             class: "textlink", rel: "noopener", target: "_blank" %>

@@ -638,11 +638,9 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--brass);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink-soft);
   }
 
   .state::before {
@@ -715,11 +713,9 @@
   }
 
   .auth-tenant {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--brass);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ink);
     overflow-wrap: anywhere;
   }
 
@@ -883,11 +879,9 @@
   }
 
   .record-cap {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--brass);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ink-soft);
   }
 
   .place {
@@ -1519,7 +1513,7 @@
     height: 2px;
     margin-bottom: 0.625rem;
     border-radius: 1px;
-    background: color-mix(in oklab, var(--brass) 60%, transparent);
+    background: transparent;
     overflow: hidden;
   }
 
@@ -1580,10 +1574,8 @@
     flex: 1;
     padding: 0 0 0.5rem;
     border-bottom: 2px solid var(--line);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.8125rem;
+    font-weight: 500;
     text-align: center;
     color: var(--ink-soft);
     transition:
@@ -1616,11 +1608,9 @@
   }
 
   .ledger-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--brass);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink);
   }
 
   .ledger-value {
@@ -1647,24 +1637,7 @@
   }
 
   .ledger-step .ledger-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--ink-soft);
-    transition: color 0.2s ease;
-  }
-
-  .ledger-step .ledger-label::before {
-    content: "";
-    width: 0.4375rem;
-    height: 0.4375rem;
-    border-radius: 50%;
-    background: var(--step);
-    transition: background-color 0.2s ease;
-  }
-
-  .ledger-step-done .ledger-label {
-    color: var(--step);
+    color: var(--ink);
   }
 
   .ledger-step-done .control:not(:focus) {
@@ -1704,6 +1677,7 @@
   }
 
   .enrol-secret {
+    font-family: var(--font-mono);
     overflow-wrap: anywhere;
     letter-spacing: 0.06em;
     user-select: all;
@@ -1720,6 +1694,7 @@
   }
 
   .codes li {
+    font-family: var(--font-mono);
     user-select: all;
   }
 
@@ -2100,6 +2075,70 @@
     outline-offset: 2px;
   }
 
+  .ways {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .way {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border-radius: var(--bend);
+    border: 1px solid var(--line-firm);
+    background: color-mix(in oklab, var(--surface) 72%, transparent);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .way:hover {
+    border-color: var(--signal);
+  }
+
+  .way:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  .way-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .way-about {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .ledger-link {
+    align-self: flex-start;
+    text-align: left;
+  }
+
+  .plain-list {
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .auth-solo {
+    display: flex;
+    justify-content: center;
+  }
+
   .providers-rule {
     display: flex;
     align-items: center;
@@ -2200,8 +2239,7 @@
   }
 
   .whom-name {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     line-height: 1.5;
     color: var(--ink-soft);
     overflow-wrap: anywhere;
@@ -2247,7 +2285,6 @@
   }
 
   .handshake-origin-value {
-    font-family: var(--font-mono);
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--ink);
@@ -2404,10 +2441,8 @@
   .actor-role {
     width: fit-content;
     margin-top: 0.25rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--signal);
   }
 
@@ -2449,6 +2484,11 @@
   }
 
   .aside-mono {
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+
+  .code-mono {
     font-family: var(--font-mono);
     font-size: 0.8125rem;
   }
@@ -2458,6 +2498,7 @@
   }
 
   .approval-code {
+    font-family: var(--font-mono);
     font-size: 2rem;
     letter-spacing: 0.12em;
     color: var(--ink);

@@ -142,7 +142,7 @@ module Masks
         get "/login"
 
         assert_match "This server is called", response.body
-        assert_match "Set up at", response.body
+        assert_match "This masks answers at", response.body
         assert_match origin_for(@tenant), response.body
 
         post "/login", params: { event: "setup-configure", called: "Payroll" }, as: :json

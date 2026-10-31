@@ -160,7 +160,7 @@ module Masks
         connect
 
         assert_response :success
-        assert_match "Connect xixo to Demo?", response.body
+        assert_match "Connect xixo?", response.body
         assert_match APP, response.body
         assert_match "xixo:catalog:read", response.body
         assert_match REDIRECT_URI, response.body
@@ -536,7 +536,7 @@ module Masks
         sign_in_as(@owner)
         connect
 
-        assert_match "Connect xixo to Demo?", response.body
+        assert_match "Connect xixo?", response.body
         assert_match "People will be able to sign in to <strong>xixo</strong> with their Demo account", response.body
         assert_match "For now only you are allowed in", response.body
         assert_match "Confidential. It receives a secret.", response.body
@@ -572,11 +572,11 @@ module Masks
         assert_match "The xixo client you approved on", response.body
       end
 
-      test "where the app runs is shown beside the question" do
+      test "where the app runs is said under the question" do
         sign_in_as(@owner)
         connect
 
-        assert_select ".prompt-head .handshake-origin-value", text: APP
+        assert_select ".prompt-head .prompt-lede", text: /xixo runs at #{Regexp.escape(APP)}\./
       end
 
       test "staying signed in and asking for accounts elsewhere are called out before the technical details" do
@@ -624,7 +624,7 @@ module Masks
         get resumed
 
         assert_response :success
-        assert_match "Connect xixo to Demo?", response.body
+        assert_match "Connect xixo?", response.body
       end
 
       test "an approved client does not ask again for what a person already approved" do

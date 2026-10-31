@@ -71,7 +71,7 @@ async function createPasskey() {
 </script>
 
 <div class="setup flow" class:setup-ready={typing ? matched : passkeying}>
-  <SignupHead {login} at={2} mark={signup.nickname || signup.email || ""} />
+  <SignupHead {login} at={2} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">

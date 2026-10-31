@@ -1,31 +1,17 @@
 <script>
-import TenantMark from "./TenantMark.svelte";
-import { initial } from "../lib/initial.js";
 import Head from "./Head.svelte";
 import Steps from "./Steps.svelte";
 
-let { login, at, mark = "" } = $props();
+let { login, at } = $props();
 
 const tenant = $derived(login.auth.tenant?.name ?? "");
 const signingUp = $derived(login.auth.signingUp ?? { steps: [] });
-
 </script>
-
-<div class="auth-pair">
-  <span class="auth-mark auth-mark-client" class:auth-mark-pending={!mark.trim()} aria-hidden="true"
-    >{initial(mark)}</span>
-  <span class="auth-wire"></span>
-  {#if signingUp.firstRun}
-    <img src="/masks-public/icon.svg" alt="" class="auth-mark auth-mark-rose" />
-  {:else}
-    <TenantMark tenant={login.auth.tenant} />
-  {/if}
-</div>
 
 {#if signingUp.firstRun}
   <Head {login} title={login.t("setup_title")} name={tenant} cap={login.t("setup_cap")} />
 {:else}
-  <Head {login} title={login.t("signup_title")} name={tenant} />
+  <Head {login} title={login.t("signup_title")} />
 {/if}
 
 <Steps {login} steps={signingUp.steps} at={at ?? signingUp.steps.length} />

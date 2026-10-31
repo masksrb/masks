@@ -7,7 +7,7 @@
 
 <div class="flow<%= " setup" if signing_up %>">
   <% if signing_up %>
-    <%= render "masks/server/logins/signup_head", login: login, at: 2, mark: login.actor&.identifier.to_s %>
+    <%= render "masks/server/logins/signup_head", login: login, at: 2 %>
 
     <p class="aside"><%= enrolment["required"] ? t(".lede") : t(".lede_optional") %></p>
   <% else %>

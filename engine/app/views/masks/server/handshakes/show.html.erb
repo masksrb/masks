@@ -12,21 +12,15 @@
 <% hot, rest = @scopes.to_a.partition { |scope, _| heeded_scope?(scope) } %>
 <% after_sign_out = @handshake.try(:post_logout_redirect_uri) %>
 
-<div class="auth-pair">
+<div class="auth-solo">
   <span class="auth-mark auth-mark-client" aria-hidden="true"><%= name.to_s.first&.upcase %></span>
-  <span class="auth-wire"></span>
-  <%= tenant_mark(Masks::Server::Current.tenant) %>
 </div>
 
 <div class="prompt-head">
   <h1 class="prompt-title"><%= t(@existing ? ".title_again" : ".title", name: name, tenant: tenant) %></h1>
 
-  <p class="handshake-origin">
-    <span class="handshake-origin-label"><%= t(".runs_at") %></span>
-    <span class="handshake-origin-value"><%= @handshake.origin %></span>
-  </p>
-
   <p class="prompt-lede">
+    <%= t(".runs_at", name: name, origin: @handshake.origin) %>
     <%= t(@existing ? ".lede_again_html" : ".lede_html", name: name, tenant: tenant) %>
   </p>
 </div>

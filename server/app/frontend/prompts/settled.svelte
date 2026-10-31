@@ -1,5 +1,4 @@
 <script>
-import TenantMark from "../shared/TenantMark.svelte";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
 
@@ -15,9 +14,7 @@ const title = $derived(
 
 <div class="over">
   {#if client}
-    <div class="auth-pair">
-      <TenantMark tenant={login.auth.tenant} />
-      <span class="auth-wire auth-wire-live"></span>
+    <div class="auth-solo">
       <ClientMark client={login.client} />
     </div>
   {/if}
