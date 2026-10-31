@@ -57,7 +57,7 @@ then **General**, then **Dynamic registration**.
 
 - The plugin writes `oauth/client.json` into the build. The file's address is the site's client ID,
   such as `https://catalog.example.com/oauth/client.json`. masks reads the file the first time
-  somebody signs in. See [a client named by its metadata document](/guides/features/#a-client-named-by-its-metadata-document).
+  somebody signs in. See [a client named by its metadata document](/build/features/#a-client-named-by-its-metadata-document).
 - masks sends people back to the site's home page, `/`. `ready()` finishes the sign-in there, puts
   the browser back on the page it started from, and returns the signed-in person's claims. It
   returns `null` when nobody is signed in.

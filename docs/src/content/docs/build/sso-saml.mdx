@@ -18,11 +18,11 @@ A provider is another service that actors sign in with, over OpenID Connect, OAu
 SAML 2.0. masks links the account there to an actor in masks. That link is a **connected account**.
 
 A provider takes the place of the password. The actor's
-[sign-in policy](/guides/features/#sign-in-policies) still asks for a second factor when it requires
+[sign-in policy](/build/features/#sign-in-policies) still asks for a second factor when it requires
 one.
 
 To add a provider, open **Settings**, then **Providers**, in `/manage`, and choose **Add provider**.
-[A provider's page](/guides/manage/#a-providers-page) lists what each tab holds.
+[A provider's page](/build/manage/#a-providers-page) lists what each tab holds.
 
 ### Known providers
 
@@ -52,7 +52,7 @@ Google, Apple, GitHub, GitLab, Slack, LinkedIn, and Discord turn on **Trust the 
 confirms**.
 
 An MCP server signs nobody in. Apps use it through a
-[delegation](/guides/connecting-via-sdk/#delegation).
+[delegation](/build/connecting-via-sdk/#delegation).
 
 ### Provider roles
 
@@ -101,11 +101,11 @@ With neither list set, a provider that adds actors can add someone who has no em
 
 ### Where a provider is offered
 
-The [sign-in policy](/guides/features/#sign-in-policies) decides where a provider is offered:
+The [sign-in policy](/build/features/#sign-in-policies) decides where a provider is offered:
 
 - `first_factors` must include `provider`.
 - `providers` lists which providers. **All providers** offers every one.
-- A provider that belongs to an [organization](/guides/organizations/#provider) is offered on the
+- A provider that belongs to an [organization](/build/organizations/#provider) is offered on the
   sign-in page only to a request that names the organization.
 
 A signed-in actor can connect any provider their policy offers under **Connected accounts** on their
@@ -197,7 +197,7 @@ masks refuses a response it did not ask for, such as one the identity provider s
 masks is the identity provider for apps that sign actors in only over SAML 2.0.
 
 1. The app sends an `AuthnRequest`.
-2. masks signs the actor in under their [sign-in policy](/guides/features/#sign-in-policies).
+2. masks signs the actor in under their [sign-in policy](/build/features/#sign-in-policies).
 3. masks posts a signed assertion back to the app.
 
 ### What to give the application
@@ -211,7 +211,7 @@ masks is the identity provider for apps that sign actors in only over SAML 2.0.
 | Certificate | In the metadata. One for each published signing key. |
 
 Most apps need only the metadata URL, which the client's page shows as **masks metadata**. After a
-[key rotation](/guides/security/#rotating-signing-keys), the app must read the metadata again. The
+[key rotation](/build/security/#rotating-signing-keys), the app must read the metadata again. The
 retiring key's certificate stays in the metadata until that key is retired.
 
 ### Registering one
@@ -293,7 +293,7 @@ Otherwise, masks ends every session in which the app was given that NameID. A re
 `Success`, or `Requester` with `UnknownPrincipal` when nothing matched.
 
 An ended session ends as it does at `/logout`. OpenID Connect clients get their
-[back-channel logout](/guides/features/#telling-other-apps) tokens, and the session's other SAML
+[back-channel logout](/build/features/#telling-other-apps) tokens, and the session's other SAML
 apps are signed out as the next section describes.
 
 #### When a person signs out of masks
@@ -335,7 +335,7 @@ https://demo.masks.example/scim/v2
 
 Issuing a token needs `masks:manage:security` or `masks:manage`. Only `masks:manage` can issue one
 for every actor, because that token reaches managers too. See
-[limits on the narrower roles](/guides/security/#limits-on-the-narrower-roles).
+[limits on the narrower roles](/build/security/#limits-on-the-narrower-roles).
 
 Each token shows who issued it, when it was last used, and when it expires. **Revoke** refuses it
 from then on.
@@ -343,7 +343,7 @@ from then on.
 A client can also provision. The client must:
 
 - be allowed `masks:scim`
-- request its own token with [`client_credentials`](/guides/features/#signing-in-as-itself)
+- request its own token with [`client_credentials`](/build/features/#signing-in-as-itself)
 - name the base URL as its `resource`
 
 ### What is provisioned
@@ -373,7 +373,7 @@ an invitation.
 - Bulk operations and sorting are not supported.
 
 `active: false` suspends an actor, the same as suspending them in `/manage`. See
-[suspending and deleting](/guides/features/#suspending-and-deleting). `active: true` restores the
+[suspending and deleting](/build/features/#suspending-and-deleting). `active: true` restores the
 actor. `DELETE` removes them.
 
 A provisioning token changes many accounts. So it cannot:
@@ -386,7 +386,7 @@ Every change is recorded in the actor's activity, marked as SCIM.
 
 ### A directory for one organization
 
-A provisioning token can belong to one [organization](/guides/organizations/). Then a customer's
+A provisioning token can belong to one [organization](/build/organizations/). Then a customer's
 directory manages that customer's actors and nobody else.
 
 | Request | What happens |

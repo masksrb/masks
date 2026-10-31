@@ -21,7 +21,7 @@ In Server mode, your app is a masks server and nothing else.
 
    The generator mounts masks at `/` and writes `config/initializers/masks_server.rb`, which sets
    `config.masks.mode = :server`. When the app has a `config/puma.rb`, the generator adds
-   `plugin :masks_ldap` to it, so Puma also serves [LDAP](/guides/ldap/).
+   `plugin :masks_ldap` to it, so Puma also serves [LDAP](/build/ldap/).
 
 3. Set `config.active_record.schema_format = :sql`. Row-level security does not survive a
    `schema.rb`.
@@ -30,7 +30,7 @@ In Server mode, your app is a masks server and nothing else.
    `key_derivation_salt`. masks encrypts each tenant's secret columns under a key derived from them.
 6. Optionally, set `MASKS_PUBLIC_ORIGIN_TEMPLATE`, such as `https://auth.example.com`. masks builds
    the issuer and every link it emails from it. Without it, each tenant keeps the address its
-   **Set up** screen was opened at. See [the public address](/guides/self-hosting/#the-public-address).
+   **Set up** screen was opened at. See [the public address](/build/self-hosting/#the-public-address).
 7. Run `bin/rails db:prepare`.
 8. Run `bin/rails masks:tenants`. It creates each tenant that `MASKS_TENANTS` or `MASKS_TENANT`
    names, and prints the setup token of each tenant that is not set up yet.
@@ -38,7 +38,7 @@ In Server mode, your app is a masks server and nothing else.
 
 ## Database roles
 
-masks keeps its tables in the primary database. [Row-level security](/guides/security/#tenant-isolation),
+masks keeps its tables in the primary database. [Row-level security](/build/security/#tenant-isolation),
 which limits each query to one tenant's rows, keeps tenants apart. Two kinds of role get around it,
 so masks checks the role it serves as:
 
@@ -46,7 +46,7 @@ so masks checks the role it serves as:
 - Outside development and test, a role that owns masks' tables is refused, since an owner can
   turn row-level security off.
 
-Migrate as one role and serve as another, as [database roles](/guides/self-hosting/#database-roles)
+Migrate as one role and serve as another, as [database roles](/build/self-hosting/#database-roles)
 describes. The serving role needs `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the tables and the
 sequences behind them.
 
@@ -55,6 +55,6 @@ sequences behind them.
 The gem reads masks' own settings from the environment, such as `MASKS_TENANTS` and
 `MASKS_SMTP_ADDRESS`. [Environment variables](/reference/environment/#server) lists them.
 
-Some variables on that page belong to the [container image](/guides/self-hosting/)'s app and are
+Some variables on that page belong to the [container image](/build/self-hosting/)'s app and are
 not part of the gem, such as `POSTGRES_HOST`, `MASKS_MASTER_KEY`, and `RAILS_FORCE_SSL`. Your app
 sets up its database, encryption keys, and SSL in its own way.

@@ -10,41 +10,32 @@ hero:
     file: ../../assets/masks.svg
     alt: The masks rose window
   actions:
-    - text: Read the docs
-      link: /quickstart/
+    - text: Use masks
+      link: /use/
       icon: right-arrow
-    - text: Try a demo
-      link: /demo/
+    - text: Build with masks
+      link: /build/
       variant: minimal
 ---
 
 <div class="not-content home">
   <section class="doors" aria-label="Where to start">
     <div class="door" style="--hue: var(--glass-amber)">
-      <h2><a href="/quickstart/">Get started</a></h2>
-      <p>Run masks with one command from its container image, or inside a Rails app.</p>
+      <h2><a href="/use/">Use masks</a></h2>
+      <p>Run masks, invite people, and connect the apps you already have, in the words you see on the screen.</p>
       <ul>
-        <li><a href="/guides/self-hosting/">Host masks yourself</a></li>
-        <li><a href="/reference/ruby/">Add it to a Rails app</a></li>
-        <li><a href="/quickstart/#run-it">Run it with one command</a></li>
+        <li><a href="/use/run-masks/">Run masks in one container</a></li>
+        <li><a href="/use/invite-people/">Invite and approve people</a></li>
+        <li><a href="/use/connect-an-app/">Connect an app from the known list</a></li>
       </ul>
     </div>
     <div class="door" style="--hue: var(--glass-cyan)">
-      <h2><a href="/guides/core-concepts/">Guides</a></h2>
-      <p>Tenants, actors, clients, and scopes, and how to set up each part of masks.</p>
+      <h2><a href="/build/">Build with masks</a></h2>
+      <p>Connect your own apps, run masks in production, and read the specifications, the manage API, and the SDKs.</p>
       <ul>
-        <li><a href="/guides/core-concepts/">Core concepts</a></li>
-        <li><a href="/guides/organizations/">Organizations</a></li>
-        <li><a href="/guides/sso-saml/">Single sign-on and SAML</a></li>
-      </ul>
-    </div>
-    <div class="door" style="--hue: var(--glass-verdant)">
-      <h2><a href="/reference/specs/">Reference</a></h2>
-      <p>The specifications masks implements, the manage API, the SDKs, and the environment variables.</p>
-      <ul>
+        <li><a href="/build/core-concepts/">Core concepts</a></li>
+        <li><a href="/build/connecting-via-sdk/">Connecting via SDK</a></li>
         <li><a href="/reference/specs/">OpenID Connect and OAuth</a></li>
-        <li><a href="/reference/manage/">The manage API</a></li>
-        <li><a href="/reference/environment/">Environment variables</a></li>
       </ul>
     </div>
   </section>
@@ -56,23 +47,23 @@ hero:
         <strong>OpenID Connect and OAuth 2.0</strong>
         <span>Passes four OpenID Foundation certification plans with no failures.</span>
       </a>
-      <a class="feat" href="/guides/core-concepts/#tenants" style="--hue: var(--glass-gold)">
+      <a class="feat" href="/build/core-concepts/#tenants" style="--hue: var(--glass-gold)">
         <strong>Tenants</strong>
         <span>Each tenant has its own actors, clients, and signing keys.</span>
       </a>
-      <a class="feat" href="/guides/features/#second-factors" style="--hue: var(--glass-emerald)">
+      <a class="feat" href="/use/signing-in/" style="--hue: var(--glass-emerald)">
         <strong>Passkeys and second factors</strong>
         <span>Passkeys, authenticator apps, backup codes, and sign-in codes by email or text message.</span>
       </a>
-      <a class="feat" href="/guides/sso-saml/" style="--hue: var(--glass-sky)">
+      <a class="feat" href="/build/sso-saml/" style="--hue: var(--glass-sky)">
         <strong>Single sign-on</strong>
         <span>Sign in with Google, Microsoft, or any OpenID Connect or SAML provider.</span>
       </a>
-      <a class="feat" href="/guides/organizations/" style="--hue: var(--glass-cobalt)">
+      <a class="feat" href="/use/organizations/" style="--hue: var(--glass-cobalt)">
         <strong>Organizations</strong>
         <span>Each organization has its own members, roles, and sign-in policy.</span>
       </a>
-      <a class="feat" href="/guides/event-streams/" style="--hue: var(--glass-violet)">
+      <a class="feat" href="/build/event-streams/" style="--hue: var(--glass-violet)">
         <strong>Event streams</strong>
         <span>masks records each sign-in and change as an event, and sends events to a URL you choose.</span>
       </a>

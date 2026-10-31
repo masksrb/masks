@@ -1,0 +1,51 @@
+---
+title: Build with masks
+description: The technical pages, for developers who connect apps to masks and operators who run it.
+---
+
+These pages are for developers and operators. They name endpoints, scopes, environment variables,
+and the words in the code. The plain-language pages for the people who run masks and sign in
+through it are under [Use masks](/use/).
+
+## Get started
+
+- [Quickstart](/build/quickstart/) runs masks from its container image or its repository, and
+  connects a first app.
+- [Core concepts](/build/core-concepts/) explains tenants, actors, clients, scopes, namespaces,
+  and signing keys.
+- [Demo](/build/demo/) runs two tenants side by side.
+
+## Run masks
+
+- [Self-hosting](/build/self-hosting/) is the full operator guide: Postgres, the master key,
+  replicas, metrics, backups, tenants, custom domains, and apps declared in a file.
+- [Manage](/build/manage/) says where everything lives in `/manage`.
+- [Security](/build/security/) covers tenant isolation, manage roles, rate limits, risky
+  sign-ins, and the protocol features that harden a client.
+- [Themes](/build/themes/) styles the sign-in and account pages.
+
+## Sign people in
+
+- [Features](/build/features/) covers clients, signing in, signing out, groups, and accounts.
+- [Organizations](/build/organizations/) covers what apps read about organizations.
+- [Single sign-on and SAML](/build/sso-saml/), [LDAP](/build/ldap/), and
+  [Enterprise](/build/enterprise/) connect providers, directories, and legacy apps.
+
+## Connect your apps
+
+- [Connecting via SDK](/build/connecting-via-sdk/) picks an SDK and registers an app.
+- [Forward authentication](/build/forward-auth/) signs people in to any app behind Caddy,
+  Traefik, or nginx.
+
+## Send events
+
+- [Event streams](/build/event-streams/) send each sign-in and change to a URL you choose.
+- [Shared signals](/build/shared-signals/) tell apps when a session ends.
+
+## Reference
+
+- [OpenID Connect and OAuth](/reference/specs/) lists the specifications masks implements.
+- [Environment variables](/reference/environment/) lists every variable the server reads.
+- [Manage API](/reference/manage/) is the GraphQL API behind `/manage`.
+- SDKs for [JavaScript](/reference/javascript/), [Python](/reference/python/),
+  [Go](/reference/go/), and [Ruby](/reference/ruby/).

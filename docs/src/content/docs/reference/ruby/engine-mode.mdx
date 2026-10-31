@@ -35,7 +35,7 @@ secrets, apart from the app around it.
    ```
 
    `--database` and `--tenant` change the last two values. When the app has a `config/puma.rb`, the
-   generator adds `plugin :masks_ldap` to it, so Puma also serves [LDAP](/guides/ldap/).
+   generator adds `plugin :masks_ldap` to it, so Puma also serves [LDAP](/build/ldap/).
 
 3. Add a database for masks, as described below.
 4. Set `config.masks.public_origin_template` to the issuer, such as `https://app.example.com/auth`
@@ -61,10 +61,10 @@ masks:
 ```
 
 Its role must hold neither `SUPERUSER` nor `BYPASSRLS`.
-[Row-level security](/guides/security/#tenant-isolation), which limits each query to one tenant's
+[Row-level security](/build/security/#tenant-isolation), which limits each query to one tenant's
 rows, keeps tenants apart, and those roles get around it. masks checks the role the first time it
 enters a tenant, and refuses to go on while the role holds either one. It also refuses a
-[connection pooler in transaction mode](/guides/self-hosting/#connection-poolers), which drops the
+[connection pooler in transaction mode](/build/self-hosting/#connection-poolers), which drops the
 tenant between statements.
 
 masks names the tenant on its own connections only. Your app's connections are left alone: the

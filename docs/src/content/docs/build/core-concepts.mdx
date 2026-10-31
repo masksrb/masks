@@ -17,7 +17,7 @@ masks signs people and machines in to apps. The rest of the docs use six ideas t
 A tenant is a subdomain with its own actors, clients, and signing keys. A subdomain is the first
 part of a web address, such as `demo` in `demo.auth.example.com`.
 
-No record belongs to more than one tenant. See [tenant isolation](/guides/security/#tenant-isolation)
+No record belongs to more than one tenant. See [tenant isolation](/build/security/#tenant-isolation)
 for how masks keeps tenants apart.
 
 ### Declaring tenants
@@ -36,16 +36,16 @@ is an error.
 - The container image declares a Single tenant, `masks`, when neither is set and
   `MASKS_PUBLIC_ORIGIN_TEMPLATE` has no `%{subdomain}`.
 - In every mode, masks answers only the hostnames that `MASKS_PUBLIC_ORIGIN_TEMPLATE` names, and
-  the tenants' [custom domains](/guides/self-hosting/#custom-domains). Any other hostname gets a 404
+  the tenants' [custom domains](/build/self-hosting/#custom-domains). Any other hostname gets a 404
   with the body `no tenant is served at this hostname`.
 - Without the template, each tenant answers only at the address its **Set up** screen was opened
-  at. See [the public address](/guides/self-hosting/#the-public-address).
+  at. See [the public address](/build/self-hosting/#the-public-address).
 
 With Dynamic, the template decides how many tenants masks creates:
 
 | `MASKS_PUBLIC_ORIGIN_TEMPLATE`                                      | What masks does with a new hostname                                                                                           |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Has `%{subdomain}`, such as `https://%{subdomain}.auth.example.com` | Creates a tenant for every new subdomain. The [rate limits](/guides/security/#rate-limits) cap how many it creates each hour. |
+| Has `%{subdomain}`, such as `https://%{subdomain}.auth.example.com` | Creates a tenant for every new subdomain. The [rate limits](/build/security/#rate-limits) cap how many it creates each hour. |
 | Has no `%{subdomain}`, such as `https://auth.example.com`           | Creates one tenant, on the first request to an empty database.                                                                |
 
 ### Setting a tenant up
@@ -76,7 +76,7 @@ The screen does not appear again.
 
 ### Tenant settings
 
-A manager changes a tenant's settings in `/manage`, under [Settings](/guides/manage/#settings),
+A manager changes a tenant's settings in `/manage`, under [Settings](/build/manage/#settings),
 without a restart. An environment variable can pin some of them for every tenant, and then
 `/manage` cannot change them. See [environment variables](/reference/environment/#sign-in-policy).
 
@@ -100,13 +100,13 @@ it.
 | **Email**              | Every account needs an email address.      |
 | **Either**             | Either one is enough. This is the default. |
 
-- **An account that holds any [manage role](/guides/security/#manage-roles) needs both**, because
+- **An account that holds any [manage role](/build/security/#manage-roles) needs both**, because
   invitations and password resets go to managers.
 - A person signs in with either field.
 - Introspection is how a resource server, an app that accepts tokens from masks, asks masks about a
   token. Its `username` is the nickname when there is one, and the email address when there is not.
 
-See [signing in](/guides/features/#signing-in) for passwords, passkeys, and second factors.
+See [signing in](/build/features/#signing-in) for passwords, passkeys, and second factors.
 
 ## Clients
 
@@ -116,26 +116,26 @@ A client is an app that starts sign-ins, or that signs in as itself. A client ho
 - the resources it acts for
 - the scopes it may request
 
-See [clients](/guides/features/#clients) to register and set up a client.
+See [clients](/build/features/#clients) to register and set up a client.
 
 ## Scopes
 
 A scope is a string that names something a token may do. masks reserves the `masks:` prefix.
 
 Seven scopes are standard: `openid`, `profile`, `email`, `offline_access`, `identities`,
-[`organization`](/guides/organizations/#signing-in-as-a-member), and
-[`groups`](/guides/features/#groups).
+[`organization`](/build/organizations/#signing-in-as-a-member), and
+[`groups`](/build/features/#groups).
 
 The `masks:` scopes are:
 
 | Scope                                                                | Lets a token                                                                    |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `masks:manage`                                                       | Use `/manage` and the GraphQL API behind it.                                    |
-| `masks:manage:read`, `masks:manage:support`, `masks:manage:security` | Use the narrower [manage roles](/guides/security/#manage-roles).                |
+| `masks:manage:read`, `masks:manage:support`, `masks:manage:security` | Use the narrower [manage roles](/build/security/#manage-roles).                |
 | `masks:handshake`                                                    | Connect an app to this tenant.                                                  |
-| `masks:scim`                                                         | [Provision people over SCIM](/guides/sso-saml/#provisioning).                   |
-| `masks:signals`                                                      | [Receive shared signals](/guides/shared-signals/).                              |
-| `masks:delegate:<provider>`                                          | [Use an actor's account at a provider](/guides/connecting-via-sdk/#delegation). |
+| `masks:scim`                                                         | [Provision people over SCIM](/build/sso-saml/#provisioning).                   |
+| `masks:signals`                                                      | [Receive shared signals](/build/shared-signals/).                              |
+| `masks:delegate:<provider>`                                          | [Use an actor's account at a provider](/build/connecting-via-sdk/#delegation). |
 
 Only an approved client may hold a `masks:` scope.
 
@@ -200,7 +200,7 @@ tokens, and the public part checks them.
 
 - masks encrypts the private key when it stores it.
 - The public key is published at the tenant's JWKS endpoint, `/.well-known/jwks.json`, where apps
-  fetch its keys. It is also in the tenant's [SAML metadata](/guides/sso-saml/#saml-applications).
+  fetch its keys. It is also in the tenant's [SAML metadata](/build/sso-saml/#saml-applications).
 - A token from one tenant has a `kid` (key ID) that no other tenant publishes, so it fails
   verification everywhere else.
 
@@ -213,4 +213,4 @@ A key moves through four states:
 | `retiring` | No longer signing. Still published, so tokens it signed still check. |
 | `retired`  | Removed from JWKS.                                                   |
 
-See [rotating signing keys](/guides/security/#rotating-signing-keys).
+See [rotating signing keys](/build/security/#rotating-signing-keys).

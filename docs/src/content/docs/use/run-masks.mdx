@@ -1,0 +1,89 @@
+---
+title: Run masks in one container
+description: Start masks with one command on your computer, then put it behind HTTPS so other computers can reach it.
+---
+
+masks comes as a container image. One container runs everything, including its own database.
+
+## On your computer
+
+You need a container runtime, such as Docker or Podman. The commands here use `docker`, and
+Podman accepts the same ones.
+
+1. Start masks:
+
+   ```sh
+   docker run --name masks -p 3000:3000 -v masks:/rails/storage ghcr.io/masksrb/masks
+   ```
+
+2. Find the setup token in the output. It is on a line like this:
+
+   ```
+   masks: masks is not set up. Its setup token is 7Hq2…
+   ```
+
+3. Open `http://localhost:3000` in a browser. The **Set up** screen appears.
+4. Follow [set up your first account](/use/first-account/).
+
+masks keeps everything in the `masks` volume. You can stop and remove the container and start it
+again without losing anything.
+
+## For other computers
+
+On its own, masks answers only on the computer it runs on. To let other computers and phones
+reach it, put a web server that serves HTTPS in front of it. Caddy does this and gets the
+certificate for you.
+
+Before you start, point a name such as `auth.example.com` at the computer in your DNS settings.
+
+1. Save this as `compose.yml`, with your own name in place of `auth.example.com`:
+
+   ```yaml
+   services:
+     masks:
+       image: ghcr.io/masksrb/masks:0.12.0
+       volumes:
+         - masks:/rails/storage
+       logging:
+         options:
+           max-size: 10m
+           max-file: "3"
+
+     caddy:
+       image: caddy:2-alpine
+       command: caddy reverse-proxy --from auth.example.com --to masks:3000
+       ports:
+         - "443:443"
+         - "80:80"
+       volumes:
+         - caddy:/data
+
+   volumes:
+     masks:
+     caddy:
+   ```
+
+2. Start both:
+
+   ```sh
+   docker compose up -d
+   ```
+
+3. Read the setup token:
+
+   ```sh
+   docker compose logs masks
+   ```
+
+4. Open `https://auth.example.com`. Open it at this address the first time. masks keeps the
+   address the **Set up** screen was opened at, and answers there from then on.
+5. Follow [set up your first account](/use/first-account/).
+
+The file names a version, `0.12.0`. When you upgrade, you change that number. See
+[keep masks healthy](/use/keep-masks-healthy/#upgrade).
+
+## More ways to run it
+
+masks can also use a database server of your own, serve more than one set of accounts, run on
+several computers at once, or sit inside a Rails app. Those setups are for operators, in
+[self-hosting](/build/self-hosting/).

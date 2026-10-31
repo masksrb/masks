@@ -31,7 +31,7 @@ text, so a true or false setting is the text `true` or `false`.
 In production, the server does not boot without these. The error names the missing variable.
 
 The container image's entrypoint (the script that runs when the container starts) derives the
-first four from one master key. See [encryption and secrets](/guides/self-hosting/#encryption-and-secrets).
+first four from one master key. See [encryption and secrets](/build/self-hosting/#encryption-and-secrets).
 
 | Variable | Default | |
 | --- | --- | --- |
@@ -63,15 +63,15 @@ A tenant is one separate set of actors, clients, and settings. Each tenant has i
 | --- | --- | --- |
 | `MASKS_TENANTS` | none | Declares Multi tenants. Lists the subdomains this server serves, separated by commas or spaces, such as `demo,acme`. The image's entrypoint creates any that do not exist before the server starts. |
 | `MASKS_TENANT` | none | Declares a Single tenant, the only one this server serves. You cannot set it together with `MASKS_TENANTS`. The image's entrypoint sets it to `masks` when `MASKS_TENANTS` is unset and `MASKS_PUBLIC_ORIGIN_TEMPLATE` has no `%{subdomain}`. |
-| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | none | The public origin (the scheme and host) of each tenant. `%{subdomain}` stands for the tenant's subdomain, as in `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. masks builds the issuer, the registration endpoint, and every link in an email from it. The server answers only hosts that match it and tenants' [custom domains](/guides/self-hosting/#custom-domains). Every other host gets a 404. Without it, each tenant keeps the origin its **Set up** screen was opened at, and answers only there. See [the public address](/guides/self-hosting/#the-public-address). |
-| `MASKS_CONFIG` | none | A YAML file of apps, groups, and tenant settings. masks applies it on every boot. See [declaring apps in a file](/guides/self-hosting/#declaring-apps-in-a-file). |
-| `MASKS_METRICS_TOKEN` | none | Turns on `/metrics` for Prometheus. `/metrics` then answers only a request that carries this token. See [metrics](/guides/self-hosting/#metrics). |
-| `MASKS_ON_DEMAND_TLS` | `false` | `true` opens `/tls/allowed`, which a proxy asks before it issues a certificate for a tenant's custom host. It answers from the server's own address, outside the hosts `MASKS_PUBLIC_ORIGIN_TEMPLATE` allows. See [certificates on demand](/guides/self-hosting/#certificates-on-demand). |
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | none | The public origin (the scheme and host) of each tenant. `%{subdomain}` stands for the tenant's subdomain, as in `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. masks builds the issuer, the registration endpoint, and every link in an email from it. The server answers only hosts that match it and tenants' [custom domains](/build/self-hosting/#custom-domains). Every other host gets a 404. Without it, each tenant keeps the origin its **Set up** screen was opened at, and answers only there. See [the public address](/build/self-hosting/#the-public-address). |
+| `MASKS_CONFIG` | none | A YAML file of apps, groups, and tenant settings. masks applies it on every boot. See [declaring apps in a file](/build/self-hosting/#declaring-apps-in-a-file). |
+| `MASKS_METRICS_TOKEN` | none | Turns on `/metrics` for Prometheus. `/metrics` then answers only a request that carries this token. See [metrics](/build/self-hosting/#metrics). |
+| `MASKS_ON_DEMAND_TLS` | `false` | `true` opens `/tls/allowed`, which a proxy asks before it issues a certificate for a tenant's custom host. It answers from the server's own address, outside the hosts `MASKS_PUBLIC_ORIGIN_TEMPLATE` allows. See [certificates on demand](/build/self-hosting/#certificates-on-demand). |
 | `MASKS_RECOVER` | none | Gets someone back into an account when nobody else can. For example, the only manager has lost their second factor. Name the account by nickname or email address. To pick one tenant, write `tenant/nickname`. At boot, masks removes the account's second factors and signs it out everywhere. It records both in the activity, and prints a link that sets a new password once. Unset it after use, because masks does this again on every boot. |
 | `MASKS_SETUP_TOKEN` | none | Replaces the setup token that masks generates for each tenant. One value applies to every tenant. Without it, each tenant gets its own token, printed in the server's logs. The first-run screen asks for the token before it creates a tenant's first account. Outside development, it must be at least 24 characters long. The dev stack sets it to `masks-dev`. |
 
 When both `MASKS_TENANTS` and `MASKS_TENANT` are unset, masks declares tenants dynamically. See
-[declaring tenants](/guides/core-concepts/#declaring-tenants) for how Single, Multi, and Dynamic
+[declaring tenants](/build/core-concepts/#declaring-tenants) for how Single, Multi, and Dynamic
 differ.
 
 ### Sign-in policy
@@ -157,11 +157,11 @@ It connects as two database roles (database users):
 Tenants are kept apart by row-level security, a PostgreSQL feature that limits which rows a role
 can see. A superuser skips row-level security, and a table's owner can turn it off. For that
 reason, the production server refuses to serve requests as a role that is either one. See
-[the database roles](/guides/self-hosting/#database-roles).
+[the database roles](/build/self-hosting/#database-roles).
 
 | Variable | Default | |
 | --- | --- | --- |
-| `POSTGRES_HOST` | `127.0.0.1` | When it is unset, the container image runs its own PostgreSQL inside the container. See [one container](/guides/self-hosting/#one-container). |
+| `POSTGRES_HOST` | `127.0.0.1` | When it is unset, the container image runs its own PostgreSQL inside the container. See [one container](/build/self-hosting/#one-container). |
 | `POSTGRES_PORT` | `5432` in production, `5435` otherwise | Development and test use the port the dev stack publishes by default. |
 | `POSTGRES_USER` | `masks` | The role that serves requests. |
 | `POSTGRES_PASSWORD` | `masks` | Derived from the master key when masks creates the roles. |
@@ -175,25 +175,25 @@ reason, the production server refuses to serve requests as a role that is either
 ### Processes
 
 The image runs the Puma web server in front of Rails, on `PORT`. See
-[self-hosting](/guides/self-hosting/#what-it-runs).
+[self-hosting](/build/self-hosting/#what-it-runs).
 
 | Variable | Default | |
 | --- | --- | --- |
 | `MASKS_JOBS_IN_WEB_SERVER` | `true` | `true` runs background jobs inside the web server, so one container does both. `false` leaves jobs to a separate `bin/jobs` process. |
 | `JOB_CONCURRENCY` | `1` | How many worker processes run background jobs. Each one runs 3 threads. |
-| `MASKS_WORKER_SILENCE` | `300` | Seconds a worker may go without reporting before `/up` answers `down`. `0` turns the check off, for a server whose jobs run elsewhere. See [health checks](/guides/self-hosting/#health-checks). |
+| `MASKS_WORKER_SILENCE` | `300` | Seconds a worker may go without reporting before `/up` answers `down`. `0` turns the check off, for a server whose jobs run elsewhere. See [health checks](/build/self-hosting/#health-checks). |
 | `MASKS_QUEUE_WAIT` | `600` | Seconds a background job may wait to start before `/up` answers `down`. `0` turns the check off. |
 | `MASKS_FINISHED_JOB_RETENTION` | `604800` (7 days) | How long a finished background job stays in the queue database before the daily prune removes it. In seconds. |
 | `MASKS_FAILED_JOB_RETENTION` | `2592000` (30 days) | How long a failed background job stays in the queue database before the daily prune removes it. In seconds. |
 | `RAILS_MAX_THREADS` | `3` | Puma threads in each process. It also sets the size of each database connection pool. When it is unset, each pool holds `5` connections. |
 | `PORT` | `3000` | The port Puma listens on. |
 | `PIDFILE` | none | The file where Puma writes its process ID. |
-| `MASKS_RELEASE_CHECK` | `false` | `true` reads the list of releases from GitHub once a day, and the overview says when a newer version is out. The request carries this server's version and nothing else. See [the health panel](/guides/self-hosting/#the-health-panel). |
+| `MASKS_RELEASE_CHECK` | `false` | `true` reads the list of releases from GitHub once a day, and the overview says when a newer version is out. The request carries this server's version and nothing else. See [the health panel](/build/self-hosting/#the-health-panel). |
 
 ### LDAP
 
 The web server reads these to serve LDAP (Lightweight Directory Access Protocol), a protocol
-some apps use to look up accounts and check passwords. See [LDAP](/guides/ldap/).
+some apps use to look up accounts and check passwords. See [LDAP](/build/ldap/).
 
 | Variable | Default | |
 | --- | --- | --- |
@@ -224,7 +224,7 @@ that proxy's address, and they all share one set of rate limits.
 
 masks notices both mistakes. When forwarded headers arrive from an address it does not trust, or a
 trusted proxy forwards plain HTTP without redirecting to HTTPS, masks writes a line that starts with
-`proxy:` to the log and the **Reverse proxy** check on the [health panel](/guides/self-hosting/#the-health-panel)
+`proxy:` to the log and the **Reverse proxy** check on the [health panel](/build/self-hosting/#the-health-panel)
 names the address. An untrusted visitor's forwarded headers, the scheme among them, are ignored.
 
 ### Outbound calls
@@ -248,7 +248,7 @@ List only the ranges you mean to allow.
 
 | Variable | Default | |
 | --- | --- | --- |
-| `MASKS_THEMES_PATH` | `/rails/themes` | The folder of theme stylesheets. masks reads it at boot. See [themes](/guides/themes/). |
+| `MASKS_THEMES_PATH` | `/rails/themes` | The folder of theme stylesheets. masks reads it at boot. See [themes](/build/themes/). |
 
 ### Links
 

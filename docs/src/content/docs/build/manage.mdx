@@ -10,7 +10,7 @@ description: Where everything lives in /manage, and what each page and tab holds
 - organizations, providers, and the tenant's settings
 
 You sign in to `/manage` through masks, like any other app. An actor who holds `masks:manage` or one
-of the three narrower [manage roles](/guides/security/#manage-roles) can open it. A manager with a
+of the three narrower [manage roles](/build/security/#manage-roles) can open it. A manager with a
 narrower role sees the same pages, and a line at the top of each page says what they can change.
 
 Everything `/manage` does goes through the [manage API](/reference/manage/), so a script can do the
@@ -34,7 +34,7 @@ Every page and tab has its own address:
 The overview starts with anything that needs a manager:
 
 - actors waiting for approval
-- actors who [asked for help](/guides/features/#second-factors) signing in
+- actors who [asked for help](/build/features/#second-factors) signing in
 - events from the last day that are worth a look, such as a refused sign-in or a blocked device
 
 While a tenant is new, the overview also shows the steps **Let masks send email**, **Register your
@@ -42,7 +42,7 @@ first client**, and **Invite someone**. Each step goes away once it is done. **H
 away in this browser only.
 
 Below that, the overview shows counts, a chart of sign-ins per day, the server's
-[health](/guides/self-hosting/#the-health-panel), the first few organizations, and the latest
+[health](/build/self-hosting/#the-health-panel), the first few organizations, and the latest
 activity. When the operator has turned the release check on, a line at the top says when a newer
 version of masks is out.
 
@@ -56,7 +56,7 @@ approval**, **Asking for help**, **Managers**, and **Suspended**.
 - **Invite many** invites several actors by email address at once, and can put them in groups.
 
 The same page lists **Devices**. Each device has a page of its own, with its activity. See
-[sessions and devices](/guides/features/#sessions-and-devices).
+[sessions and devices](/build/features/#sessions-and-devices).
 
 ### An actor's page
 
@@ -66,7 +66,7 @@ that settles it, such as **Restore**, **Resend invitation**, or **Send a confirm
 | Tab          | What it holds                                                                                                                            |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | **Profile**  | Their nickname, email address, other profile details, and photo. **Suspend or delete**.                                                  |
-| **Access**   | Their scopes and [groups](/guides/features/#groups). The IDs a directory gave them. The apps they have let in. Their connected accounts. |
+| **Access**   | Their scopes and [groups](/build/features/#groups). The IDs a directory gave them. The apps they have let in. Their connected accounts. |
 | **Sign-in**  | Their password, second factors, and passkeys. Where they are signed in. Their tokens.                                                    |
 | **Activity** | Their latest 25 events, with a link to **All activity**.                                                                                 |
 
@@ -74,7 +74,7 @@ that settles it, such as **Restore**, **Resend invitation**, or **Send a confirm
 
 To add one, choose **Add organization**. An organization's page has five tabs: **Members**,
 **Sign-in**, **Roles**, **Activity**, and **General**. See
-[organizations in /manage](/guides/organizations/#organizations-in-manage) for what each tab holds.
+[organizations in /manage](/build/organizations/#organizations-in-manage) for what each tab holds.
 
 ## Clients
 
@@ -83,7 +83,7 @@ To add a client, choose **Add client**, then pick **What kind of client**:
 - **Signs in as itself**
 - **Signs actors in**
 - **Signs actors in over SAML**
-- **A known product**, one of the [known products](/guides/features/#adding-a-known-app)
+- **A known product**, one of the [known products](/build/features/#adding-a-known-app)
 
 The clients list marks a client that registered itself, and says whether a manager has approved it.
 Archived clients show only when the **Archived** switch is on.
@@ -93,20 +93,20 @@ Archived clients show only when the **Archived** switch is on.
 | Tab           | What it holds                                                                                                                                                                                           |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **General**   | Its name and how it proves who it is. Its SAML settings, for a SAML client. What actors see about it, such as its logo. Its **Sign-in** settings, such as its policy and token lifetimes. Archiving it. |
-| **Access**    | [Who may sign in](/guides/features/#who-may-sign-in-to-an-app), by group or organization role. The scopes it always gets, and the scopes it may ask for.                                                |
-| **Endpoints** | Its redirect URIs, post-logout redirect URIs, and resources. Its keys. Its [authorization details](/guides/security/#rich-authorization-requests).                                                      |
+| **Access**    | [Who may sign in](/build/features/#who-may-sign-in-to-an-app), by group or organization role. The scopes it always gets, and the scopes it may ask for.                                                |
+| **Endpoints** | Its redirect URIs, post-logout redirect URIs, and resources. Its keys. Its [authorization details](/build/security/#rich-authorization-requests).                                                      |
 | **Usage**     | Who has let it in. Its live tokens. Its activity. The namespaces it claimed.                                                                                                                            |
 
 ## Settings
 
 | Tab           | What it holds                                                                                                                                                                                        |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General**   | The tenant's name and branding. How long activity is kept. How long [emailed links](/guides/features/#link-lifetimes) last. **Dynamic registration**. Signing keys. [Groups](/guides/features/#groups), domains, and [namespaces](/guides/core-concepts/#namespaces). |
-| **Policies**  | The [sign-in policies](/guides/features/#sign-in-policies), and rules for the whole tenant: **Primary identifier**, **Default policy**, **Who may sign in**, and **Auto-deletion** of idle actors.   |
+| **General**   | The tenant's name and branding. How long activity is kept. How long [emailed links](/build/features/#link-lifetimes) last. **Dynamic registration**. Signing keys. [Groups](/build/features/#groups), domains, and [namespaces](/build/core-concepts/#namespaces). |
+| **Policies**  | The [sign-in policies](/build/features/#sign-in-policies), and rules for the whole tenant: **Primary identifier**, **Default policy**, **Who may sign in**, and **Auto-deletion** of idle actors.   |
 | **Providers** | The providers and MCP servers that actors sign in or connect with.                                                                                                                                   |
-| **Directory** | The [LDAP](/guides/ldap/) server. [Provisioning](/guides/sso-saml/#provisioning) tokens.                                                                                                             |
+| **Directory** | The [LDAP](/build/ldap/) server. [Provisioning](/build/sso-saml/#provisioning) tokens.                                                                                                             |
 | **Messages**  | **Sending** holds the services that send email and text messages. **Templates** holds the wording of each email.                                                                                     |
-| **Activity**  | **Log** holds the tenant's whole activity, which you can filter, narrow to what is worth a look, and export. **Streams** holds the [event streams](/guides/event-streams/).                          |
+| **Activity**  | **Log** holds the tenant's whole activity, which you can filter, narrow to what is worth a look, and export. **Streams** holds the [event streams](/build/event-streams/).                          |
 
 The settings tabs also show who is signed in, with two buttons:
 
@@ -123,7 +123,7 @@ Okta, or from a blank OpenID Connect, OAuth 2.0, SAML 2.0, or MCP provider.
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Setup**              | Its name. The values to give the provider. Its endpoints and credentials. Archiving it.                                                                               |
 | **Sign-in**            | The email domains it signs in. Whether it adds the actors it signs in, and whether it trusts their email addresses. Its security events. Where each claim comes from. |
-| **Clients**            | [Delegation](/guides/connecting-via-sdk/#set-up-the-provider): whether clients may use an actor's account there, and what they may do with it.                        |
+| **Clients**            | [Delegation](/build/connecting-via-sdk/#set-up-the-provider): whether clients may use an actor's account there, and what they may do with it.                        |
 | **Connected accounts** | Every actor who has connected an account through it.                                                                                                                  |
 
 Not every provider has every tab. An MCP server has no **Sign-in** tab, and a SAML provider has no

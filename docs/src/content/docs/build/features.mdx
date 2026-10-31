@@ -3,7 +3,7 @@ title: Features
 description: Clients, signing in, signing out, groups, and accounts.
 ---
 
-This page covers what a [client](/guides/core-concepts/#clients) can do, how actors sign in and sign
+This page covers what a [client](/build/core-concepts/#clients) can do, how actors sign in and sign
 out, and what happens to their accounts over time.
 
 ## Clients
@@ -13,18 +13,18 @@ out, and what happens to their accounts over time.
 | How | Who | Approved |
 | --- | --- | --- |
 | Added | A manager, in `/manage`. `/manage` shows the secret once. | Yes |
-| [Handshake](/guides/connecting-via-sdk/#connecting-an-app) | A person approves the app at `/handshake`. The app's server then trades a one-time token at `/register` for its credentials. | Yes |
-| [Declared in a file](/guides/self-hosting/#declaring-apps-in-a-file) | The operator, in the file named by `MASKS_CONFIG`. | Yes |
-| [SAML application](/guides/sso-saml/#saml-applications) | A manager, in `/manage`. | Yes |
+| [Handshake](/build/connecting-via-sdk/#connecting-an-app) | A person approves the app at `/handshake`. The app's server then trades a one-time token at `/register` for its credentials. | Yes |
+| [Declared in a file](/build/self-hosting/#declaring-apps-in-a-file) | The operator, in the file named by `MASKS_CONFIG`. | Yes |
+| [SAML application](/build/sso-saml/#saml-applications) | A manager, in `/manage`. | Yes |
 | [Enrolled](#enrolling-a-machine) | An approved app, for a machine of its own. | Yes |
-| Self-registered | The app, over dynamic registration, within the tenant's [ceiling](/guides/core-concepts/#the-ceiling). | No |
+| Self-registered | The app, over dynamic registration, within the tenant's [ceiling](/build/core-concepts/#the-ceiling). | No |
 | [Metadata document](#a-client-named-by-its-metadata-document) | The app. It uses the URL of a document that describes it as its `client_id`. | No |
 
 Only an approved client may:
 
 - hold a `masks:` scope
 - sign in as itself
-- receive a [delegation](/guides/connecting-via-sdk/#delegation)
+- receive a [delegation](/build/connecting-via-sdk/#delegation)
 - name `resources` it serves. A self-registered client that names `resources` is refused.
 
 A client always grants its `required_scopes`. It grants its `allowed_scopes` when asked. A request
@@ -68,7 +68,7 @@ masks then:
 | Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin), Matrix (Synapse) | **Name it uses for masks**. This is `masks` unless you change it. |
 | Wiki.js | **Name it uses for masks**. Wiki.js shows it in the strategy's callback URL. Copy it from there. |
 | Tailscale | Nothing. Its address is `https://login.tailscale.com`. See [signing in to a tailnet](#signing-in-to-a-tailnet). |
-| Any app behind Caddy, Traefik, or nginx | Nothing. See [forward authentication](/guides/forward-auth/). Its [rules](/guides/forward-auth/#rules) can treat paths, methods, networks, and groups differently. |
+| Any app behind Caddy, Traefik, or nginx | Nothing. See [forward authentication](/build/forward-auth/). Its [rules](/build/forward-auth/#rules) can treat paths, methods, networks, and groups differently. |
 
 Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, Open WebUI,
 Headscale, Home Assistant, BookStack, Wiki.js, MinIO, and Argo CD read the [groups claim](#groups).
@@ -132,7 +132,7 @@ masks keeps a copy of the document:
 
 When masks cannot fetch the document, or refuses it, the client cannot sign anyone in. masks tries
 again after five minutes. A private address is refused, as for every
-[call to another server](/guides/security/#calls-to-other-servers).
+[call to another server](/build/security/#calls-to-other-servers).
 
 A manager can archive the client to refuse it.
 
@@ -172,7 +172,7 @@ masks asks each actor once before a client receives anything. It asks again when
 
 - the client asks for more scopes or resources
 - the client passes `prompt=consent`
-- the client sends [authorization details](/guides/security/#rich-authorization-requests) the actor
+- the client sends [authorization details](/build/security/#rich-authorization-requests) the actor
   has not approved
 - the sign-in is a [device sign-in](#device-sign-in)
 
@@ -215,7 +215,7 @@ A manager turns on **Signs in as itself (client_credentials)** for an approved c
 
 ### Enrolling a machine
 
-An approved app that has claimed a [namespace](/guides/core-concepts/#namespaces) can enroll machines
+An approved app that has claimed a [namespace](/build/core-concepts/#namespaces) can enroll machines
 of its own. An example is an agent the app installs on each computer in a home. Nobody approves each
 machine in a browser.
 
@@ -255,7 +255,7 @@ new client:
 - authenticates only with `private_key_jwt`, against those keys
 - uses only the `client_credentials` grant
 - gets access tokens that last 10 minutes
-- binds every access token to a key with [DPoP](/guides/security/#binding-a-token-with-dpop), so a
+- binds every access token to a key with [DPoP](/build/security/#binding-a-token-with-dpop), so a
   token works only for whoever holds that key
 
 The answer holds a registration access token and no secret. The private key never leaves the
@@ -286,7 +286,7 @@ same answer. A client the app did not enroll is refused with `404`.
 
 A policy sets how actors sign in. A sign-in uses the first of these that exists and is not archived:
 
-1. The [organization's](/guides/organizations/#policy) policy.
+1. The [organization's](/build/organizations/#policy) policy.
 2. The client's policy.
 3. The tenant's default policy.
 4. The built-in policy.
@@ -300,7 +300,7 @@ these parts:
 | **Account** | Whether an account has a **Nickname**, an **Email**, and a **Phone**: **Off**, **Optional**, or **Required**. **Confirmed email** and **Confirmed phone**, which ask an actor to confirm each one before they sign in. | **Nickname** **Optional**, **Email** **Required**, **Phone** **Off**, neither confirmed |
 | **Sign-in** | The first factors. The minimum password length. **Refuse common passwords**, from a list of about 47,000. **Require a password at signup**, which stops a passkey alone. The providers to offer. | **Password**, **Passkey**, and **Provider**. 8 characters. **Refuse common passwords** on. **All providers**. |
 | **Second factor** | The second factors an actor can set up. **Required for everyone, not just managers**. **Asked again at a sign-in to a client when the session did not use one**. | **Authenticator app**, **Passkey**, and **Backup codes**. Both switches off. |
-| **Risk** | The scores that ask for a second factor or refuse a sign-in, and **Refuse passwords found in known breaches**. See [risky sign-ins](/guides/security/#risky-sign-ins). | **Never**, and breached passwords allowed |
+| **Risk** | The scores that ask for a second factor or refuse a sign-in, and **Refuse passwords found in known breaches**. See [risky sign-ins](/build/security/#risky-sign-ins). | **Never**, and breached passwords allowed |
 | **Sessions** | See [how long a session lasts](#how-long-a-session-lasts). | 14 days, no idle limit |
 
 - **Emailed code** and **Emailed link** confirmation, and **Hide who has an account**, need
@@ -342,7 +342,7 @@ A first factor is how an actor first proves who they are.
 | --- | --- |
 | **Password** | Checked against the policy's minimum length and the common passwords. |
 | **Passkey** | WebAuthn. It also counts as a second factor when the authenticator verified the person. |
-| **Provider** | An account at Google, Okta, a SAML provider, and others. See [single sign-on and SAML](/guides/sso-saml/). |
+| **Provider** | An account at Google, Okta, a SAML provider, and others. See [single sign-on and SAML](/build/sso-saml/). |
 | **Emailed code** | A six-digit code sent to the account's email address, with no password. See [signing in with an emailed code](#signing-in-with-an-emailed-code). |
 
 When the policy offers passkeys at signup and the browser can make one:
@@ -424,7 +424,7 @@ An actor who gets past the first factor but cannot use any second factor can ask
 2. masks records `recovery.requested`.
 3. masks mails every manager holding `masks:manage` or `masks:manage:support` who has a confirmed
    email address.
-4. masks sends the actor a [security email](/guides/security/#security-emails), so someone who stole
+4. masks sends the actor a [security email](/build/security/#security-emails), so someone who stole
    only the password gets noticed.
 
 Asking again within a day does nothing.
@@ -497,8 +497,8 @@ logout.
 - masks tries each delivery five times. It records a delivery that still fails in the actor's
   activity.
 - masks never posts to a private address unless the operator allows it. See
-  [calls to other servers](/guides/security/#calls-to-other-servers).
-- SAML applications hear through [single logout](/guides/sso-saml/#single-logout).
+  [calls to other servers](/build/security/#calls-to-other-servers).
+- SAML applications hear through [single logout](/build/sso-saml/#single-logout).
 
 ### Sessions and devices
 
@@ -538,7 +538,7 @@ A session lasts 14 days by default. A sign-in policy changes this under **Sessio
 
 An **organization** is a customer inside a tenant. Each member holds a role there. An app that asks
 for the `organization` scope signs an actor in as a member of one organization. See
-[organizations](/guides/organizations/).
+[organizations](/build/organizations/).
 
 ## Groups
 
@@ -600,7 +600,7 @@ box cannot be cleared. The source decides when they leave. A person a manager ad
 the group even when the source would leave them out.
 
 The `groups` claim, [who may sign in to an app](#who-may-sign-in-to-an-app), and
-[forward auth](/guides/forward-auth/) treat every member the same, however they joined.
+[forward auth](/build/forward-auth/) treat every member the same, however they joined.
 
 A nested group cannot sit inside itself, directly or through its parents. masks refuses that change.
 
@@ -640,7 +640,7 @@ under **Settings**, then **Emails**. Requests older than 30 days are removed by 
 ### Suspending and deleting
 
 A manager suspends, restores, or deletes an actor in `/manage`. A directory does the same over
-[SCIM](/guides/sso-saml/#provisioning).
+[SCIM](/build/sso-saml/#provisioning).
 
 - Suspending signs the actor out everywhere. It refuses every sign-in until a manager or the
   directory restores them.
@@ -686,7 +686,7 @@ lifetime it was sent with, and the email that carries it says how long it lasts.
 
 An invitation to an organization counts from when it was last sent, so a change applies to open
 invitations too. masks removes an invitation nobody accepted once twice its lifetime has passed.
-Each tenant on a server keeps its own four values, and [`MASKS_CONFIG`](/guides/self-hosting/#declaring-apps-in-a-file)
+Each tenant on a server keeps its own four values, and [`MASKS_CONFIG`](/build/self-hosting/#declaring-apps-in-a-file)
 can declare them.
 
 ### Your apps
@@ -719,14 +719,14 @@ entered.
 
 What it does:
 
-- It signs in over [LDAP](/guides/ldap/#password-binds) and
-  [forward auth](/guides/forward-auth/#scripts-and-apps-without-a-browser), for the app it was made
+- It signs in over [LDAP](/build/ldap/#password-binds) and
+  [forward auth](/build/forward-auth/#scripts-and-apps-without-a-browser), for the app it was made
   for and no other.
 - It stands in for the password and the second factor together. That is the point: the app never
   sees the account password, and the second factor stays on for everything else.
 - It never signs in on the sign-in page, at `/token`, or to `/manage`.
 - Wrong guesses count against the same limits as the sign-in page. See
-  [rate limits](/guides/security/#rate-limits).
+  [rate limits](/build/security/#rate-limits).
 
 The list shows each app password's name, app, when it was made, and when it was last used. **Revoke**
 ends one on its own. The account password and passkeys stay as they are. An account holds up to 20.
@@ -734,7 +734,7 @@ Suspending the account revokes them all.
 
 masks records **App password made**, **Signed in with an app password** once a day per app
 password, and **App password revoked**. The first and last are mailed under the
-[security emails](/guides/security/#security-emails) for second factors.
+[security emails](/build/security/#security-emails) for second factors.
 
 ### Changing your own details
 
@@ -758,8 +758,8 @@ after a recent sign-in. Setting it signs out every other session and ends the to
 
 Changing a nickname asks for a sign-in within the last 15 minutes. A nickname that is given up,
 by a rename or by deleting the account, is held for 30 days. Nobody else can take it in that time,
-and the account that gave it up can take it back. Apps behind [forward auth](/guides/forward-auth/)
-and [LDAP](/guides/ldap/) know an actor by their nickname, so the hold keeps a new account from
+and the account that gave it up can take it back. Apps behind [forward auth](/build/forward-auth/)
+and [LDAP](/build/ldap/) know an actor by their nickname, so the hold keeps a new account from
 being taken for the old one. A manager or a directory can give the held nickname to someone else
 at once.
 
@@ -788,7 +788,7 @@ It holds no password hash, authenticator secret, backup code, token, or key.
 
 - masks records each download as `account.exported`.
 - masks emails the person, unless they turned off the **Account** group under
-  [**Emails we send you**](/guides/security/#security-emails).
+  [**Emails we send you**](/build/security/#security-emails).
 - A person can download their account five times an hour.
 
 ### Deleting your own account

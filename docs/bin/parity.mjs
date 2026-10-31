@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const MANIFEST = join(ROOT, "docs/parity.json");
-const PAGE = join(ROOT, "docs/src/content/docs/guides/connecting-via-sdk.mdx");
+const PAGE = join(ROOT, "docs/src/content/docs/build/connecting-via-sdk.mdx");
 const START = "{/* parity:start */}";
 const END = "{/* parity:end */}";
 const BLOB = "https://github.com/masksrb/masks/blob/main";

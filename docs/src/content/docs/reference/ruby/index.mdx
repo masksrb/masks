@@ -14,7 +14,7 @@ A Rails app can use masks in one of three modes.
 Server mode and Engine mode use the same Rails engine, `Masks::Server::Engine`, and the same
 install generator. They mount it in different ways:
 
-- Server mode mounts it at the root. The [container image](/guides/self-hosting/) is a Server-mode
+- Server mode mounts it at the root. The [container image](/build/self-hosting/) is a Server-mode
   app.
 - Engine mode mounts it at a path or on a subdomain, and keeps masks apart from the app around it.
 
@@ -211,7 +211,7 @@ config.cache = ActiveSupport::Cache::RedisCacheStore.new(
 ### Organizations
 
 When an app asks for the `organization` scope, a person signs in as a member of one
-[organization](/guides/organizations/). You can name the organization in two ways:
+[organization](/build/organizations/). You can name the organization in two ways:
 
 - For every sign-in, with `config.organization`.
 - For one sign-in, with `/auth?organization=acme`.
@@ -367,7 +367,7 @@ A refusal carries an RFC 6750 challenge. Its `resource_metadata` points at
    end
    ```
 
-A token can be [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop). DPoP lets
+A token can be [bound to a key with DPoP](/build/security/#binding-a-token-with-dpop). DPoP lets
 only the holder of a private key use the token. A bound token has a `cnf.jkt` claim.
 
 The engine accepts a bound token only as `Authorization: DPoP`, with a `DPoP` proof that:

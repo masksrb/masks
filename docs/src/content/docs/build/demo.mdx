@@ -8,7 +8,7 @@ its own set of accounts, clients, and signing keys. Each tenant is also its own 
 its tokens name as the one that issued them.
 
 masks has no public demo server. The tutorial uses the dev stack from
-[Try it locally](/quickstart/#try-it-locally).
+[Try it locally](/build/quickstart/#try-it-locally).
 
 ## Start two tenants
 
@@ -63,7 +63,7 @@ curl http://nothing.masks.localhost:12345/.well-known/openid-configuration
 1. Open `http://demo.masks.localhost:12345` in a browser. `demo` has no accounts yet, so it shows
    the **Set up demo** screen.
 2. Enter the setup token `masks-dev`, and follow the screen to the end. See
-   [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for each step.
+   [setting a tenant up](/build/core-concepts/#setting-a-tenant-up) for each step.
 3. Open `http://acme.masks.localhost:12345`. It still shows **Set up acme**, because the account you
    made belongs to `demo` only.
 4. Set up `acme` too. The same nickname and email address work, because no account at `demo` exists
@@ -100,6 +100,6 @@ service's logs, as a production server does.
 
 ## Next steps
 
-- [Tenants](/guides/core-concepts/#tenants) explains how masks keeps tenants apart.
-- [Signing keys](/guides/core-concepts/#signing-keys) explains how each tenant's keys are made and
+- [Tenants](/build/core-concepts/#tenants) explains how masks keeps tenants apart.
+- [Signing keys](/build/core-concepts/#signing-keys) explains how each tenant's keys are made and
   rotated.

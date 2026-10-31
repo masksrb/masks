@@ -70,7 +70,7 @@ Postgres stops too.
 - The job queue stays bounded. A daily prune removes finished jobs after 7 days and failed jobs
   after 30 days. `MASKS_FINISHED_JOB_RETENTION` and `MASKS_FAILED_JOB_RETENTION` change those
   times, in seconds. A failed job is in `/up/jobs` and the logs until then.
-- The web process also serves [LDAP](/guides/ldap/) for apps that sign people in only over LDAP.
+- The web process also serves [LDAP](/build/ldap/) for apps that sign people in only over LDAP.
 
 CI times a first sign-in on every push. It starts the image with the command above, waits for `/up`,
 then creates the first manager and signs in. The seconds for each step are in the build job's
@@ -189,7 +189,7 @@ them again.
 | Background jobs | Whether a kind of job failed in the last day.                                                                                                                                                        |
 | Worker          | Whether a worker has reported within `MASKS_WORKER_SILENCE`.                                                                                                                                         |
 | Queue           | Whether a job has waited longer than `MASKS_QUEUE_WAIT` to start.                                                                                                                                    |
-| LDAP            | Whether the directory answers without TLS to the network. See [LDAP](/guides/ldap/).                                                                                                                 |
+| LDAP            | Whether the directory answers without TLS to the network. See [LDAP](/build/ldap/).                                                                                                                 |
 | Metrics         | Whether `MASKS_METRICS_TOKEN` is set and at least 24 characters long.                                                                                                                                |
 | Mail            | Whether the tenant's SMTP server, or the one in `MASKS_SMTP_ADDRESS`, answers a connection. No mail is sent.                                                                                         |
 | Public address  | Whether requests reach this tenant at its public address. A proxy that drops `X-Forwarded-Proto` shows up here.                                                                                      |
@@ -293,7 +293,7 @@ permanently.
 :::
 
 Each tenant's encrypted columns use a key made from the master key and that tenant's own ID, so
-nothing else needs backing up. See [tenant isolation](/guides/security/#tenant-isolation).
+nothing else needs backing up. See [tenant isolation](/build/security/#tenant-isolation).
 
 ### Running more than one replica
 
@@ -453,8 +453,8 @@ To serve more tenants:
 3. Point each host at the proxy. A wildcard host such as `*.auth.example.com` needs a DNS
    challenge, and a Caddy build with your DNS provider's module.
 
-See [declaring tenants](/guides/core-concepts/#declaring-tenants) for each mode, and
-[setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for the setup token.
+See [declaring tenants](/build/core-concepts/#declaring-tenants) for each mode, and
+[setting a tenant up](/build/core-concepts/#setting-a-tenant-up) for the setup token.
 
 ## Custom domains
 
@@ -533,9 +533,9 @@ apps:
 |                                                                                                                     |                                                                                                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`, `accent_color`                                                                                              | The tenant's name and color, as under **Branding** in `/manage`.                                                                                                  |
-| `invitation_lifetime`, `organization_invitation_lifetime`, `password_reset_lifetime`, `email_verification_lifetime` | Seconds each [emailed link](/guides/features/#link-lifetimes) stays valid, as under **Links** in `/manage`.                                                       |
+| `invitation_lifetime`, `organization_invitation_lifetime`, `password_reset_lifetime`, `email_verification_lifetime` | Seconds each [emailed link](/build/features/#link-lifetimes) stays valid, as under **Links** in `/manage`.                                                       |
 | An app's key                                                                                                        | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                                                                   |
-| `preset`, `url`, `slug`                                                                                             | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                                                          |
+| `preset`, `url`, `slug`                                                                                             | A [known product](/build/features/#adding-a-known-app), as **Add client** registers it.                                                                          |
 | `redirect_uris`, `scopes`                                                                                           | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                                                                 |
 | `name` under an app                                                                                                 | The app's name. Without it, masks uses the preset's name or the app's key.                                                                                        |
 | `client_secret_env`                                                                                                 | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once.                                         |
@@ -586,7 +586,7 @@ See [processes](/reference/environment/#processes).
 ## Next steps
 
 1. Read the tenant's setup token in the server's logs, open the tenant's address, and create the
-   first account. See [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
+   first account. See [setting a tenant up](/build/core-concepts/#setting-a-tenant-up).
 2. Fetch the tenant's discovery document:
 
    ```sh
@@ -595,4 +595,4 @@ See [processes](/reference/environment/#processes).
 
    It confirms the tenant's issuer, keys, and public origin.
 
-3. [Connect an app](/guides/connecting-via-sdk/#connecting-an-app).
+3. [Connect an app](/build/connecting-via-sdk/#connecting-an-app).

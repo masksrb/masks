@@ -1,0 +1,7 @@
+/guides/* /build/:splat 301
+/quickstart /build/quickstart/ 301
+/quickstart/ /build/quickstart/ 301
+/demo /build/demo/ 301
+/demo/ /build/demo/ 301
+/reference/explorer /reference/manage/#explorer 301
+/reference/explorer/ /reference/manage/#explorer 301

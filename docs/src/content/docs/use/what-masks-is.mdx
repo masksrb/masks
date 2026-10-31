@@ -1,0 +1,68 @@
+---
+title: What masks is
+description: masks is a sign-in server you run yourself. People sign in once, and masks signs them in to your apps.
+---
+
+masks is a sign-in server. You run it on a computer of your own, and your apps use it to sign
+people in.
+
+## One account for every app
+
+Each person has one account on your masks server. They sign in to masks with a password or a
+passkey, and masks signs them in to the apps you have connected. They do not need a separate
+password for each app.
+
+An account can hold:
+
+- a password, a passkey, or both
+- a second step at sign-in, such as a code from an authenticator app
+- backup codes, for the day the phone is lost
+- a name, a photo, an email address, and a phone number
+
+Each person has an [account page](/use/your-account/) where they change these themselves.
+
+## Apps you already run
+
+masks knows how to set up many apps that people run at home or at work, such as Grafana,
+Nextcloud, Jellyfin, Immich, Home Assistant, and Tailscale. You pick the app from a list, enter
+its address, and masks shows you what to paste into the app's settings. See
+[connect an app from the known list](/use/connect-an-app/).
+
+An app that has no sign-in of its own can sit behind a web server such as Caddy, Traefik, or
+nginx, and masks signs people in to it there. That setup is for operators, and it is covered in
+[forward authentication](/build/forward-auth/).
+
+## Who runs it
+
+The first account you create is a manager. A manager opens **Manage this server** from their
+account page. There, managers:
+
+- invite people, and approve the ones who sign up on their own
+- connect apps, and choose who may sign in to each one
+- set the rules for signing in, such as whether a second step is required
+- see what has been happening, and check the server's health
+
+A manager can make other people managers too.
+
+## Organizations
+
+An organization is a customer inside your server, such as a company you serve. Each one has its
+own members, and each member holds a role there. An app that cares about organizations learns
+which one a person signed in for, and their role. See [organizations](/use/organizations/).
+
+## What it needs
+
+masks runs as one container and keeps everything it knows in one place. It needs a way to send
+email for invitations, password resets, and sign-in codes. You add a mail service once, in
+**Manage this server**.
+
+Sign-in screens, account pages, and the email masks sends are in English, French, Spanish, and
+German. masks picks the language the browser asks for.
+
+masks is open source. The code is on [GitHub](https://github.com/masksrb/masks).
+
+## Where to go next
+
+1. [Run masks in one container](/use/run-masks/).
+2. [Set up your first account](/use/first-account/).
+3. [Invite people](/use/invite-people/) and [connect an app](/use/connect-an-app/).

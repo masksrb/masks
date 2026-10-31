@@ -1,0 +1,99 @@
+---
+title: Invite and approve people
+description: Let masks send email, invite people one at a time or many at once, let people sign up, and approve them.
+---
+
+Managers invite people from **Manage this server**. Open it from the top of your account page.
+
+## Let masks send email first
+
+Invitations, password resets, and sign-in codes go out by email. Until masks can send email, a
+manager passes each invitation link along by hand.
+
+1. Open **Manage this server**. The overview shows **Getting started** with the step
+   **Let masks send email**. Choose **Add a mail service**.
+2. Under **Mail**, choose **Add a service**, pick the **Service**, and enter what it asks for,
+   such as the server and a password.
+3. Choose **Add**.
+4. Enter your own address under **Send a test to** and choose **Send a test**. Check your inbox.
+
+The same page is under **Settings**, then **Messages**, then **Sending**.
+
+## Invite one person
+
+1. Open **Actors** and choose **Add actor**.
+2. Enter a **Nickname**, an **Email**, or both.
+3. Leave **Password** blank and choose **Send the invitation**.
+
+masks emails the person. The email is headed **You have been invited to** your server's name, and
+its button says **Choose a password**. The link works once, and nothing happens until they open
+it. It stays valid for 7 days unless a manager changes that under **Settings**, then **General**,
+then **Links**.
+
+When masks cannot send email yet, the screen shows the link instead, with **Pass this link along
+yourself. It works once.** Send it to the person however you like.
+
+To make the account with a password you choose, enter one under **Password** and choose
+**Add actor**. Tell the person the password yourself. They can sign in right away.
+
+## Invite many people
+
+1. Open **Actors** and choose **Invite many**.
+2. Paste the addresses under **Email addresses**, one per line, or separated by spaces or
+   commas.
+3. To put everyone in a group at once, tick the groups under **Put them in**.
+4. Choose **Send invitations**.
+
+masks lists each address with what happened to it: **invited**, **is already an actor**, or
+**is not an address masks can invite**.
+
+## See who has not accepted
+
+In **Actors**, choose the **Invited** filter. Each person is marked **Invited, has not signed in
+yet**. Open the person and choose **Resend invitation** to send a fresh link. The earlier link
+stops working.
+
+## Let people sign up on their own
+
+By default, only invited people get an account. To let anyone sign up:
+
+1. Open **Settings**, then **Policies**, and open the default policy.
+2. Under **Signup**, turn on **Open**.
+3. Under **Email domains**, list the domains that may sign up, such as `example.com`. Leave it
+   empty to allow any address.
+4. Under **Confirmation**, choose what a new account has to do before it can sign in:
+
+   |                      |                                                                 |
+   | -------------------- | --------------------------------------------------------------- |
+   | **None**             | Nothing. The account works at once.                             |
+   | **Emailed code**     | Enter a six-digit code masks emails them.                       |
+   | **Emailed link**     | Open a link masks emails them.                                  |
+   | **Manager approval** | Wait for a manager to approve them.                             |
+
+5. Save the policy.
+
+With **Open** on, the sign-in page says **New here? Enter your email and masks makes you an
+account.**
+
+## Approve a new account
+
+With **Manager approval** on, a new account sees **Waiting for a manager** after it signs up, and
+cannot sign in yet. Every manager gets an email headed with the person's nickname and
+**is waiting to be let in to** your server's name, with a **Review the account** button.
+
+1. Open **Actors**. The **Actors** button at the top shows how many people are waiting.
+2. Choose the **Awaiting approval** filter.
+3. Open the person. The top of their page says **Awaiting approval**.
+4. Choose **Approve**.
+
+masks emails them **Your account is ready**, and they can sign in.
+
+## Suspend, restore, or delete someone
+
+Open the person in **Actors**. On their **Profile** tab, under **Suspend or delete**:
+
+- **Suspend** signs them out everywhere and refuses every sign-in until a manager chooses
+  **Restore**. Everything they had is kept.
+- **Delete** removes them for good, along with their passkeys, sessions, and photo.
+
+Nobody can suspend or delete the last manager.

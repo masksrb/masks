@@ -16,7 +16,7 @@ An **organization** is a customer inside a tenant.
 | An owner | Their own account page, under **Organizations** | Invite, promote, and remove the members of their own organization. |
 | A member | Their own account page | See their role. Accept or decline an invitation. Leave. |
 
-In `/manage`, each change needs one of the [manage roles](/guides/security/#manage-roles):
+In `/manage`, each change needs one of the [manage roles](/build/security/#manage-roles):
 
 - `masks:manage:security` to add, archive, or restore an organization, or to change its roles or
   sign-in.
@@ -104,7 +104,7 @@ Declining removes the invitation. An owner has to invite the person again.
 ### Sending an invitation again
 
 An organization invitation expires two weeks after it was last sent. An owner changes this under
-**Links** in `/manage`. See [Link lifetimes](/guides/features/#link-lifetimes).
+**Links** in `/manage`. See [Link lifetimes](/build/features/#link-lifetimes).
 
 1. Open the organization's members, in `/manage` or on an owner's account page.
 2. Find the person. An open invitation is marked **invited**. An expired one is marked **expired**.
@@ -138,7 +138,7 @@ An organization always keeps an owner.
 - When the last owner's account is deleted, masks records *Organization left without an owner*. Only
   managers can change its members until they make someone an owner.
 
-An app that receives [shared signals](/guides/shared-signals/), and holds a token for the
+An app that receives [shared signals](/build/shared-signals/), and holds a token for the
 organization, hears about role changes and removals as they happen.
 
 ### What members are told
@@ -154,7 +154,7 @@ masks emails a member when someone else changes their place in an organization.
 - A member who makes the change themselves, such as by leaving, gets no email.
 - These emails go only to a confirmed address.
 - Each person can turn them off on the account page, under **Emails we send you**, in the
-  **Organizations** group. See [security emails](/guides/security/#security-emails).
+  **Organizations** group. See [security emails](/build/security/#security-emails).
 
 ## Signing in as a member
 
@@ -189,7 +189,7 @@ A claim is a named value inside a token.
 
 ### Device sign-in
 
-A [device sign-in](/guides/features/#device-sign-in) can name the organization with `organization`
+A [device sign-in](/build/features/#device-sign-in) can name the organization with `organization`
 on `/device_authorization`. Or the person chooses one when they approve it.
 
 - Its tokens carry that organization.
@@ -229,16 +229,16 @@ Everyone who signs in through it becomes a member, in the role their groups map 
 - Sometimes the provider would take away the last owner's role. Then masks records *Organization role
   kept against the provider*, and the role stays.
 - An invited account that has no password yet is linked only when masks
-  [trusts the address](/guides/sso-saml/#trusted-email-addresses) from the provider. Otherwise the
+  [trusts the address](/build/sso-saml/#trusted-email-addresses) from the provider. Otherwise the
   sign-in is refused, and the invitation stays waiting.
 - An existing account with the same address is linked only after that account signs in another way
-  once. This is the same as with any [provider](/guides/sso-saml/#provider-roles).
+  once. This is the same as with any [provider](/build/sso-saml/#provider-roles).
 
 ### Directory
 
 A provisioning token for one organization reaches only that organization's members. It manages their
 roles through SCIM groups. See
-[a directory for one organization](/guides/sso-saml/#a-directory-for-one-organization).
+[a directory for one organization](/build/sso-saml/#a-directory-for-one-organization).
 
 ## What apps read
 
@@ -309,4 +309,4 @@ An event belongs to an organization in these cases:
   organization along.
 
 The organization's **Activity** tab lists its recent events. An
-[event stream](/guides/event-streams/) can send only those events.
+[event stream](/build/event-streams/) can send only those events.

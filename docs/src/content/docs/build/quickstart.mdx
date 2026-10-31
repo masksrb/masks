@@ -20,11 +20,11 @@ Podman accepts the same ones.
 2. Copy the setup token from the output. It is on a line like
    `masks: masks is not set up. Its setup token is 7Hq2…`.
 3. Open `http://localhost:3000`, enter the token, and follow the **Set up** screen. See
-   [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for each step.
+   [setting a tenant up](/build/core-concepts/#setting-a-tenant-up) for each step.
 4. On your account page, choose **Manage this server** to open `/manage`.
 
 The container runs its own Postgres, and keeps everything in the `masks` volume.
-[Self-hosting](/guides/self-hosting/#one-container) puts it behind HTTPS for other computers.
+[Self-hosting](/build/self-hosting/#one-container) puts it behind HTTPS for other computers.
 
 ## Try it locally
 
@@ -42,7 +42,7 @@ as Docker or Podman. On a Mac, [Colima](https://github.com/abiosoft/colima) runs
 
 2. Open masks at `http://masks.localhost:12345`.
 3. Enter the setup token `masks-dev`, and follow the **Set up** screen. See
-   [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for each step.
+   [setting a tenant up](/build/core-concepts/#setting-a-tenant-up) for each step.
 4. On your account page, choose **Manage this server** to open `/manage`. The account you created
    holds `masks:manage`.
 
@@ -57,7 +57,7 @@ This documentation runs at `http://masks.localhost:12346`. The ports are in
 | `./dev logs [service]` | Follows the logs of one service, or all of them.             |
 | `./dev test [suite]`   | Runs the test suites in containers.                          |
 | `./dev first-sign-in`  | Times a fresh image to its first signed-in account.          |
-| `./dev --multi`        | Runs two tenants, `demo` and `acme`. See [the demo](/demo/). |
+| `./dev --multi`        | Runs two tenants, `demo` and `acme`. See [the demo](/build/demo/). |
 
 `./dev help` lists every command.
 
@@ -67,7 +67,7 @@ masks runs in one of three ways.
 
 |                                              |                                                                                          |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [The container image](/guides/self-hosting/) | `ghcr.io/masksrb/masks`, with its own Postgres or yours, and a TLS proxy in front of port `3000`. |
+| [The container image](/build/self-hosting/) | `ghcr.io/masksrb/masks`, with its own Postgres or yours, and a TLS proxy in front of port `3000`. |
 | [Engine mode](/reference/ruby/engine-mode/)  | Mounted inside your own Rails app with the `masks-server` gem.                           |
 | [Server mode](/reference/ruby/server-mode/)  | A Rails app of your own that is a masks server and nothing else.                         |
 
@@ -78,12 +78,12 @@ Each one starts at the same **Set up** screen, with a setup token that masks pri
 An app connects to masks through an SDK, a library for the app's language. masks has SDKs for
 Ruby, JavaScript in the server and in the browser, Python, and Go.
 
-1. Pick the SDK in [choosing an SDK](/guides/connecting-via-sdk/#choosing-an-sdk).
-2. Follow [connecting an app](/guides/connecting-via-sdk/#connecting-an-app).
+1. Pick the SDK in [choosing an SDK](/build/connecting-via-sdk/#choosing-an-sdk).
+2. Follow [connecting an app](/build/connecting-via-sdk/#connecting-an-app).
 
 ## Next steps
 
-- [Core concepts](/guides/core-concepts/) explains tenants, actors, clients, scopes, and signing
+- [Core concepts](/build/core-concepts/) explains tenants, actors, clients, scopes, and signing
   keys.
-- [Features](/guides/features/) covers clients, signing in, and signing out.
-- [Security](/guides/security/) describes what masks protects and how.
+- [Features](/build/features/) covers clients, signing in, and signing out.
+- [Security](/build/security/) describes what masks protects and how.

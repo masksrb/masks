@@ -295,7 +295,7 @@ or a sentinel works as well. When the store fails, a request that needs it is re
 
 ## Organizations
 
-An app signs a person in as a member of one [organization](/guides/organizations/) when it asks for
+An app signs a person in as a member of one [organization](/build/organizations/) when it asks for
 the `organization` scope. Name one for every sign-in with `Organization`, or for one sign-in with
 `/auth/?organization=acme`:
 
@@ -376,7 +376,7 @@ against the token:
 - When the app cannot check a token, because masks could not be reached or the store failed, it
   answers `503`.
 
-A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
+A token [bound to a key with DPoP](/build/security/#binding-a-token-with-dpop) is accepted only as
 `Authorization: DPoP`, with a proof that:
 
 - is signed by that key
@@ -395,7 +395,7 @@ An API with no browser sign-in checks tokens with the client package alone. See
 
 ## Delegations
 
-A [delegation](/guides/connecting-via-sdk/#delegation) lets the app act as a person at a provider
+A [delegation](/build/connecting-via-sdk/#delegation) lets the app act as a person at a provider
 while they are away. Set `Delegates` and the path the provider's answer comes back to. The handshake
 then asks for `masks:delegate:` and registers that path:
 
@@ -449,11 +449,11 @@ refresh. The upstream token is a Bearer token, even when the client holds a DPoP
 ## Machines
 
 A Go program on a machine, such as an agent an app installs, signs in as itself with the client
-package. See [enrolling a machine](/guides/features/#enrolling-a-machine) for how masks treats it.
+package. See [enrolling a machine](/build/features/#enrolling-a-machine) for how masks treats it.
 
 ### Enrolling a machine
 
-An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `Namespace` in its
+An app that has claimed a [namespace](/build/core-concepts/#namespaces), through `Namespace` in its
 handshake, enrolls each machine without a browser. It asks masks for an initial access token and
 hands it to the machine:
 

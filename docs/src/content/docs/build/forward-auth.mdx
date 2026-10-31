@@ -23,7 +23,7 @@ dashboard or an admin page.
 masks registers the app and shows the proxy settings for that address. It also lists the app under
 **Your apps** on each person's account page.
 
-To limit the app to some [groups](/guides/features/#groups), use **Who may sign in** on its
+To limit the app to some [groups](/build/features/#groups), use **Who may sign in** on its
 **Access** tab, as for any other client.
 
 ## What happens
@@ -36,7 +36,7 @@ To limit the app to some [groups](/guides/features/#groups), use **Who may sign 
    | `Remote-User`   | The actor's nickname, or their email address when they have no nickname.            |
    | `Remote-Email`  | Their email address, when it is confirmed.                                          |
    | `Remote-Name`   | Their name, when they have one.                                                     |
-   | `Remote-Groups` | The [groups claim](/guides/features/#groups), separated by commas. It can be empty. |
+   | `Remote-Groups` | The [groups claim](/build/features/#groups), separated by commas. It can be empty. |
 
 2. If the request has no live cookie, masks sends the browser to `/forward-auth/start` on masks'
    own address. masks signs the actor in there, unless they are already signed in.
@@ -123,7 +123,7 @@ can claim to be on the home network.
 ### Scripts
 
 A script signs in as its own client with the `client_credentials` grant and asks for a token for the
-app's address as its `resource`. See [signing in as itself](/guides/features/#signing-in-as-itself).
+app's address as its `resource`. See [signing in as itself](/build/features/#signing-in-as-itself).
 The script's client needs the app's address, such as `https://dash.example.com`, in its
 **Resources**.
 
@@ -204,7 +204,7 @@ To pass `Remote-Email`, `Remote-Name`, or `Remote-Groups` too, add an `auth_requ
 
 A request that carries an `Authorization: Basic` header is answered from that header alone, with no
 cookie and no redirect. The name is the person's nickname or email address, and the password is an
-[app password](/guides/features/#app-passwords) made for this client. masks answers 200 with the
+[app password](/build/features/#app-passwords) made for this client. masks answers 200 with the
 same headers as a browser sign-in, or 401.
 
 ```sh
@@ -224,4 +224,4 @@ The app can trust `Remote-User` only because the proxy sets it. Set up two thing
    answered with.
 
 A nickname that an actor gives up is held for 30 days, so a new account cannot become the old
-`Remote-User` right away. See [accounts](/guides/features/#accounts).
+`Remote-User` right away. See [accounts](/build/features/#accounts).

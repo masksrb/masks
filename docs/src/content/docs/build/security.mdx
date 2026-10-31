@@ -8,9 +8,9 @@ changes, and hardens the requests apps send.
 
 Two related subjects live on other pages:
 
-- How masks encrypts secrets at rest: [self-hosting](/guides/self-hosting/#encryption-and-secrets).
+- How masks encrypts secrets at rest: [self-hosting](/build/self-hosting/#encryption-and-secrets).
 - How to block a device before it can try a password:
-  [sessions and devices](/guides/features/#sessions-and-devices).
+  [sessions and devices](/build/features/#sessions-and-devices).
 
 ## Tenant isolation
 
@@ -35,10 +35,10 @@ So masks checks its database role the first time it enters a tenant:
 - Outside development and test, it also refuses a role that owns a table that row-level security
   protects. Engine mode skips this check.
 - It refuses a connection pooler in transaction mode, which drops the tenant between one statement
-  and the next. See [connection poolers](/guides/self-hosting/#connection-poolers).
+  and the next. See [connection poolers](/build/self-hosting/#connection-poolers).
 
 This is why the server migrates as one role and serves as another. See
-[database roles](/guides/self-hosting/#database-roles).
+[database roles](/build/self-hosting/#database-roles).
 
 ### Entering a tenant
 
@@ -99,7 +99,7 @@ A role below `masks:manage` has these limits:
 
 - **It cannot give out manage access.** It cannot give an actor or a client any manage scope or
   `masks:scim`. It cannot issue a provisioning token for every account. Either one would reach
-  managers through [SCIM](/guides/sso-saml/#provisioning).
+  managers through [SCIM](/build/sso-saml/#provisioning).
 - **It cannot change a client that can carry a manage scope or `masks:scim`.** So it cannot point
   `/manage` at another address.
 - **It cannot connect `/manage` in a new browser.** It can open `/manage` in a new browser once an
@@ -148,7 +148,7 @@ add nothing.
 To act on the score, use **Risk** in a sign-in policy:
 
 - **Ask for a second factor at a score of** asks for a second factor from that score up. An account
-  without one is asked to add one, as in [step-up](/guides/enterprise/#step-up-authentication).
+  without one is asked to add one, as in [step-up](/build/enterprise/#step-up-authentication).
 - **Refuse at** stops the sign-in from that score up, and asks for the first factor again. It must
   be higher than the score that asks for a second factor.
 
@@ -189,7 +189,7 @@ masks emails an actor when something changes on their account.
 | Sessions | A new device signs in. A sign-in gets a risk score above zero. A session is signed out. A device is blocked. |
 | Apps and connected accounts | An app is allowed in. A connected account is connected or removed. A device sign-in is approved. |
 | Account | The phone number is changed or removed. A manager changes the actor's scopes. The actor downloads their account. |
-| Organizations | Someone else changes the actor's role in an organization, or removes them. Someone archives an organization the actor is signed in to an app for. See [what members are told](/guides/organizations/#what-members-are-told). |
+| Organizations | Someone else changes the actor's role in an organization, or removes them. Someone archives an organization the actor is signed in to an app for. See [what members are told](/build/organizations/#what-members-are-told). |
 
 - masks reports a new sign-in once per device.
 - Emails go only to a confirmed address. An account with no confirmed address gets none, and the
@@ -250,13 +250,13 @@ To download a copy:
 About the file:
 
 - It has one event per line, as JSON, in the same shape that
-  [event streams](/guides/event-streams/#what-is-sent) send.
+  [event streams](/build/event-streams/#what-is-sent) send.
 - It follows the filter on the page.
 - Any manage role may download it. masks records each download as `events.exported`.
 - The link lasts ten minutes. It works only in a browser signed in as the manager who asked for it.
 - A range with more than 250,000 events is refused.
 
-For a copy that keeps up to date on its own, use an [event stream](/guides/event-streams/).
+For a copy that keeps up to date on its own, use an [event stream](/build/event-streams/).
 
 ## Calls to other servers
 
@@ -293,7 +293,7 @@ only the ranges you mean.
 
 masks publishes a new key before it signs anything with it. Clients that cache the keys then have
 the new key before they see a token it signed. See
-[signing keys](/guides/core-concepts/#signing-keys) for the states a key moves through.
+[signing keys](/build/core-concepts/#signing-keys) for the states a key moves through.
 
 Managers holding `masks:manage:security` or `masks:manage` rotate keys under **Settings**, then
 **General**, then **Signing keys**.
@@ -325,7 +325,7 @@ records each step in the activity.
 A bad `/authorize` link ends with an error. Where masks sends that error depends on who registered
 the client.
 
-- An [approved client](/guides/features/#registering-a-client) hears the error at its `redirect_uri`,
+- An [approved client](/build/features/#registering-a-client) hears the error at its `redirect_uri`,
   with `error`, `error_description`, `state`, and `iss`, as OAuth describes.
 - A self-registered client's errors show on a page on masks. The person stays on masks and reads
   what went wrong. Nothing is sent to the client's `redirect_uri`.
@@ -615,7 +615,7 @@ The actor sees what is kept, and until when, under **Apps you have let in** on t
 manager sees it on the actor's and the app's consents in `/manage`.
 
 masks forgets a kept entry when the app is revoked, or when the client's
-[consent lifetime](/guides/features/#consent) ends.
+[consent lifetime](/build/features/#consent) ends.
 
 ### Tokens
 
@@ -624,5 +624,5 @@ masks forgets a kept entry when the app is revoked, or when the client's
 - At the token endpoint, the app can send `authorization_details` to narrow an access token to some
   of the granted entries.
 - A refresh token keeps every granted entry.
-- A [token exchange](/guides/connecting-via-sdk/#exchanging-a-token) passes them on or narrows them.
+- A [token exchange](/build/connecting-via-sdk/#exchanging-a-token) passes them on or narrows them.
 - Nothing can add an entry that was not granted.

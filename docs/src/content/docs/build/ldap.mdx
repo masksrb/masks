@@ -101,7 +101,7 @@ are left out. Each actor has these attributes:
 | `memberOf` | The DN of each group they belong to. |
 | `entryUUID` | Their account's UUID. It never changes. |
 
-Each [group](/guides/features/#groups) is a `groupOfNames` with these attributes:
+Each [group](/build/features/#groups) is a `groupOfNames` with these attributes:
 
 | Attribute | |
 | --- | --- |
@@ -124,7 +124,7 @@ To give an app a credential:
    directory is on.
 2. Enter a label, such as `jellyfin`.
 3. Under **App**, choose the client the app is registered as, when its people sign in with
-   [app passwords](/guides/features/#app-passwords). Leave it as **No app** otherwise.
+   [app passwords](/build/features/#app-passwords). Leave it as **No app** otherwise.
 4. Choose **Issue a credential**. Only a manager holding `masks:manage` can issue one.
 5. Copy the bind DN and the secret. The secret is shown once, and masks keeps only a digest of it.
    The bind DN is `cn=<label>,ou=services,dc=<subdomain>,dc=masks`.
@@ -163,7 +163,7 @@ over LDAP is worth less than the second factor it skips.
 
 ### App passwords
 
-An [app password](/guides/features/#app-passwords) binds in place of the account password, for one
+An [app password](/build/features/#app-passwords) binds in place of the account password, for one
 app, with the second factor satisfied. It is the way to let one app in without lifting the rules
 for the whole tenant.
 
@@ -189,7 +189,7 @@ masks records these events. **Sign-in refused** and **Sign-ins throttled** have 
 | --- | --- |
 | **Sign-in refused** | A wrong password, a rule above, or a wrong credential secret. Its `factor` names the reason. |
 | **Sign-ins throttled** | An account reaches its attempt limit. |
-| **Signed in over LDAP** | A password bind succeeds. It counts as activity for [idle accounts](/guides/features/#idle-accounts). |
+| **Signed in over LDAP** | A password bind succeeds. It counts as activity for [idle accounts](/build/features/#idle-accounts). |
 
 A DN that names no tenant, or no entry under `ou=people` or `ou=services`, records nothing.
 

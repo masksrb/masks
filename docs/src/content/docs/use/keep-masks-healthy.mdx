@@ -1,0 +1,101 @@
+---
+title: Keep masks healthy
+description: The health panel, backups, restores, and upgrades for a server that runs in one container.
+---
+
+## The health panel
+
+The overview in **Manage this server** has a **Health** panel. masks runs every check every 10
+minutes. Each check shows **Fine**, **Needs a look**, or **Failing**, says what it found, and says
+what to do about it. **Check now** runs them again.
+
+|                     |                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| **Background jobs** | Whether any job, such as sending mail, failed in the last day.                              |
+| **Worker**          | Whether the part of masks that runs jobs is running.                                        |
+| **Queue**           | Whether jobs start on time.                                                                 |
+| **LDAP**            | Whether the directory service, if it is on, is reachable only in a safe way.                |
+| **Metrics**         | Whether the page that reports figures to a monitor is on and protected.                     |
+| **Mail**            | Whether the mail server answers. No mail is sent.                                           |
+| **Public address**  | Whether requests reach masks at its own address. A proxy that is set up wrong shows up here. |
+| **Domains**         | Whether every domain you claimed still has its proof.                                       |
+| **Signing keys**    | Whether the key masks signs with is fresh.                                                  |
+| **Reverse proxy**   | Whether the web server in front of masks passes requests along the way masks expects.       |
+
+Whoever runs the server can also have masks check for new releases once a day. The overview then
+says **Version** and the new number **is available**, with a **Release notes** link. When a release
+needs a step from the person who runs the server, the overview says
+**This release needs a step from an operator. Read its notes before you upgrade.** Turning the
+check on is in [self-hosting](/build/self-hosting/#a-new-release).
+
+## Back up
+
+Everything masks holds is in its database and its master key. Keep both together. A backup of the
+database alone cannot be read without the key.
+
+With masks in [one container](/use/run-masks/) named `masks`:
+
+1. Save the database:
+
+   ```sh
+   docker exec masks pg_dump --host=/rails/tmp/postgres --format=custom masks_production > masks.dump
+   ```
+
+2. Save the master key:
+
+   ```sh
+   docker cp masks:/rails/storage/master.key master.key
+   ```
+
+3. Keep the two files together, somewhere other than the computer masks runs on.
+
+With Compose, run the same commands with `docker compose exec masks` and `docker compose cp`.
+
+:::caution
+Losing the master key makes the database backup unreadable, permanently.
+:::
+
+## Restore
+
+1. Start masks the same way as before, with the same master key in its volume.
+2. Load the backup into the running container, then restart it:
+
+   ```sh
+   docker exec -i masks pg_restore --host=/rails/tmp/postgres --dbname=masks_production \
+     --clean --if-exists --no-owner --role=masks_owner < masks.dump
+   docker restart masks
+   ```
+
+Everyone keeps their passkeys and second steps. Sign-ins that were live at the time of the backup
+work again.
+
+## Upgrade
+
+1. Take a backup.
+2. Open the release notes on [GitHub](https://github.com/masksrb/masks/releases). A line that
+   starts with **Operator:** is a step you have to take yourself.
+3. Change the version and restart.
+
+With Compose, change the number after `ghcr.io/masksrb/masks:` in `compose.yml`, then:
+
+```sh
+docker compose up -d
+```
+
+With `docker run`, stop and remove the container, then start it again with the new version. The
+`masks` volume keeps everything. Put the new version in place of `0.12.0`:
+
+```sh
+docker stop masks
+docker rm masks
+docker run --name masks -p 3000:3000 -v masks:/rails/storage ghcr.io/masksrb/masks:0.12.0
+```
+
+Each start brings the database up to date, so you can skip versions. Updates do not run
+backwards, which is why the backup comes first.
+
+## Locked out
+
+When the only manager has lost their phone and their backup codes, nobody can sign in to reset
+them. Whoever runs the server can reset that account from the server itself. See
+[getting back into a locked account](/build/self-hosting/#getting-back-into-a-locked-account).

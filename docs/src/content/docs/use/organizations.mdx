@@ -1,0 +1,114 @@
+---
+title: Organizations
+description: Customers inside your server. Each one has its own members, and each member holds a role there.
+---
+
+An organization is a customer inside your server, such as a company you serve. It has members,
+and each member holds one role there. Every organization offers the roles **owner** and
+**member**, and it can offer more, such as **billing**. A person can belong to several
+organizations, or to none.
+
+An app that cares about organizations learns which one a person signed in for, and their role.
+A person who belongs to several is asked **Choose an organization** when they sign in to such an
+app.
+
+| Who       | Where                                           | Can                                                                              |
+| --------- | ----------------------------------------------- | -------------------------------------------------------------------------------- |
+| A manager | **Manage this server**, under **Organizations** | Add and archive organizations. Set how members sign in. Add, promote, and remove anyone. |
+| An owner  | Their own account page, under **Organizations** | Invite, promote, and remove the members of their own organization.               |
+| A member  | Their own account page                          | See their role. Accept or decline an invitation. Leave.                          |
+
+## Add an organization
+
+1. Open **Manage this server**, then **Organizations**, and choose **Add organization**.
+2. Enter a **Name**. masks fills in the **Key** from the name. Apps ask for the organization by
+   its key, and it cannot change later.
+3. Choose **Add organization** again. You become its first owner.
+4. Add the customer's own owner as a member, with the **owner** role.
+5. Once they accept, you can remove yourself.
+
+## Invite members
+
+Adding someone to an organization invites them. Nothing changes for them until they accept.
+
+From **Manage this server**:
+
+1. Open the organization and choose **Add member**.
+2. Enter the person's email address and choose a role.
+3. Choose **Invite**.
+
+From an owner's own account page, under **Organizations**:
+
+1. Enter the address under **Add someone by email**.
+2. Choose a **Role**.
+3. Choose **Add**.
+
+masks emails the person. The email is headed **Join** and the organization's name, and names the
+role and who invited them. Someone who has no account yet gets an account invitation first. Once
+they have an account, the organization waits on their account page.
+
+An owner can invite an address that the server's sign-up rules admit, or one at an email domain
+the organization has proven. An owner sends at most 50 invitations a day.
+
+## Accept an invitation
+
+The invitation waits on the person's account page, under **Waiting for you**. It shows who sent
+it, the role, when it expires, and the address it went to. The person chooses **Join** or
+**Decline**.
+
+- Only an account with that email address, confirmed, can accept it. An account whose address is
+  not confirmed is asked to confirm it under **Email address** first.
+- An invitation sent to another address says where it went. The person signs in with that address,
+  or asks an owner to invite the address on this account.
+- Declining removes the invitation. An owner has to invite the person again.
+
+## Send an invitation again
+
+An invitation expires two weeks after it was last sent, unless a manager changes that under
+**Settings**, then **General**, then **Links**.
+
+1. Open the organization's members, in **Manage this server** or on an owner's account page.
+2. Find the person. An open invitation is marked **invited**. An expired one is marked
+   **expired**.
+3. Choose **Send again**.
+
+Sending again emails the person and starts the two weeks over. It can be done once an hour.
+
+## Roles
+
+1. Open the organization in **Manage this server** and open its **Roles** tab.
+2. Enter the role under **Offer another role** and choose **Add**.
+
+A role uses lowercase letters, digits, dashes, and underscores, up to 40 characters. A role cannot
+be removed while someone holds it.
+
+To change someone's role, find them in the members list and choose **Set role**.
+
+## Remove members and leave
+
+- An owner or a manager chooses **Remove** next to a member. Anything the person signed in to as
+  a member stops working.
+- A member chooses **Leave** on their own account page. An owner has to invite them again.
+- **Withdraw** takes back an invitation nobody has accepted yet.
+
+An organization always keeps an owner. The only owner cannot leave, step down, or be removed until
+someone else is an owner.
+
+## What members are told
+
+masks emails a member when someone else changes their role or removes them, and when the
+organization is archived while they are signed in to an app for it. A member who makes the change
+themselves, such as by leaving, gets no email. Each person can turn these emails off on their
+account page, under **Emails we send you**.
+
+## Archive an organization
+
+Open the organization in **Manage this server**, open its **General** tab, and archive it. Nobody
+can sign in as a member of it until a manager chooses **Restore**. Members keep their roles, so a
+restore puts everything back.
+
+## For developers
+
+An organization can have its own sign-in rules, its own provider, and its own directory. What
+apps read about organizations, and how they ask for one, is in
+[organizations for developers](/build/organizations/).
