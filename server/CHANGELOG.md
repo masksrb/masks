@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.13.0](https://github.com/masksrb/masks/compare/server-v0.12.0...server-v0.13.0) (2026-10-31)
+
+
+### Features
+
+* **engine:** a new tenant rotates its signing keys every 90 days, and one still rotating by hand is flagged on the health panel ([0194cca](https://github.com/masksrb/masks/commit/0194cca8edb9655e5dfffcb3823ba3f8556835dd)), closes [#177](https://github.com/masksrb/masks/issues/177)
+* **engine:** every rate limit is a named budget set from the environment or MASKS_CONFIG, and reaching one records one event ([36136af](https://github.com/masksrb/masks/commit/36136af94b2987e6fe0103a5d3a2ead144ad3117)), closes [#154](https://github.com/masksrb/masks/issues/154)
+
+
+### Fixes
+
+* **server:** rack 3.2.8 and crass 1.0.8 close four rack advisories and a CSS sanitizer bypass ([bfaa390](https://github.com/masksrb/masks/commit/bfaa3905ba8a3b3e384c67332c2e95027847a6e4))
+
+
+### Documentation
+
+* **reference:** the rate limit table sits between MDX comments, since an HTML comment stops the docs build ([fb88949](https://github.com/masksrb/masks/commit/fb8894902c4b4e25ae950526dcc81ea5bd15da73))
+
 ## [0.12.0](https://github.com/masksrb/masks/compare/server-v0.11.0...server-v0.12.0) (2026-10-22)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.0](https://github.com/masksrb/masks/compare/masks-server-v0.12.0...masks-server-v0.13.0) (2026-10-31)
+
+
+### Features
+
+* **engine:** a new tenant rotates its signing keys every 90 days, and one still rotating by hand is flagged on the health panel ([0194cca](https://github.com/masksrb/masks/commit/0194cca8edb9655e5dfffcb3823ba3f8556835dd)), closes [#177](https://github.com/masksrb/masks/issues/177)
+* **engine:** every rate limit is a named budget set from the environment or MASKS_CONFIG, and reaching one records one event ([36136af](https://github.com/masksrb/masks/commit/36136af94b2987e6fe0103a5d3a2ead144ad3117)), closes [#154](https://github.com/masksrb/masks/issues/154)
+* **engine:** the health panel and the log say when a reverse proxy is misconfigured ([7efaaaa](https://github.com/masksrb/masks/commit/7efaaaa93e19a9fd2b52dfb64f8ab75e2395baa8)), closes [#176](https://github.com/masksrb/masks/issues/176)
+
+
+### Fixes
+
+* **engine:** a provider callback or SAML logout step is redeemed once, decided in the database, and engine mode refuses a cache each process keeps to itself ([9edc092](https://github.com/masksrb/masks/commit/9edc092ae6b44eaf6304b9bfb64cd25bcde3dfaf)), closes [#150](https://github.com/masksrb/masks/issues/150)
+* **engine:** tenant isolation refuses a transaction pooler, names the tenant for the transaction inside one, and leaves a host app's connections alone ([18fb9ea](https://github.com/masksrb/masks/commit/18fb9ea5c5b1473567e02dfa62bde2ed7af962c3)), closes [#155](https://github.com/masksrb/masks/issues/155)
+
 ## [0.12.0](https://github.com/masksrb/masks/compare/masks-server-v0.11.0...masks-server-v0.12.0) (2026-10-22)
 
 
