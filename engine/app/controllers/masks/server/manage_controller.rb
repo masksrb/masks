@@ -9,6 +9,7 @@ module Masks
           resource: issuer.manage_resource,
           graphql: manage_graphql_path,
           root: manage_path,
+          clientId: Client.console!(issuer).client_id,
           account: root_path,
           tenant: current_tenant.to_identity,
           copy: I18n.t("manage", default: {})

@@ -101,6 +101,9 @@ module Masks
       belongs_to :enrolled_by, class_name: "Client", optional: true, inverse_of: :enrolled
       belongs_to :sign_in_policy, optional: true
 
+      CONSOLE_ID = "masks-manage".freeze
+      CONSOLE_SCOPES = [ Scopes::OPENID, Scopes::PROFILE, Scopes::EMAIL, Scopes::MANAGE, *ManageRoles::SCOPES ].uniq.freeze
+
       scope :approved, -> { where.not(approved_at: nil) }
       scope :speaking, ->(protocol) { active.where(protocol: protocol) }
 
@@ -111,6 +114,27 @@ module Masks
           host = uri.host.to_s
 
           LOOPBACK.include?(host) || host.end_with?(".localhost")
+        end
+
+        def console!(issuer)
+          approved_for(issuer.manage_resource) || create!(
+            client_id: CONSOLE_ID,
+            name: "Manage #{Current.tenant.name}",
+            redirect_uris: [ "#{issuer.manage_resource}/callback" ],
+            post_logout_redirect_uris: [ issuer.manage_resource ],
+            resources: [ issuer.manage_resource ],
+            allowed_scopes: Scopes.join(CONSOLE_SCOPES),
+            grant_types: %w[authorization_code refresh_token],
+            response_types: [ "code" ],
+            token_endpoint_auth_method: "none",
+            client_uri: issuer.url,
+            handshake_return_to: issuer.manage_resource,
+            consent_required: false,
+            dynamic: false,
+            approved_at: Time.current
+          )
+        rescue ActiveRecord::RecordNotUnique
+          find_by!(client_id: CONSOLE_ID)
         end
 
         def approve!(handshake, actor:)

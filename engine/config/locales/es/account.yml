@@ -62,7 +62,7 @@ es:
           set:
             one: "1 configurada"
             other: "%{count} configuradas"
-        explained: "En lugar de escribir una contraseña, tu dispositivo comprueba que eres tú de la misma forma en que ya se desbloquea. Cuenta como los dos factores a la vez, así que no hay que esperar ningún código."
+        explained: "En lugar de escribir una contraseña, tu dispositivo comprueba que eres tú igual que cuando lo desbloqueas. También cuenta como tu segundo paso, así que no hay ningún código que esperar."
         used: "usada por última vez hace %{age}"
         never_used: "nunca usada"
         remove: "Eliminar"
@@ -209,11 +209,11 @@ es:
         remembered: "%{label}, sin preguntar hasta el %{date}"
         heading: "Aplicaciones a las que diste acceso"
         none_yet: "Nada ha pedido acceso todavía. Una aplicación aparece aquí cuando inicias sesión en ella, con lo que aceptaste que pueda ver."
-        revoke: "Revocar acceso"
+        revoke: "Quitar el acceso"
         more:
           one: "y una más"
           other: "y %{count} más"
-        confirm_revoke: "¿Revocar %{client}? Todo lo que tiene deja de funcionar y tendrá que volver a pedirlo la próxima vez que inicies sesión."
+        confirm_revoke: "¿Quitar el acceso a %{client}? Todo lo que tenga deja de funcionar, y tendrá que pedirlo otra vez la próxima vez que inicies sesión."
 
       connections:
         heading: "Cuentas conectadas"
@@ -258,7 +258,7 @@ es:
 
       export:
         heading: "Descargar tu cuenta"
-        state: "JSON"
+        state: "Un archivo"
         lede: "Un archivo con tu perfil, cómo inicias sesión, tus organizaciones, aplicaciones, cuentas conectadas y dispositivos, y la actividad que masks ha guardado. No contiene contraseñas, códigos ni claves."
         again: "Iniciaste sesión hace tiempo, así que primero se te pedirá que vuelvas a iniciarla."
         submit: "Descargar"

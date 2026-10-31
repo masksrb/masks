@@ -62,7 +62,7 @@ de:
           set:
             one: "1 eingerichtet"
             other: "%{count} eingerichtet"
-        explained: "Statt ein Passwort einzugeben, prüft Ihr Gerät auf dieselbe Weise, wie es sich entsperrt, dass Sie es sind. Das zählt als beide Faktoren zugleich, daher müssen Sie auf keinen Code warten."
+        explained: "Statt ein Passwort einzutippen, prüft Ihr Gerät so, dass Sie es sind, wie es sich ohnehin entsperrt. Es zählt auch als Ihr zweiter Schritt, also müssen Sie auf keinen Code warten."
         used: "zuletzt verwendet vor %{age}"
         never_used: "nie verwendet"
         remove: "Entfernen"
@@ -209,11 +209,11 @@ de:
         remembered: "%{label}, ohne Nachfrage bis %{date}"
         heading: "Apps, die Sie zugelassen haben"
         none_yet: "Bisher hat nichts angefragt. Eine App erscheint hier, sobald Sie sich bei ihr anmelden, zusammen mit dem, was sie sehen darf."
-        revoke: "Zugriff widerrufen"
+        revoke: "Zugriff entfernen"
         more:
           one: "und eine weitere"
           other: "und %{count} weitere"
-        confirm_revoke: "%{client} widerrufen? Alles, was die App hält, funktioniert nicht mehr, und sie muss bei Ihrer nächsten Anmeldung erneut fragen."
+        confirm_revoke: "%{client} den Zugriff entfernen? Alles, was es gerade hält, funktioniert nicht mehr, und es muss bei der nächsten Anmeldung erneut fragen."
 
       connections:
         heading: "Verbundene Konten"
@@ -258,7 +258,7 @@ de:
 
       export:
         heading: "Ihr Konto herunterladen"
-        state: "JSON"
+        state: "Eine Datei"
         lede: "Eine Datei mit Ihrem Profil, Ihren Anmeldemethoden, Organisationen, Apps, verbundenen Konten und Geräten sowie der Aktivität, die masks aufbewahrt hat. Sie enthält keine Passwörter, Codes oder Schlüssel."
         again: "Ihre Anmeldung ist eine Weile her, daher werden Sie zuerst gebeten, sich erneut anzumelden."
         submit: "Herunterladen"

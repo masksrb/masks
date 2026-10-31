@@ -62,7 +62,7 @@ fr:
           set:
             one: "1 configurée"
             other: "%{count} configurées"
-        explained: "Au lieu de saisir un mot de passe, votre appareil vérifie que c’est bien vous, de la même façon qu’il se déverrouille déjà. Une clé d’accès compte pour les deux facteurs à la fois, donc il n’y a aucun code à attendre."
+        explained: "Au lieu de saisir un mot de passe, votre appareil vérifie que c'est vous comme il se déverrouille déjà. Il compte aussi comme votre deuxième étape, donc aucun code à attendre."
         used: "utilisée il y a %{age}"
         never_used: "jamais utilisée"
         remove: "Supprimer"
@@ -209,11 +209,11 @@ fr:
         remembered: "%{label}, sans demander jusqu’au %{date}"
         heading: "Applications que vous avez autorisées"
         none_yet: "Aucune demande pour l’instant. Une application apparaît ici dès que vous vous y connectez, avec ce que vous avez accepté qu’elle voie."
-        revoke: "Révoquer l’accès"
+        revoke: "Retirer l'accès"
         more:
           one: "et une autre"
           other: "et %{count} autres"
-        confirm_revoke: "Révoquer %{client} ? Tout ce qu’elle détient cesse de fonctionner, et elle devra redemander l’accès lors de votre prochaine connexion."
+        confirm_revoke: "Retirer l'accès de %{client} ? Tout ce qu'il détient cesse de fonctionner, et il devra redemander à votre prochaine connexion."
 
       connections:
         heading: "Comptes associés"
@@ -258,7 +258,7 @@ fr:
 
       export:
         heading: "Télécharger votre compte"
-        state: "JSON"
+        state: "Un fichier"
         lede: "Un fichier contenant votre profil, vos modes de connexion, vos organisations, applications, comptes associés et appareils, ainsi que l’activité conservée par masks. Il ne contient aucun mot de passe, code ni clé."
         again: "Votre connexion date d’un moment, il vous sera donc d’abord demandé de vous reconnecter."
         submit: "Télécharger"

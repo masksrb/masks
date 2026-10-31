@@ -62,7 +62,7 @@ en:
           set:
             one: "1 set up"
             other: "%{count} set up"
-        explained: "Instead of typing a password, your device checks it is you the way it already unlocks. It counts as both factors at once, so there is no code to wait for."
+        explained: "Instead of typing a password, your device checks it is you the way it already unlocks. It also counts as your second step, so there is no code to wait for."
         used: "last used %{age} ago"
         never_used: "never used"
         remove: "Remove"
@@ -209,11 +209,11 @@ en:
         remembered: "%{label}, without asking until %{date}"
         heading: "Apps you have let in"
         none_yet: "Nothing has asked yet. An app appears here once you sign in to it, with what you agreed it may see."
-        revoke: "Revoke access"
+        revoke: "Remove access"
         more:
           one: "and one more"
           other: "and %{count} more"
-        confirm_revoke: "Revoke %{client}? Anything it is holding stops working, and it has to ask again the next time you sign in."
+        confirm_revoke: "Remove %{client}'s access? Anything it is holding stops working, and it has to ask again the next time you sign in."
 
       connections:
         heading: "Connected accounts"
@@ -258,7 +258,7 @@ en:
 
       export:
         heading: "Download your account"
-        state: "JSON"
+        state: "A file"
         lede: "A file with your profile, how you sign in, your organizations, apps, connected accounts, and devices, and the activity masks has kept. It holds no passwords, codes, or keys."
         again: "You signed in a while ago, so you will be asked to sign in again first."
         submit: "Download"

@@ -28,7 +28,7 @@ function keep(issuer, clientId) {
 }
 
 export function clientId(boot) {
-  return held(boot.issuer);
+  return held(boot.issuer) || boot.clientId || null;
 }
 
 export function forget(boot) {
