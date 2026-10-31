@@ -68,10 +68,10 @@ en:
         keys:
           title: "Signing keys"
           missing: "This tenant has no active signing key, so nothing can be signed."
-          manual: "Keys rotate by hand. The active key is %{days} days old."
+          manual: "Keys rotate by hand, so nothing replaces the active key on its own. It is %{days} days old."
           fresh: "The active key is %{days} days old and rotates every %{period} days."
           stale: "The active key is %{days} days old, past its %{period} day rotation."
-          advice: "Rotate the key on the Settings page, or read the signing_keys job in the server log."
+          advice: "Pick a rotation schedule on the Settings page, rotate the key there, or read the signing_keys job in the server log."
       release:
         available: "Version %{version} is available."
         operator: "This release needs a step from an operator. Read its notes before you upgrade."

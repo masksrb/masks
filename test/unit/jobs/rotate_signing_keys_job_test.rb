@@ -7,7 +7,17 @@ module Masks
         within { SigningKey.order(:created_at).to_a }
       end
 
+      test "a new tenant rotates every 90 days without anybody choosing" do
+        assert_equal 90, @tenant.key_rotation_days
+        assert_equal 90, Tenant.create!(subdomain: "fresh-#{SecureRandom.hex(4)}", name: "Fresh").key_rotation_days
+
+        travel(89.days + 1.hour) { RotateSigningKeysJob.perform_now }
+
+        assert within { SigningKey.staged.first }, "the next key is staged a day before the active key turns 90 days old"
+      end
+
       test "a tenant left to rotate by hand is never touched" do
+        @tenant.update!(key_rotation_days: nil)
         before = keys.map(&:kid)
 
         travel(400.days) { RotateSigningKeysJob.perform_now }

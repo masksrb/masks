@@ -194,7 +194,7 @@ them again.
 | Mail            | Whether the tenant's SMTP server, or the one in `MASKS_SMTP_ADDRESS`, answers a connection. No mail is sent.    |
 | Public address  | Whether requests reach this tenant at its public address. A proxy that drops `X-Forwarded-Proto` shows up here. |
 | Domains         | Whether every claimed domain still has its TXT record.                                                          |
-| Signing keys    | Whether the active key is older than the tenant's rotation period, or missing.                                  |
+| Signing keys    | Whether the active key is older than the tenant's rotation period, missing, or left to rotate by hand. |
 
 The first five are about the server and show the same result in every tenant. The rest are about
 the tenant. A check that turns failing records a `health.failing` event, and `health.recovered` when

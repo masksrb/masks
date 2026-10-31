@@ -68,10 +68,10 @@ de:
         keys:
           title: "Signaturschlüssel"
           missing: "Dieser Mandant hat keinen aktiven Signaturschlüssel, also kann nichts signiert werden."
-          manual: "Schlüssel werden von Hand rotiert. Der aktive Schlüssel ist %{days} Tage alt."
+          manual: "Schlüssel werden von Hand rotiert, also ersetzt nichts den aktiven Schlüssel von selbst. Er ist %{days} Tage alt."
           fresh: "Der aktive Schlüssel ist %{days} Tage alt und rotiert alle %{period} Tage."
           stale: "Der aktive Schlüssel ist %{days} Tage alt, älter als seine Rotation von %{period} Tagen."
-          advice: "Rotieren Sie den Schlüssel auf der Seite Einstellungen, oder lesen Sie den Job signing_keys im Serverprotokoll."
+          advice: "Wählen Sie auf der Seite Einstellungen einen Rotationsplan, rotieren Sie den Schlüssel dort, oder lesen Sie den Job signing_keys im Serverprotokoll."
       release:
         available: "Version %{version} ist verfügbar."
         operator: "Diese Version braucht einen Schritt von einem Betreiber. Lesen Sie ihre Hinweise vor dem Upgrade."

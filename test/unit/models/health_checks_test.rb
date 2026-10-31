@@ -242,10 +242,16 @@ module Masks
         assert_equal [ "acme.example" ], found.details["domains"]
       end
 
-      test "keys is manual, fresh, stale, or missing" do
+      test "keys is fresh, stale, manual, or missing" do
         found = result(:keys)
 
-        assert_equal [ "ok", "manual" ], [ found.status, found.summary ]
+        assert_equal [ "ok", "fresh" ], [ found.status, found.summary ]
+        assert_equal({ "days" => 0, "period" => 90 }, found.details)
+
+        @tenant.update!(key_rotation_days: nil)
+        found = result(:keys)
+
+        assert_equal [ "warning", "manual" ], [ found.status, found.summary ], "a tenant still rotating by hand needs a look"
         assert_equal 0, found.details["days"]
 
         @tenant.update!(key_rotation_days: 30)

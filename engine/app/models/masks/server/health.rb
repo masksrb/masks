@@ -221,7 +221,7 @@ module Masks
         days = ((Time.current - active.activated_at) / 1.day).floor
         period = Current.tenant.key_rotation_days
 
-        return ok("keys", "manual", days: days) if period.nil?
+        return warning("keys", "manual", days: days) if period.nil?
         return warning("keys", "stale", days: days, period: period) if days > period
 
         ok("keys", "fresh", days: days, period: period)

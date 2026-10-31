@@ -68,10 +68,10 @@ fr:
         keys:
           title: "Clés de signature"
           missing: "Ce locataire n'a aucune clé de signature active, donc rien ne peut être signé."
-          manual: "Les clés tournent à la main. La clé active a %{days} jours."
+          manual: "Les clés tournent à la main, donc rien ne remplace la clé active de lui-même. Elle a %{days} jours."
           fresh: "La clé active a %{days} jours et tourne tous les %{period} jours."
           stale: "La clé active a %{days} jours, au-delà de sa rotation de %{period} jours."
-          advice: "Faites tourner la clé sur la page Paramètres, ou lisez la tâche signing_keys dans le journal du serveur."
+          advice: "Choisissez un calendrier de rotation sur la page Paramètres, faites tourner la clé là, ou lisez la tâche signing_keys dans le journal du serveur."
       release:
         available: "La version %{version} est disponible."
         operator: "Cette version demande une étape d'un opérateur. Lisez ses notes avant de mettre à jour."

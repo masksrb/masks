@@ -68,10 +68,10 @@ es:
         keys:
           title: "Claves de firma"
           missing: "Este inquilino no tiene ninguna clave de firma activa, así que no se puede firmar nada."
-          manual: "Las claves se rotan a mano. La clave activa tiene %{days} días."
+          manual: "Las claves se rotan a mano, así que nada sustituye la clave activa por sí solo. Tiene %{days} días."
           fresh: "La clave activa tiene %{days} días y rota cada %{period} días."
           stale: "La clave activa tiene %{days} días, más que su rotación de %{period} días."
-          advice: "Rota la clave en la página Configuración, o lee la tarea signing_keys en el registro del servidor."
+          advice: "Elige un calendario de rotación en la página Configuración, rota la clave allí, o lee la tarea signing_keys en el registro del servidor."
       release:
         available: "La versión %{version} está disponible."
         operator: "Esta versión necesita un paso de un operador. Lee sus notas antes de actualizar."
