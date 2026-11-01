@@ -14,7 +14,7 @@ from .fake import AUDIENCE, ISSUER, Fake, FakeClient
 def test_discovery_refuses_a_document_naming_another_issuer(fake: Fake) -> None:
     fake.issuer = "https://elsewhere.example"
 
-    with pytest.raises(masks.Error) as raised, fake.http() as http:
+    with pytest.raises(masks.Refused) as raised, fake.http() as http:
         masks.discover(ISSUER, http=http)
 
     assert raised.value.code == "invalid_issuer"
@@ -34,7 +34,7 @@ def test_plain_http_is_allowed_on_this_machine(allowed: str) -> None:
 
 @pytest.mark.parametrize("refused", ["http://id.example", "http://10.0.0.4", "ftp://id.example", "id.example"])
 def test_plain_http_is_refused_elsewhere(refused: str) -> None:
-    with pytest.raises(masks.InsecureURL):
+    with pytest.raises(masks.Insecure):
         masks.flows.check(refused)
 
 
@@ -57,7 +57,7 @@ def test_client_credentials_with_a_secret(fake: Fake, issuer: masks.Issuer, meth
 def test_a_wrong_secret_is_an_invalid_client(fake: Fake, issuer: masks.Issuer) -> None:
     fake.add("machine", FakeClient(method="client_secret_basic", secret="right"))
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         masks.Client(issuer, "machine", secret="wrong", http=fake.http()).client_credentials()
 
     assert raised.value.code == "invalid_client"
@@ -102,7 +102,7 @@ def test_a_bearer_answer_to_a_dpop_client_is_refused(issuer: masks.Issuer) -> No
         http=httpx.Client(transport=httpx.MockTransport(handle)),
     )
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.client_credentials()
 
     assert raised.value.code == "invalid_dpop_proof"
@@ -140,7 +140,7 @@ def test_the_device_flow_stops_when_the_code_expires(fake: Fake, issuer: masks.I
     device = client.device_authorization()
     device.expires_at = time.time() - 1
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.await_device(device)
 
     assert raised.value.code == "expired_token"
@@ -161,7 +161,7 @@ def test_a_refresh_source_keeps_each_rotated_token(fake: Fake, issuer: masks.Iss
     assert len(kept) == 1
     assert renewed.refresh_token != first.refresh_token
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.refresh(first.refresh_token or "")
 
     assert raised.value.code == "invalid_grant"
@@ -192,7 +192,7 @@ def test_registration_with_an_initial_access_token(fake: Fake, issuer: masks.Iss
         http=fake.http(),
     )
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         masks.Client.register(issuer, masks.ClientMetadata(), "one-time", http=fake.http())
 
     assert raised.value.code == "invalid_token"
@@ -209,7 +209,7 @@ def test_registration_with_an_initial_access_token(fake: Fake, issuer: masks.Iss
 
     client.delete_registration(updated)
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.read_registration(updated)
 
     assert raised.value.code == "invalid_token"
@@ -219,7 +219,7 @@ def test_a_registration_uri_on_another_origin_never_sees_the_token(fake: Fake, i
     fake.initial["one-time"] = "enrolled"
     fake.foreign_uri = True
 
-    with pytest.raises(masks.ForeignOrigin):
+    with pytest.raises(masks.Foreign):
         masks.Client.register(issuer, masks.ClientMetadata(), "one-time", http=fake.http())
 
     held = masks.Registration(
@@ -229,7 +229,7 @@ def test_a_registration_uri_on_another_origin_never_sees_the_token(fake: Fake, i
     )
     before = len(fake.seen)
 
-    with pytest.raises(masks.ForeignOrigin):
+    with pytest.raises(masks.Foreign):
         masks.Client(issuer, "x", http=fake.http()).read_registration(held)
 
     assert len(fake.seen) == before
@@ -265,7 +265,7 @@ def test_resource_discovery_refuses_metadata_naming_another_resource() -> None:
     def handle(_: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"resource": "https://other.example"})
 
-    with pytest.raises(masks.Error), httpx.Client(transport=httpx.MockTransport(handle)) as http:
+    with pytest.raises(masks.Refused), httpx.Client(transport=httpx.MockTransport(handle)) as http:
         masks.discover_resource(AUDIENCE, http=http)
 
 
@@ -275,7 +275,7 @@ def test_an_answer_past_the_read_limit_is_refused(issuer: masks.Issuer) -> None:
 
     client = masks.Client(issuer, "app", secret="s", http=httpx.Client(transport=httpx.MockTransport(handle)))
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.client_credentials()
 
     assert "more than" in raised.value.description
@@ -325,13 +325,13 @@ def test_a_scope_given_as_a_string_is_sent_whole(app: masks.Client, fake: Fake) 
 
 
 def test_an_enrollment_the_server_refuses_raises(app: masks.Client) -> None:
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         app.enroll(scope=["masks:manage"])
 
     assert raised.value.code == "invalid_request"
     assert raised.value.status == 400
 
-    with pytest.raises(masks.Error):
+    with pytest.raises(masks.Refused):
         app.enroll(scope=["xixo:agent"], expires_in=7200)
 
 
@@ -356,7 +356,7 @@ def test_an_answer_without_an_initial_access_token_is_refused(issuer: masks.Issu
 
     client = masks.Client(issuer, "app", secret="s", http=httpx.Client(transport=httpx.MockTransport(handle)))
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.enroll(scope=["xixo:agent"])
 
     assert raised.value.code == "server_error"
@@ -366,7 +366,7 @@ def test_an_issuer_without_enrollment_refuses_before_sending(fake: Fake) -> None
     held = masks.Issuer(url=ISSUER, metadata=masks.Metadata(issuer=ISSUER, token_endpoint=f"{ISSUER}/token"))
     client = masks.Client(held, "app", secret="secret", http=fake.http())
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.enroll(scope=["xixo:agent"])
 
     assert raised.value.code == "invalid_issuer"
@@ -400,7 +400,7 @@ def test_an_app_unenrolls_only_its_own_machines(app: masks.Client, fake: Fake, i
     fake.add("other", FakeClient(method="client_secret_post", secret="other", namespace="xixo"))
     other = masks.Client(issuer, "other", secret="other", method=masks.CLIENT_SECRET_POST, http=fake.http())
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         other.unenroll("machine-1")
 
     assert raised.value.status == 404
@@ -408,7 +408,7 @@ def test_an_app_unenrolls_only_its_own_machines(app: masks.Client, fake: Fake, i
 
 
 def test_unenrolling_escapes_the_client_id(app: masks.Client, fake: Fake) -> None:
-    with pytest.raises(masks.Error):
+    with pytest.raises(masks.Refused):
         app.unenroll("a/../../token?x=1")
 
     assert fake.seen[-1].url.raw_path == b"/enrollments/a%2F..%2F..%2Ftoken%3Fx%3D1"
@@ -453,7 +453,7 @@ def test_introspection_reports_an_inactive_token(app: masks.Client, fake: Fake) 
 def test_introspection_refuses_a_token_from_another_issuer(app: masks.Client, fake: Fake) -> None:
     fake.introspected_issuer = "https://elsewhere.example"
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         app.introspect(app.client_credentials().access_token)
 
     assert raised.value.code == "invalid_issuer"
@@ -462,7 +462,7 @@ def test_introspection_refuses_a_token_from_another_issuer(app: masks.Client, fa
 def test_introspection_authenticates_the_client(fake: Fake, issuer: masks.Issuer) -> None:
     fake.add("app", FakeClient(method="client_secret_basic", secret="secret"))
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         masks.Client(issuer, "app", secret="wrong", http=fake.http()).introspect("token")
 
     assert raised.value.code == "invalid_client"
@@ -522,7 +522,7 @@ def test_an_exchange_holds_the_new_token_to_the_same_key(signed: masks.Client, f
 def test_an_exchange_of_a_held_token_without_its_key_is_refused(signed: masks.Client, app: masks.Client) -> None:
     subject = signed.client_credentials()
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         app.exchange(subject.access_token)
 
     assert raised.value.code == "invalid_grant"
@@ -557,7 +557,7 @@ def test_an_exchange_answered_with_an_unheld_access_token_is_refused(issuer: mas
         issuer, "app", secret="s", dpop=masks.Key.generate(), http=httpx.Client(transport=httpx.MockTransport(handle))
     )
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         client.exchange("subject")
 
     assert raised.value.code == "invalid_dpop_proof"

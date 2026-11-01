@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 import jwt
 
-from .errors import Error, InvalidToken
+from .errors import InvalidToken, Refused
 from .flows import Flow, get, required
 from .keys import encode
 from .models import Issuer
@@ -36,40 +36,38 @@ def typed(header: dict[str, Any], accepted: Sequence[str]) -> bool:
     return held in accepted
 
 
-def unverified(error: jwt.PyJWTError) -> InvalidToken:
+def unverified(error: jwt.PyJWTError, issuer: str = "its issuer") -> InvalidToken:
     if isinstance(error, jwt.ExpiredSignatureError):
-        said = "that token has expired"
-    elif isinstance(error, (jwt.ImmatureSignatureError, jwt.InvalidIssuedAtError)):
-        said = "that token is not valid yet"
-    elif isinstance(error, jwt.InvalidIssuerError):
-        said = "that token was issued by another server"
-    elif isinstance(error, jwt.InvalidAudienceError):
-        said = "that token was issued for another app"
-    elif isinstance(error, jwt.MissingRequiredClaimError):
-        said = "that token is missing a claim it needs"
-    elif isinstance(error, jwt.InvalidSignatureError):
-        said = "that token was not signed by this issuer"
-    elif isinstance(error, jwt.DecodeError):
-        said = "that token is not a signed JWT"
-    else:
-        said = "that token could not be verified"
+        return InvalidToken.of("expired")
+    if isinstance(error, (jwt.ImmatureSignatureError, jwt.InvalidIssuedAtError)):
+        return InvalidToken.of("not_valid_yet")
+    if isinstance(error, jwt.InvalidIssuerError):
+        return InvalidToken.of("other_issuer")
+    if isinstance(error, jwt.InvalidAudienceError):
+        return InvalidToken.of("other_audience")
+    if isinstance(error, jwt.MissingRequiredClaimError):
+        return InvalidToken.of("missing_claims", error.claim)
+    if isinstance(error, jwt.InvalidSignatureError):
+        return InvalidToken.of("not_signed_by", issuer)
+    if isinstance(error, jwt.DecodeError):
+        return InvalidToken.of("not_a_jwt")
 
-    return InvalidToken(f"masks: {said}")
+    return InvalidToken.of("unverified")
 
 
 def unverified_header(token: str) -> dict[str, Any]:
     segment, dot, rest = token.partition(".")
 
     if not dot or rest.count(".") != 1 or not SEGMENT.fullmatch(segment) or len(segment) % 4 == 1:
-        raise InvalidToken("masks: that is not a signed JWT")
+        raise InvalidToken.of("not_a_jwt")
 
     try:
         header = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
     except ValueError as error:
-        raise InvalidToken("masks: that is not a signed JWT") from error
+        raise InvalidToken.of("not_a_jwt") from error
 
     if not isinstance(header, dict):
-        raise InvalidToken("masks: that is not a signed JWT: its header is not an object")
+        raise InvalidToken.of("not_a_jwt")
 
     return header
 
@@ -126,7 +124,7 @@ class KeySet:
         if age >= KEYS_PATIENCE or not self._fetched_at:
             try:
                 body = required((yield get(self.issuer.metadata.jwks_uri)))
-            except (Error, httpx.HTTPError) as error:
+            except (Refused, httpx.HTTPError) as error:
                 with self._lock:
                     self._retry.failed(now, error)
 
@@ -145,7 +143,7 @@ class KeySet:
             found = self._find(kid)
 
         if found is None:
-            raise InvalidToken(f"masks: {self.issuer.url} publishes no key {kid!r}")
+            raise InvalidToken.of("no_key", self.issuer.url, kid)
 
         return found
 
@@ -165,10 +163,10 @@ class KeySet:
         algorithm = header.get("alg")
 
         if algorithm not in SIGNING_ALGORITHMS:
-            raise InvalidToken(f"masks: {algorithm!r} is not an algorithm masks signs with")
+            raise InvalidToken.of("not_an_algorithm", algorithm)
 
         if not typed(header, accepted):
-            raise InvalidToken(f"masks: that token is typed {header.get('typ')!r}")
+            raise InvalidToken.of("wrong_type", header.get("typ"), " or ".join(accepted))
 
         jwk = yield from self.key(str(header.get("kid") or ""))
 
@@ -183,7 +181,7 @@ class KeySet:
                 options={"require": list(require), "verify_aud": audience is not None},
             )
         except jwt.PyJWTError as error:
-            raise unverified(error) from error
+            raise unverified(error, self.issuer.url) from error
 
         return claims, str(algorithm)
 

@@ -16,9 +16,9 @@ from .dpop import DPOP, proof
 from .errors import (
     DelegationRefused,
     DelegationUnavailable,
-    Error,
     InvalidToken,
     MasksError,
+    Refused,
     Unavailable,
     has_code,
 )
@@ -247,7 +247,7 @@ class _Flows:
         value = str(getattr(self.issuer.metadata, named))
 
         if not value:
-            raise Error("invalid_issuer", f"{self.issuer.url} publishes no {named}")
+            raise Refused.of("publishes_nothing", self.issuer.url, named)
 
         return value
 
@@ -328,12 +328,12 @@ class _Flows:
         body = yield from self._post(self._endpoint("token_endpoint"), form, True)
 
         if not body or not body.get("access_token"):
-            raise Error("server_error", "the token endpoint answered without an access token")
+            raise Refused("server_error", "the token endpoint answered without an access token")
 
         token = Token.from_dict(body)
 
         if held and self.dpop is not None and not token.bound:
-            raise Error("invalid_dpop_proof", "the token endpoint answered with a token that is not held to this key")
+            raise Refused.of("not_held_to_key")
 
         return token
 
@@ -353,7 +353,7 @@ class _Flows:
         body = yield from self._post(endpoint, [*asked(scope, resource), ("client_id", self.client_id)], False)
 
         if not body:
-            raise Error("server_error", "the device authorization endpoint answered with nothing")
+            raise Refused("server_error", "the device authorization endpoint answered with nothing")
 
         return DeviceAuthorization.from_dict(body)
 
@@ -369,21 +369,21 @@ class _Flows:
         held = flattened(params)
 
         if held.get("error"):
-            raise Error(held["error"], held.get("error_description", ""))
+            raise Refused(held["error"], held.get("error_description", ""))
 
         if not started.state or not same(held.get("state"), started.state):
-            raise Error("invalid_state", "that answer is for a sign-in this browser did not start")
+            raise Refused.of("state_mismatch")
 
         named = held.get("iss", "")
 
         if named and named.rstrip("/") != self.issuer.url:
-            raise Error("invalid_issuer", f"that answer came from {named}, not {self.issuer.url}")
+            raise Refused("invalid_issuer", f"that answer came from {named}, not {self.issuer.url}")
 
         if not named and self.issuer.metadata.authorization_response_iss_parameter_supported:
-            raise Error("invalid_issuer", "that answer does not name the issuer it came from")
+            raise Refused("invalid_issuer", "that answer does not name the issuer it came from")
 
         if not held.get("code"):
-            raise Error("invalid_request", "that answer carries no code")
+            raise Refused.of("no_callback_code")
 
         token = yield from self._token(
             [
@@ -398,7 +398,7 @@ class _Flows:
 
         if OPENID in started.scopes:
             if not token.id_token:
-                raise InvalidToken("masks: the token endpoint answered without an ID token")
+                raise InvalidToken.of("no_id_token")
 
             claims = yield from self._id_token(
                 token.id_token, started.nonce, token.access_token, max_age=started.max_age
@@ -413,16 +413,16 @@ class _Flows:
         audience = claims["aud"]
 
         if isinstance(audience, list) and len(audience) > 1 and claims.get("azp") != self.client_id:
-            raise InvalidToken("masks: that ID token was issued to several clients and names another")
+            raise InvalidToken.of("id_token_several_audiences")
 
         if nonce and not same(claims.get("nonce"), nonce):
-            raise InvalidToken("masks: that ID token was issued for another sign-in")
+            raise InvalidToken.of("id_token_other_sign_in")
 
         if "at_hash" in claims and not same(claims["at_hash"], half_hash(access_token, algorithm)):
-            raise InvalidToken("masks: that ID token was issued with another access token")
+            raise InvalidToken.of("id_token_other_access_token")
 
         if max_age > 0 and not recent(claims.get("auth_time"), max_age):
-            raise InvalidToken("masks: the person signed in longer ago than max_age allows")
+            raise InvalidToken.of("too_old")
 
         return claims
 
@@ -461,16 +461,16 @@ class _Flows:
         events = claims.get("events")
 
         if "nonce" in claims:
-            raise InvalidToken("masks: that logout token carries a nonce, so it is an ID token")
+            raise InvalidToken.of("logout_with_nonce")
 
         if not claims.get("sub") and not claims.get("sid"):
-            raise InvalidToken("masks: that logout token names neither a subject nor a session")
+            raise InvalidToken.of("logout_names_nobody")
 
         if not isinstance(claims["iat"], (int, float)) or claims["iat"] > time.time() + LOGOUT_LEEWAY:
-            raise InvalidToken("masks: that logout token was issued in the future")
+            raise InvalidToken.of("issued_in_future")
 
         if not isinstance(events, dict) or not isinstance(events.get(LOGOUT_EVENT), dict):
-            raise InvalidToken("masks: that token is not about a logout")
+            raise InvalidToken.of("not_a_logout")
 
         return Logout(
             subject=str(claims.get("sub") or ""),
@@ -488,10 +488,10 @@ class _Flows:
         held = next((item for item in signed.token.delegations or [] if item.get("provider") == started.provider), None)
 
         if held is None:
-            raise DelegationRefused("access_denied", f"masks connected nothing for {started.provider}")
+            raise DelegationRefused.of("nothing_connected", started.provider)
 
         if not signed.token.refresh_token:
-            raise DelegationRefused("invalid_grant", "masks issued no refresh token to keep the connection with")
+            raise DelegationRefused.of("no_refresh_for_connection")
 
         return HeldConnection(
             connection=str(held.get("connection") or ""),
@@ -532,12 +532,12 @@ class _Flows:
         body = yield from self._post(self._endpoint("introspection_endpoint"), form, False)
 
         if not body:
-            raise Error("server_error", "the introspection endpoint answered with nothing")
+            raise Refused("server_error", "the introspection endpoint answered with nothing")
 
         found = Introspection.from_dict(body)
 
         if found.active and found.issuer.rstrip("/") != self.issuer.url:
-            raise Error("invalid_issuer", f"the introspection endpoint describes a token from {found.issuer!r}")
+            raise Refused("invalid_issuer", f"the introspection endpoint describes a token from {found.issuer!r}")
 
         return found
 
@@ -590,7 +590,7 @@ class _Flows:
         body = yield from self._post(self._endpoint("enrollment_endpoint"), form, False)
 
         if not body or not body.get("initial_access_token"):
-            raise Error("server_error", "the enrollment endpoint answered without an initial access token")
+            raise Refused("server_error", "the enrollment endpoint answered without an initial access token")
 
         return Enrollment.from_dict(body)
 
@@ -636,7 +636,7 @@ class _Flows:
             endpoint = issuer.url + "/register"
 
         if not endpoint:
-            raise Error("access_denied", f"{issuer.url} registers no clients without an initial access token")
+            raise Refused("access_denied", f"{issuer.url} registers no clients without an initial access token")
 
         body = decoded((yield send_json("POST", endpoint, initial_access_token, metadata.to_dict())))
         held = Registration.from_dict(body or {})
@@ -653,10 +653,10 @@ class _Flows:
 
 def owned(issuer: Issuer, held: Registration) -> None:
     if not held.client_id:
-        raise Error("invalid_client_metadata", "the registration names no client_id")
+        raise Refused("invalid_client_metadata", "the registration names no client_id")
 
     if not held.registration_client_uri or not held.registration_access_token:
-        raise Error("invalid_client_metadata", "the registration holds no registration_client_uri and token")
+        raise Refused("invalid_client_metadata", "the registration holds no registration_client_uri and token")
 
     same_origin(issuer, held.registration_client_uri)
 
@@ -665,7 +665,7 @@ def delegation_failure(error: Exception, secret: str) -> Exception:
     if isinstance(error, (DelegationRefused, DelegationUnavailable)):
         return error
 
-    if isinstance(error, Error):
+    if isinstance(error, Refused):
         if error.code == "invalid_client":
             return error
 
@@ -677,13 +677,13 @@ def delegation_failure(error: Exception, secret: str) -> Exception:
         return DelegationRefused(error.code, error.description, status=error.status, secret=secret)
 
     if isinstance(error, (httpx.HTTPError, Unavailable)):
-        return DelegationUnavailable(f"masks: {error}", secret=secret)
+        return DelegationUnavailable(str(error).removeprefix("masks: "), secret=secret)
 
     return error
 
 
-def expired() -> Error:
-    return Error("expired_token", "the code expired before anyone approved it")
+def expired() -> Refused:
+    return Refused("expired_token", "the code expired before anyone approved it")
 
 
 class Client(_Flows):
@@ -752,7 +752,7 @@ class Client(_Flows):
 
             try:
                 return run(self._device_token(device), self.http)
-            except Error as error:
+            except Refused as error:
                 if has_code(error, "authorization_pending"):
                     continue
 
@@ -941,7 +941,7 @@ class AsyncClient(_Flows):
 
             try:
                 return await arun(self._device_token(device), self.http)
-            except Error as error:
+            except Refused as error:
                 if has_code(error, "authorization_pending"):
                     continue
 
@@ -1069,7 +1069,7 @@ class AsyncClient(_Flows):
 
 def renewal(token: Token) -> str:
     if not token.refresh_token:
-        raise Error("invalid_grant", "there is no refresh token to renew this session with")
+        raise Refused.of("no_refresh_token")
 
     return token.refresh_token
 

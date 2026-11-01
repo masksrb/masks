@@ -8,7 +8,7 @@ from urllib.parse import urlencode, urlsplit
 import httpx
 
 from .client import _Flows, words
-from .errors import Error
+from .errors import Refused
 from .flows import Flow, arun, check, default_async_http, default_http, origin, run
 from .keys import random_id
 from .keyset import same
@@ -120,25 +120,25 @@ class Handshake:
         held = flattened(params)
 
         if held.get("error"):
-            raise Error(held["error"], held.get("error_description", ""))
+            raise Refused(held["error"], held.get("error_description", ""))
 
         if not state or not same(held.get("state"), state):
-            raise Error("invalid_state", "the handshake did not match this browser")
+            raise Refused.of("state_mismatch")
 
         named = held.get("iss", "")
 
         if named and named.rstrip("/") != self.issuer.url:
-            raise Error("invalid_issuer", f"that came back from {named}, not {self.issuer.url}")
+            raise Refused("invalid_issuer", f"that came back from {named}, not {self.issuer.url}")
 
         token = held.get("initial_access_token", "")
 
         if not token:
-            raise Error("invalid_request", "the handshake came back without a token")
+            raise Refused("invalid_request", "the handshake came back without a token")
 
         registration = yield from _Flows._registered(self.issuer, self.metadata(), token)
 
         if not registration.client_secret:
-            raise Error("invalid_client_metadata", "the handshake registered a client without a secret")
+            raise Refused("invalid_client_metadata", "the handshake registered a client without a secret")
 
         return registration
 

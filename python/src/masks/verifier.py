@@ -13,7 +13,7 @@ import httpx
 import jwt
 
 from .dpop import DPOP, PROOF_TYPE, tidied, token_hash
-from .errors import Error, InvalidToken, MissingToken, Unavailable
+from .errors import InvalidToken, Refused, Unavailable
 from .flows import Flow, arun, default_async_http, default_http, run
 from .keys import PRIVATE_MEMBERS, thumbprint
 from .keyset import KeySet, unverified, unverified_header
@@ -91,22 +91,22 @@ def remembered(answer: object) -> None:
         answer.close()
 
     if answer is False:
-        raise InvalidToken("masks: that proof has already been used")
+        raise InvalidToken.of("proof_replayed")
 
     if answer is not True:
-        raise Unavailable("masks: the replay store answered with something other than true or false")
+        raise Unavailable.of("replay_store_answer")
 
 
 def unremembered() -> Unavailable:
-    return Unavailable("masks: the replay store could not say whether that proof is new")
+    return Unavailable.of("replay_store_unreachable")
 
 
 @contextmanager
 def fetching() -> Iterator[None]:
     try:
         yield
-    except (Error, httpx.HTTPError) as error:
-        raise Unavailable("masks: the issuer's keys could not be fetched") from error
+    except (Refused, httpx.HTTPError) as error:
+        raise Unavailable.of("keys_unreachable", "the issuer") from error
 
 
 class _Verifying:
@@ -121,10 +121,10 @@ class _Verifying:
         algorithm = header.get("alg")
 
         if algorithm not in TOKEN_ALGORITHMS:
-            raise InvalidToken(f"masks: {algorithm!r} is not an algorithm a masks token is signed with")
+            raise InvalidToken.of("not_an_algorithm", algorithm)
 
         if not typed(header, ACCESS_TOKEN_TYPE):
-            raise InvalidToken(f"masks: that token is not typed {ACCESS_TOKEN_TYPE}")
+            raise InvalidToken.of("wrong_type", header.get("typ"), ACCESS_TOKEN_TYPE)
 
         jwk = yield from self.keys.key(str(header.get("kid") or ""))
 
@@ -149,7 +149,7 @@ class _Verifying:
         scheme, _, token = held.get("Authorization", "").partition(" ")
 
         if not token:
-            raise MissingToken("masks: the request carries no token")
+            raise InvalidToken.of("no_token")
 
         claims = yield from self._verify(token)
 
@@ -161,9 +161,9 @@ class _Verifying:
             return claims, seen
 
         if scheme.lower() == "bearer":
-            raise InvalidToken("masks: that token is held to a key and is presented with DPoP")
+            raise InvalidToken.of("bound_as_bearer")
 
-        raise InvalidToken("masks: that token is presented as a Bearer token")
+        raise InvalidToken.of("unbound_as_dpop")
 
     def _target(self, url: str) -> str:
         if not self.public_url:
@@ -175,21 +175,21 @@ class _Verifying:
 
     def _proven(self, method: str, url: str, token: str, bound_to: str, presented: list[str]) -> str:
         if len(presented) != 1 or "," in presented[0]:
-            raise InvalidToken("masks: exactly one DPoP proof is required")
+            raise InvalidToken.of("one_proof")
 
         header = unverified_header(presented[0])
         algorithm = header.get("alg")
 
         if not typed(header, PROOF_TYPE):
-            raise InvalidToken(f"masks: a proof is typed {PROOF_TYPE}")
+            raise InvalidToken.of("proof_type", PROOF_TYPE)
 
         if algorithm not in PROOF_ALGORITHMS:
-            raise InvalidToken(f"masks: {algorithm!r} is not an algorithm a proof may use")
+            raise InvalidToken.of("proof_algorithm", algorithm)
 
         jwk = header.get("jwk")
 
         if not isinstance(jwk, dict) or jwk.get("kty") not in ("EC", "RSA") or PRIVATE_MEMBERS & set(jwk):
-            raise InvalidToken("masks: a proof carries the public key that signed it")
+            raise InvalidToken.of("proof_no_key")
 
         try:
             key = jwt.PyJWK(jwk, algorithm=algorithm).key
@@ -200,21 +200,21 @@ class _Verifying:
                 options={"verify_aud": False, "verify_exp": False, "require": ["jti", "htm", "htu", "iat"]},
             )
         except jwt.PyJWTError as error:
-            raise InvalidToken("masks: that proof was not signed by the key it carries") from error
+            raise InvalidToken.of("proof_unsigned") from error
 
         try:
             held = thumbprint(jwk)
         except ValueError as error:
-            raise InvalidToken(f"masks: {error}") from error
+            raise InvalidToken(str(error)) from error
 
         if not hmac.compare_digest(held, bound_to):
-            raise InvalidToken("masks: that proof was signed by another key than the token is held to")
+            raise InvalidToken.of("proof_other_key")
 
         if str(claims["htm"]).upper() != method.upper():
-            raise InvalidToken("masks: that proof was made for another method")
+            raise InvalidToken.of("proof_other_method")
 
         if tidied(str(claims["htu"])) != tidied(url):
-            raise InvalidToken("masks: that proof was made for another URL")
+            raise InvalidToken.of("proof_other_url")
 
         made = claims["iat"]
 
@@ -223,15 +223,15 @@ class _Verifying:
             or made < time.time() - PROOF_WINDOW - LEEWAY
             or made > time.time() + LEEWAY
         ):
-            raise InvalidToken("masks: that proof was not made just now")
+            raise InvalidToken.of("proof_not_now")
 
         if not hmac.compare_digest(str(claims.get("ath") or ""), token_hash(token)):
-            raise InvalidToken("masks: that proof was made for another token")
+            raise InvalidToken.of("proof_other_token")
 
         jti = claims["jti"]
 
         if not isinstance(jti, str) or not jti:
-            raise InvalidToken("masks: a proof carries a jti")
+            raise InvalidToken.of("proof_no_jti")
 
         return f"{bound_to}:{jti}"
 

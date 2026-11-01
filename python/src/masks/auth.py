@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from .dpop import DPOP, proof
-from .errors import ForeignOrigin
+from .errors import Foreign
 from .flows import origin
 from .keys import Key
 from .models import Token
@@ -52,7 +52,7 @@ class Auth(httpx.Auth):
     def _allowed(self, request: httpx.Request) -> None:
         if origin(request.url) not in self.origins:
             named = ", ".join(sorted(self.origins)) or "no origin"
-            raise ForeignOrigin(f"masks: this auth holds tokens only for {named}, not {origin(request.url)}")
+            raise Foreign.of("tokens_only_for", named, origin(request.url))
 
     def _signed(self, request: httpx.Request, token: Token) -> Generator[httpx.Request, httpx.Response, None]:
         held = origin(request.url)

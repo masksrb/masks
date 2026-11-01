@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from ..client import AsyncClient, Client, _Flows, delegation_failure
 from ..dpop import DPOP
-from ..errors import DelegationRefused, Error, Forbidden, InvalidToken, MasksError, Unavailable
+from ..errors import DelegationRefused, Forbidden, InvalidToken, MasksError, Refused, Unavailable, failure, saying
 from ..flows import (
     Flow,
     afetch,
@@ -235,7 +235,7 @@ class Renewed:
 
 class Refusal(MasksError):
     def __init__(self, answer: Answer) -> None:
-        super().__init__(f"masks: refused with {answer.status}")
+        super().__init__("refused", f"the request was refused with {answer.status}", status=answer.status)
         self.answer = answer
 
 
@@ -511,7 +511,7 @@ class Masks:
 
         try:
             found = yield from discovery(named, self.config.allow_plain_http)
-        except (Error, httpx.HTTPError) as error:
+        except (Refused, httpx.HTTPError) as error:
             with self._lock:
                 retry.failed(now, error)
 
@@ -648,7 +648,7 @@ class Masks:
             flows = self.flows(request, issuer)
             resource = self.resource(request)
             refreshed = yield from flows._refresh(renewal.refresh_token, (), [resource] if resource else [])
-        except Error as error:
+        except Refused as error:
             if error.code == "invalid_client":
                 return Renewed(UNREGISTERED)
 
@@ -870,7 +870,7 @@ class Masks:
                     registration_access_token=held["registration_access_token"],
                 )
             )
-        except Error as error:
+        except Refused as error:
             if error.status in (401, 403, 404):
                 return False
 
@@ -931,7 +931,7 @@ class Masks:
             issuer = yield from self.discover(request)
             flows = self.flows(request, issuer)
             signed = yield from flows._complete(started, request.query)
-        except Error as error:
+        except Refused as error:
             if outage(error):
                 raise
 
@@ -944,7 +944,7 @@ class Masks:
         except InvalidToken as error:
             self.forget(session)
 
-            return self._refuse(request, "invalid_token", str(error).removeprefix("masks: "))
+            return self._refuse(request, error.code, error.description)
 
         identity = dict(signed.claims)
 
@@ -1061,7 +1061,7 @@ class Masks:
 
         try:
             response = yield httpx.Request("GET", photo, headers=headers)
-        except (httpx.HTTPError, Error):
+        except (httpx.HTTPError, Refused):
             return Answer(502, headers=[("Cache-Control", "no-store")])
 
         if 300 <= response.status_code < 400 and response.headers.get("Location"):
@@ -1134,8 +1134,8 @@ class Masks:
                 AuthorizationRequest.from_dict(pending["request"]), request.query
             )
         except InvalidToken as error:
-            raise DelegationRefused("invalid_token", str(error).removeprefix("masks: ")) from error
-        except (Error, Unavailable, httpx.HTTPError) as error:
+            raise DelegationRefused(error.code, error.description) from error
+        except (Refused, Unavailable, httpx.HTTPError) as error:
             raise delegation_failure(error, "") from error
 
         if held.account != actor.subject:
@@ -1156,9 +1156,7 @@ class Masks:
             issuer = yield from self.discover(request)
             logout = yield from self.flows(request, issuer)._logout(logout_token)
         except InvalidToken as error:
-            return Answer.json(
-                400, {"error": "invalid_request", "error_description": str(error).removeprefix("masks: ")}
-            )
+            return Answer.json(400, {"error": "invalid_request", "error_description": error.description})
 
         seen = keyed("logout", issuer.url, logout.id)
         first = yield Stored("add", seen, "1", logout_memory(logout))
@@ -1327,7 +1325,7 @@ class Masks:
         try:
             issuer = yield from self.discover(request)
             registration = yield from self.handshake(request, issuer)._complete(request.query, state)
-        except Error as error:
+        except Refused as error:
             if outage(error):
                 raise
 
@@ -1370,7 +1368,7 @@ class Masks:
                         registration_access_token=held["registration_access_token"],
                     )
                 )
-            except Error as error:
+            except Refused as error:
                 if outage(error):
                     return self._refuse(request, "temporarily_unavailable", "masks could not be reached", 503)
 
@@ -1423,11 +1421,7 @@ class Masks:
 
             return self._forbid(
                 request,
-                Forbidden(
-                    "insufficient_scope",
-                    f"this account does not hold the {' and '.join(missing)} privilege",
-                    scope=scopes,
-                ),
+                Forbidden(*failure("no_privilege", " and ".join(missing)), scope=scopes),
             )
 
         back = request.full_path if request.method == "GET" else referring(request)
@@ -1475,7 +1469,7 @@ class Masks:
             ("WWW-Authenticate", f'{DPOP} algs="{" ".join(PROOF_ALGORITHMS)}", {joined}'),
         ]
 
-    def _token_refusal(self, request: Incoming, error: Exception) -> Answer:
+    def _token_refusal(self, request: Incoming, error: MasksError) -> Answer:
         if isinstance(error, Forbidden):
             return Answer.json(
                 403,
@@ -1493,11 +1487,11 @@ class Masks:
         if not request.authorization:
             return Answer.json(
                 401,
-                {"error": "invalid_token", "error_description": "a bearer token is required"},
+                {"error": "invalid_token", "error_description": saying("no_token")},
                 self.challenge(request),
             )
 
-        said = str(error).removeprefix("masks: ")
+        said = error.description
 
         return Answer.json(
             401, {"error": "invalid_token", "error_description": said}, self.challenge(request, "invalid_token", said)
@@ -1517,7 +1511,7 @@ class Masks:
         for privilege in wanted:
             for scope in privilege.scopes:
                 if not actor.permits(scope):
-                    raise Forbidden("insufficient_scope", f"this token does not carry {scope}", scope=scope)
+                    raise Forbidden(*failure("no_scope", scope), scope=scope)
 
             if privilege.roles or privilege.organization:
                 actor.member(*privilege.roles, organization=privilege.organization)
@@ -1573,8 +1567,8 @@ class Masks:
             return self._granted(request, claims, wanted)
         except (InvalidToken, Forbidden, Unavailable) as error:
             return self._token_refusal(request, error)
-        except (Error, httpx.HTTPError) as error:
-            return self._token_refusal(request, Unavailable(str(error)))
+        except (Refused, httpx.HTTPError):
+            return self._token_refusal(request, Unavailable.of("not_checked"))
 
     async def aprotect(self, request: Incoming, names: Sequence[str]) -> Actor | Answer:
         wanted = scoped(names, self.config.known)
@@ -1587,8 +1581,8 @@ class Masks:
             return self._granted(request, claims, wanted)
         except (InvalidToken, Forbidden, Unavailable) as error:
             return self._token_refusal(request, error)
-        except (Error, httpx.HTTPError) as error:
-            return self._token_refusal(request, Unavailable(str(error)))
+        except (Refused, httpx.HTTPError):
+            return self._token_refusal(request, Unavailable.of("not_checked"))
 
     def authorize(
         self, request: Incoming, session: Session, names: Sequence[str], tokens: bool = False
@@ -1617,7 +1611,7 @@ class Masks:
             return self.run(flow)
         except Refusal as refusal:
             return refusal.answer
-        except (Unavailable, httpx.HTTPError, Error):
+        except (Unavailable, httpx.HTTPError, Refused):
             return unreachable()
 
     async def aanswer(self, flow: Step[T]) -> T | Answer:
@@ -1625,7 +1619,7 @@ class Masks:
             return await self.arun(flow)
         except Refusal as refusal:
             return refusal.answer
-        except (Unavailable, httpx.HTTPError, Error):
+        except (Unavailable, httpx.HTTPError, Refused):
             return unreachable()
 
     def fetch(self, request: httpx.Request) -> httpx.Response:
@@ -1665,7 +1659,7 @@ class Masks:
         ]
 
 
-def outage(error: Error) -> bool:
+def outage(error: Refused) -> bool:
     return error.code in ("server_error", "temporarily_unavailable") or (error.status or 0) >= 500
 
 

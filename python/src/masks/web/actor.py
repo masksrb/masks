@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..errors import Forbidden
+from ..errors import Forbidden, failure
 from ..oidc import AVATARS_CLAIM, ORGANIZATION, ORGANIZATION_CLAIM, ORGANIZATIONS_CLAIM
 
 OWNER = "owner"
@@ -155,13 +155,13 @@ class Actor:
         held = self.organization
 
         if held is None:
-            raise Forbidden("insufficient_organization", "this sign-in names no organization", scope=ORGANIZATION)
+            raise Forbidden(*failure("no_organization"), scope=ORGANIZATION)
 
         if organization and organization not in (held.key, held.id):
-            raise Forbidden("insufficient_organization", f"this sign-in is for {held.key}, not {organization}")
+            raise Forbidden.of("other_organization", held.key, organization)
 
         if roles and not held.has_role(*roles):
-            raise Forbidden("insufficient_role", f"{held.role} in {held.key} is not {' or '.join(roles)}")
+            raise Forbidden.of("other_role", held.role, held.key, " or ".join(roles))
 
         return held
 

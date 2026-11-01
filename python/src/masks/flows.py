@@ -8,7 +8,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
-from .errors import READ_LIMIT, Error, ForeignOrigin, InsecureURL, refused
+from .errors import READ_LIMIT, Foreign, Insecure, Refused, refused
 from .models import Issuer, Metadata, ResourceMetadata
 
 T = TypeVar("T")
@@ -41,9 +41,9 @@ def check(target: str, allow_plain_http: bool = False) -> None:
         return
 
     if held.scheme == "http":
-        raise InsecureURL(f"masks: plain http is allowed only on this machine: {target}")
+        raise Insecure.of("plain_http", target)
 
-    raise InsecureURL(f"masks: {target!r} is not an http or https URL")
+    raise Insecure.of("not_http", target)
 
 
 def origin(target: str | httpx.URL) -> str:
@@ -62,7 +62,7 @@ def origin(target: str | httpx.URL) -> str:
 
 def same_origin(issuer: Issuer, target: str) -> None:
     if origin(target) != origin(issuer.url):
-        raise ForeignOrigin(f"masks: that URL belongs to another origin: {target}")
+        raise Foreign.of("other_origin", target)
 
 
 def get(target: str, bearer: str = "") -> httpx.Request:
@@ -97,10 +97,10 @@ def decoded(response: httpx.Response) -> dict[str, Any] | None:
     try:
         body = json.loads(response.content)
     except ValueError as error:
-        raise Error("server_error", f"{response.request.url} answered with something other than JSON") from error
+        raise Refused.of("not_json", response.request.url) from error
 
     if not isinstance(body, dict):
-        raise Error("server_error", f"{response.request.url} answered with something other than a JSON object")
+        raise Refused.of("not_an_object", response.request.url)
 
     return body
 
@@ -109,7 +109,7 @@ def required(response: httpx.Response) -> dict[str, Any]:
     body = decoded(response)
 
     if body is None:
-        raise Error("server_error", f"{response.request.url} answered with nothing")
+        raise Refused("server_error", f"{response.request.url} answered with nothing")
 
     return body
 
@@ -122,7 +122,7 @@ def discovery(issuer: str, allow_plain_http: bool = False) -> Flow[Issuer]:
     metadata = Metadata.from_dict(body)
 
     if metadata.issuer.rstrip("/") != named:
-        raise Error("invalid_issuer", f"{named} publishes a document naming {metadata.issuer!r}")
+        raise Refused.of("names_another", named, metadata.issuer)
 
     for endpoint in metadata.endpoints():
         check(endpoint, allow_plain_http)
@@ -140,7 +140,7 @@ def resource_discovery(resource: str, allow_plain_http: bool = False) -> Flow[Re
     found = ResourceMetadata.from_dict(required((yield get(document))))
 
     if found.resource.rstrip("/") != named:
-        raise Error("invalid_resource", f"{named} publishes metadata naming {found.resource!r}")
+        raise Refused.of("resource_names_another", named, found.resource)
 
     return found
 
@@ -164,7 +164,7 @@ def fetch(request: httpx.Request, http: httpx.Client) -> httpx.Response:
             content += chunk
 
             if len(content) > READ_LIMIT:
-                raise Error("server_error", f"{request.url} answered with more than {READ_LIMIT} bytes")
+                raise Refused.of("too_large", request.url)
     finally:
         response.close()
 
@@ -181,7 +181,7 @@ async def afetch(request: httpx.Request, http: httpx.AsyncClient) -> httpx.Respo
             content += chunk
 
             if len(content) > READ_LIMIT:
-                raise Error("server_error", f"{request.url} answered with more than {READ_LIMIT} bytes")
+                raise Refused.of("too_large", request.url)
     finally:
         await response.aclose()
 
@@ -208,7 +208,7 @@ def run(flow: Generator[Any, Any, T], http: httpx.Client, other: Callable[[Any],
 
             try:
                 response = fetch(item, http)
-            except (httpx.HTTPError, Error) as error:
+            except (httpx.HTTPError, Refused) as error:
                 item = flow.throw(error)
                 continue
 
@@ -241,7 +241,7 @@ async def arun(
 
             try:
                 response = await afetch(item, http)
-            except (httpx.HTTPError, Error) as error:
+            except (httpx.HTTPError, Refused) as error:
                 item = flow.throw(error)
                 continue
 

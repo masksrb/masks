@@ -67,7 +67,7 @@ def test_a_sign_in_refuses_another_state(web: masks.Client, fake: Fake) -> None:
     params = returned(fake.authorize(started.url))
     params["state"] = "forged"
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         web.complete(started, params)
 
     assert raised.value.code == "invalid_state"
@@ -83,7 +83,7 @@ def test_a_sign_in_refuses_an_answer_from_another_issuer(web: masks.Client, fake
     else:
         params["iss"] = iss
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         web.complete(started, params)
 
     assert raised.value.code == "invalid_issuer"
@@ -92,7 +92,7 @@ def test_a_sign_in_refuses_an_answer_from_another_issuer(web: masks.Client, fake
 def test_a_sign_in_raises_the_error_masks_answered(web: masks.Client) -> None:
     started = web.start(CALLBACK)
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         web.complete(started, {"error": "access_denied", "error_description": "no", "state": started.state})
 
     assert raised.value.code == "access_denied"
@@ -112,7 +112,7 @@ def test_a_code_is_spent_once_and_needs_its_verifier(web: masks.Client, fake: Fa
     params = returned(fake.authorize(started.url))
     wrong = masks.AuthorizationRequest.from_dict({**started.to_dict(), "verifier": "x" * 64})
 
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         web.complete(wrong, params)
 
     assert raised.value.code == "invalid_grant"
@@ -250,14 +250,14 @@ def test_a_handshake_refuses_a_forged_answer(
     started = shaking.start()
     params = {**returned(fake.handshake(started.url)), **changes}
 
-    with pytest.raises(masks.Error) as raised, fake.http() as http:
+    with pytest.raises(masks.Refused) as raised, fake.http() as http:
         shaking.complete(params, started.state, http=http)
 
     assert raised.value.code == code
 
 
 def test_a_declined_handshake_raises(issuer: masks.Issuer) -> None:
-    with pytest.raises(masks.Error) as raised:
+    with pytest.raises(masks.Refused) as raised:
         handshake(issuer).complete({"error": "access_denied", "state": "s"}, "s")
 
     assert raised.value.code == "access_denied"
@@ -275,7 +275,7 @@ def test_a_declined_handshake_raises(issuer: masks.Issuer) -> None:
     ],
 )
 def test_a_handshake_shares_one_origin(issuer: masks.Issuer, changes: dict[str, Any]) -> None:
-    with pytest.raises((ValueError, masks.InsecureURL)):
+    with pytest.raises((ValueError, masks.Insecure)):
         handshake(issuer, **changes)
 
 

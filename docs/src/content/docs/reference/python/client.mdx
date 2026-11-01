@@ -102,7 +102,7 @@ A guard that checks a token answers in JSON. See
 | `organization`                                           | The organization signed in to, or `None`.                                                                                                                                    |
 | `organizations`                                          | Every organization the person has joined.                                                                                                                                    |
 | `has_role(*roles)`                                       | Whether the person holds one of these roles in the organization.                                                                                                             |
-| `member(*roles, organization="")`                        | The organization, or raises `masks.errors.Forbidden`, a `masks.Error`.                                                                                                       |
+| `member(*roles, organization="")`                        | The organization, or raises `masks.Forbidden`, a `masks.Error`.                                                                                                       |
 | `scopes`                                                 | The scopes the token holds.                                                                                                                                                  |
 | `permits(scope)`                                         | Whether the token holds the scope.                                                                                                                                           |
 | `privileges`                                             | The names of the privileges the person holds.                                                                                                                                |
@@ -213,7 +213,7 @@ so the store holds no tokens anyone can read.
 
 The client authenticates with `client_secret_basic` when `secret` is set, and with
 `private_key_jwt` when `key` is set. Pass `method` to choose another. With a `dpop` key, the client
-refuses a token that comes back unbound. `auth` raises `masks.ForeignOrigin` for a request to any
+refuses a token that comes back unbound. `auth` raises `masks.Foreign` for a request to any
 origin it was not given.
 
 `masks.Handshake(issuer, name=..., resource=..., redirect_uris=..., return_to=...)` runs the
@@ -290,15 +290,11 @@ one.
 
 ## Errors
 
-|                               |                                                                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `masks.MasksError`            | Every error the SDK raises.                                                                                                       |
-| `masks.Error`                 | masks answered with an OAuth error. Has `code`, `description`, and `status`.                                                      |
-| `masks.InvalidToken`          | A token or proof failed a check.                                                                                                  |
-| `masks.MissingToken`          | A request carried no token. A kind of `masks.InvalidToken`.                                                                       |
-| `masks.Unavailable`           | masks, its keys, or a replay store could not be reached.                                                                          |
-| `masks.DelegationRefused`     | masks refused a delegation call. `sign_in_again` says whether the person must sign in again. `secret` holds a replacement secret. |
-| `masks.DelegationUnavailable` | masks or the provider did not answer. `secret` holds a replacement secret.                                                        |
-| `masks.InsecureURL`           | A plain `http` URL off this machine, without `allow_plain_http`.                                                                  |
-| `masks.ForeignOrigin`         | A URL on another origin than the one expected.                                                                                    |
-| `masks.web.Refusal`           | A guard refused the request. `answer` holds the response.                                                                         |
+Every error the SDK raises is a `masks.MasksError` and one of the kinds in
+[Errors](/reference/errors/): `masks.Refused`, `masks.InvalidToken`, `masks.Forbidden`,
+`masks.Unavailable`, `masks.Insecure`, `masks.Foreign`, `masks.DelegationRefused`, and
+`masks.DelegationUnavailable`. Each has `code` and `description`, and its message reads
+`masks: code: description`. `masks.has_code(error, "invalid_grant")` asks for the code. The
+description for a failure that page lists is the same in every SDK.
+
+`masks.web.Refusal` is raised by a guard that refused the request. Its `answer` holds the response.

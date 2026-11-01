@@ -54,7 +54,7 @@ def test_auth_refuses_an_origin_it_was_not_given(signed: masks.Client) -> None:
         httpx.Client(
             auth=auth, transport=httpx.MockTransport(lambda request: calls.append(request) or httpx.Response(200))
         ) as http,
-        pytest.raises(masks.ForeignOrigin),
+        pytest.raises(masks.Foreign),
     ):
         http.get("https://elsewhere.example/files")
 
@@ -265,15 +265,15 @@ def test_a_verifier_checks_the_token_itself(fake: Fake, issuer: masks.Issuer) ->
         "another audience": "that token was issued for another app",
         "another issuer": "that token was issued by another server",
         "expired": "that token has expired",
-        "no jti": "that token is missing a claim it needs",
-        "not a JWT": "that is not a signed JWT",
+        "no jti": "that token is missing jti",
+        "not a JWT": "that token is not a signed JWT",
     }
 
     for name, description in said.items():
         with pytest.raises(masks.InvalidToken) as raised:
             verifier.verify(refused[name])
 
-        assert str(raised.value) == f"masks: {description}", name
+        assert str(raised.value) == f"masks: invalid_token: {description}", name
 
 
 def test_an_unknown_key_refetches_the_keys_at_most_once_in_a_while(fake: Fake, issuer: masks.Issuer) -> None:
@@ -438,7 +438,7 @@ async def test_the_asgi_middleware(signed: masks.Client, issuer: masks.Issuer, f
     _, refused = await call(middleware, [(b"authorization", b"Bearer nonsense")])
     challenges = [value for name, value in refused["headers"] if name == b"www-authenticate"]
 
-    assert challenges[0] == b'Bearer error="invalid_token", error_description="that is not a signed JWT"'
+    assert challenges[0] == b'Bearer error="invalid_token", error_description="that token is not a signed JWT"'
 
 
 class Remembering:
@@ -511,7 +511,7 @@ def test_a_failing_replay_store_is_unavailable(signed: masks.Client, issuer: mas
     verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=Remembering(down))
     _, headers = bound_request(signed)
 
-    with pytest.raises(masks.Unavailable, match="could not say") as raised:
+    with pytest.raises(masks.Unavailable, match="could not be reached") as raised:
         verifier.authenticate("GET", TARGET, headers)
 
     assert raised.value.__cause__ is down

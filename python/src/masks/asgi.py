@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 from .dpop import DPOP
-from .errors import InvalidToken, MissingToken, Unavailable
+from .errors import InvalidToken, Unavailable
 from .verifier import PROOF_ALGORITHMS, AsyncVerifier
 
 Scope = MutableMapping[str, Any]
@@ -62,11 +62,8 @@ class Middleware:
 
         try:
             claims = await self.verifier.authenticate(method, requested_url(scope), headers)
-        except MissingToken as error:
-            await self._refuse(scope, send, str(error).removeprefix("masks: "), missing=True)
-            return
         except InvalidToken as error:
-            await self._refuse(scope, send, str(error).removeprefix("masks: "))
+            await self._refuse(scope, send, error.description, missing=error.missing)
             return
         except Unavailable:
             await self._unavailable(scope, send)
