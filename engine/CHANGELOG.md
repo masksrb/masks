@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.14.0](https://github.com/masksrb/masks/compare/masks-server-v0.13.0...masks-server-v0.14.0) (2026-11-01)
+
+
+### Features
+
+* **engine:** the console is a built-in client of each tenant, so a fresh browser is never asked to approve it, and the account page says remove access and a file ([e61ea67](https://github.com/masksrb/masks/commit/e61ea67276b9e7f342be1e6b078a923dac928c65))
+* **engine:** the sign-in, sign-up, setup, enrolment, consent, and handshake pages speak in plain words and show one choice at a time ([74e03c2](https://github.com/masksrb/masks/commit/74e03c206a7ee831dd6bb37c407e49168bfb1376))
+
+
+### Fixes
+
+* **engine:** the forward-auth preset, the SCIM metadata, the manage reference, and the parity table link to the guides at their /build/ addresses ([a4d4251](https://github.com/masksrb/masks/commit/a4d4251b860d85e0591d1afd3c62b2e3395264bd))
+
 ## [0.13.0](https://github.com/masksrb/masks/compare/masks-server-v0.12.0...masks-server-v0.13.0) (2026-10-31)
 
 
