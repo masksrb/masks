@@ -1,15 +1,15 @@
 import { type DpopKey, dpopProof, forgetDpopKey, heldDpopKey } from "./dpop.js";
+import { failure, Insecure, InvalidToken, Refused } from "./errors.js";
 import { type Jwk, verifyIdToken } from "./jwt.js";
 import { CLIENT_PATH, list } from "./metadata.js";
 import { challenge, method, random } from "./pkce.js";
-import {
-  type AvatarStyle,
-  type Avatars,
-  type Claims,
-  type Discovery,
-  masksError,
-  type Organization,
-  type Tokens,
+import type {
+  AvatarStyle,
+  Avatars,
+  Claims,
+  Discovery,
+  Organization,
+  Tokens,
 } from "./types.js";
 
 const PENDING = "masks:pending";
@@ -90,14 +90,13 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   const redirectUri = options.redirectUri ?? (here && `${here}/`);
 
   if (!globalThis.crypto?.subtle) {
-    throw masksError(
-      "insecure_context",
+    throw new Insecure(
       "serve the page over https, or from localhost, since the browser hides the cryptography a sign-in needs on any other http page",
     );
   }
 
   if (!clientId || !redirectUri) {
-    throw masksError(
+    throw new Refused(
       "invalid_request",
       "pass clientId and redirectUri when the client runs outside a browser",
     );
@@ -149,20 +148,19 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     });
 
     if (!response.ok) {
-      throw masksError(
-        "invalid_issuer",
-        `${issuer} answered ${response.status}`,
+      const { code, description } = failure(
+        "answered_status",
+        issuer,
         response.status,
       );
+
+      throw new Refused(code, description, { status: response.status });
     }
 
     const found = (await response.json()) as Discovery;
 
     if (found.issuer?.replace(/\/$/, "") !== issuer) {
-      throw masksError(
-        "invalid_issuer",
-        `${issuer} publishes a document naming ${found.issuer}`,
-      );
+      throw Refused.of("names_another", issuer, String(found.issuer));
     }
 
     document = found;
@@ -176,10 +174,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const { jwks_uri } = await discover();
 
     if (!jwks_uri) {
-      throw masksError(
-        "invalid_issuer",
-        `${issuer} publishes no jwks_uri, so an id token cannot be verified`,
-      );
+      throw Refused.of("publishes_nothing", issuer, "jwks_uri");
     }
 
     const response = await call(jwks_uri, {
@@ -188,11 +183,13 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     });
 
     if (!response.ok) {
-      throw masksError(
-        "invalid_issuer",
-        `${jwks_uri} answered ${response.status}`,
+      const { code, description } = failure(
+        "answered_status",
+        jwks_uri,
         response.status,
       );
+
+      throw new Refused(code, description, { status: response.status });
     }
 
     const found = (await response.json()) as { keys?: Jwk[] };
@@ -212,7 +209,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     if (found) return found;
     if (!refresh) return keyFor(kid, true);
 
-    throw masksError("invalid_token", `${issuer} publishes no key ${kid}`);
+    throw InvalidToken.of("no_key", issuer, kid);
   };
 
   const post = async (body: string[][]): Promise<Tokens> => {
@@ -235,15 +232,15 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     >;
 
     if (!response.ok) {
-      throw masksError(
-        payload.error ?? `http_${response.status}`,
-        payload.error_description,
-        response.status,
-      );
+      const { code, description } = payload.error
+        ? { code: payload.error, description: payload.error_description }
+        : failure("answered_status", token_endpoint, response.status);
+
+      throw new Refused(code, description, { status: response.status });
     }
 
     if (started !== generation) {
-      throw masksError(
+      throw new Refused(
         "invalid_grant",
         "the client signed out while this request was in flight",
       );
@@ -306,17 +303,11 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const { avatar_endpoint, avatar_styles_supported } = await discover();
 
     if (!avatar_endpoint) {
-      throw masksError(
-        "invalid_issuer",
-        `${issuer} publishes no avatar_endpoint`,
-      );
+      throw Refused.of("publishes_nothing", issuer, "avatar_endpoint");
     }
 
     if (avatar_styles_supported && !avatar_styles_supported.includes(style)) {
-      throw masksError(
-        "invalid_style",
-        `${issuer} does not serve ${style} avatars`,
-      );
+      throw Refused.of("no_avatars", issuer, style);
     }
 
     const base = `${avatar_endpoint}/${encodeURIComponent(subject)}/${style}`;
@@ -332,7 +323,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
   const renew = async (): Promise<Tokens> => {
     if (!held?.refresh_token) {
-      throw masksError("invalid_grant", "no refresh token is held");
+      throw Refused.of("no_refresh_token");
     }
 
     const previous = held.refresh_token;
@@ -419,32 +410,26 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       store.removeItem(PENDING);
 
       if (query.get("error")) {
-        throw masksError(
+        throw new Refused(
           query.get("error") as string,
           query.get("error_description") ?? undefined,
         );
       }
 
       if (!raw) {
-        throw masksError(
-          "invalid_state",
-          "this browser has no authorization in flight",
-        );
+        throw Refused.of("nothing_in_flight");
       }
 
       const waiting = JSON.parse(raw) as Pending;
 
       if (query.get("state") !== waiting.state) {
-        throw masksError(
-          "invalid_state",
-          "the callback did not match this browser",
-        );
+        throw Refused.of("state_mismatch");
       }
 
       const code = query.get("code");
 
       if (!code) {
-        throw masksError("invalid_request", "the callback carried no code");
+        throw Refused.of("no_callback_code");
       }
 
       const body = [
@@ -463,10 +448,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         if (!tokens.id_token) {
           clear();
 
-          throw masksError(
-            "invalid_token",
-            "an id token was asked for and the issuer returned none",
-          );
+          throw InvalidToken.of("no_id_token");
         }
 
         try {
@@ -487,9 +469,9 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         if (waiting.organization && named && named !== waiting.organization) {
           clear();
 
-          throw masksError(
-            "invalid_token",
-            `the id token does not name the organization ${waiting.organization}`,
+          throw InvalidToken.of(
+            "id_token_other_organization",
+            waiting.organization,
           );
         }
       }
@@ -603,10 +585,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       const { end_session_endpoint } = await discover();
 
       if (!end_session_endpoint) {
-        throw masksError(
-          "invalid_issuer",
-          `${issuer} publishes no end_session_endpoint`,
-        );
+        throw Refused.of("publishes_nothing", issuer, "end_session_endpoint");
       }
 
       const query = new URLSearchParams([["client_id", clientId]]);

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { createHash, createSign, generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import { createBrowserClient } from "../dist/browser.js";
+import { hasCode, MasksError, Refused } from "../dist/index.js";
 import { clientMetadata } from "../dist/metadata.js";
 import { challenge, encode, random } from "../dist/pkce.js";
-import { InvalidGrant, LoginRequired, MasksError } from "../dist/types.js";
 import { masks } from "../dist/vite.js";
 
 const ISSUER = "https://demo.auth.test";
@@ -245,7 +245,7 @@ test("a callback with nothing in flight is refused", async () => {
 
   await assert.rejects(
     () => subject.callback("https://app.test/callback?code=abc&state=any"),
-    (error) => error.code === "invalid_state",
+    (error) => error.code === "invalid_request",
   );
 });
 
@@ -510,7 +510,7 @@ test("an id token carrying another request's nonce is refused", async () => {
 
   await assert.rejects(
     () => subject.callback(`https://app.test/callback?code=a&state=${state}`),
-    (error) => error.code === "invalid_nonce",
+    (error) => error.code === "invalid_token",
   );
   assert.equal(subject.accessToken(), null);
   assert.equal(subject.identity(), null);
@@ -526,7 +526,7 @@ test("an id token carrying no nonce at all is refused", async () => {
 
   await assert.rejects(
     () => subject.callback(`https://app.test/callback?code=a&state=${state}`),
-    (error) => error.code === "invalid_nonce",
+    (error) => error.code === "invalid_token",
   );
 });
 
@@ -860,7 +860,7 @@ test("an error from the issuer arrives as its own kind", async () => {
         "https://app.test/callback?error=login_required&state=x",
       ),
     (error) =>
-      error instanceof LoginRequired &&
+      error instanceof Refused &&
       error instanceof MasksError &&
       error.code === "login_required",
   );
@@ -874,7 +874,10 @@ test("an error from the issuer arrives as its own kind", async () => {
 
   await assert.rejects(
     () => subject.callback(`https://app.test/callback?code=a&state=${state}`),
-    (error) => error instanceof InvalidGrant && error.name === "InvalidGrant",
+    (error) =>
+      error instanceof Refused &&
+      error.name === "Refused" &&
+      hasCode(error, "invalid_grant"),
   );
 });
 
@@ -978,7 +981,9 @@ test("a refresh masks refuses forgets the stored session", async () => {
 
   upstream.held.token = { error: "invalid_grant" };
   upstream.held.status = 400;
-  await assert.rejects(subject.refresh(), InvalidGrant);
+  await assert.rejects(subject.refresh(), (error) =>
+    hasCode(error, "invalid_grant"),
+  );
 
   assert.equal(subject.accessToken(), null);
   assert.equal(store.getItem("masks:session"), null);

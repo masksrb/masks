@@ -1,10 +1,5 @@
-import {
-  type Account,
-  type AvatarStyle,
-  masksError,
-  type Refusal,
-  type Status,
-} from "./types.js";
+import { failure, Refused } from "./errors.js";
+import type { Account, AvatarStyle, Refusal, Status } from "./types.js";
 
 export interface SessionOptions {
   basePath?: string;
@@ -103,11 +98,13 @@ export function createSession(options: SessionOptions = {}): SessionClient {
       };
     }
 
-    throw masksError(
-      "session_failed",
-      `the session endpoint answered ${response.status}`,
+    const { code, description } = failure(
+      "answered_status",
+      "the session endpoint",
       response.status,
     );
+
+    throw new Refused(code, description, { status: response.status });
   };
 
   const session = async (): Promise<Account | null> => {

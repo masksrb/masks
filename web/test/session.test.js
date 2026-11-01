@@ -69,7 +69,7 @@ test("any other failure does throw", async () => {
 
   await assert.rejects(
     () => subject.session(),
-    (error) => error.code === "session_failed" && error.status === 500,
+    (error) => error.code === "server_error" && error.status === 500,
   );
 });
 

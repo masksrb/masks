@@ -1,4 +1,5 @@
-import { type Claims, masksError } from "./types.js";
+import { InvalidToken } from "./errors.js";
+import type { Claims } from "./types.js";
 
 const HASHES: Record<string, string> = {
   RS256: "SHA-256",
@@ -38,7 +39,7 @@ function json(part: string): Record<string, unknown> {
   try {
     return JSON.parse(new TextDecoder().decode(bytes(part)));
   } catch {
-    throw masksError("invalid_token", "the id token is not a JWT");
+    throw InvalidToken.of("not_a_jwt");
   }
 }
 
@@ -55,25 +56,19 @@ export async function verifyIdToken(
   const [rawHeader, rawPayload, rawSignature, ...rest] = token.split(".");
 
   if (!rawHeader || !rawPayload || !rawSignature || rest.length > 0) {
-    throw masksError("invalid_token", "the id token is not a JWT");
+    throw InvalidToken.of("not_a_jwt");
   }
 
   const header = json(rawHeader);
 
   if (header.typ !== undefined && String(header.typ).toUpperCase() !== "JWT") {
-    throw masksError(
-      "invalid_token",
-      `the id token is typed ${header.typ}, which is not an id token`,
-    );
+    throw InvalidToken.of("wrong_type", String(header.typ), "JWT");
   }
 
   const hash = HASHES[String(header.alg)];
 
   if (!hash) {
-    throw masksError(
-      "invalid_token",
-      `the id token is signed with ${header.alg}, which this client cannot verify`,
-    );
+    throw InvalidToken.of("not_an_algorithm", String(header.alg));
   }
 
   const key = await crypto.subtle.importKey(
@@ -92,39 +87,30 @@ export async function verifyIdToken(
   );
 
   if (!signed) {
-    throw masksError("invalid_token", "the id token signature does not verify");
+    throw InvalidToken.of("not_signed_by", issuer);
   }
 
   const claims = json(rawPayload) as Claims;
   const now = Math.floor(Date.now() / 1000);
 
   if (String(claims.iss ?? "").replace(/\/$/, "") !== issuer) {
-    throw masksError(
-      "invalid_token",
-      `the id token was issued by ${claims.iss}`,
-    );
+    throw InvalidToken.of("other_issuer");
   }
 
   if (!audiences(claims.aud).includes(audience)) {
-    throw masksError(
-      "invalid_token",
-      "the id token was issued for another client",
-    );
+    throw InvalidToken.of("other_audience");
   }
 
   if (typeof claims.exp === "number" && now - leeway >= claims.exp) {
-    throw masksError("invalid_token", "the id token has expired");
+    throw InvalidToken.of("expired");
   }
 
   if (typeof claims.iat === "number" && claims.iat - leeway > now) {
-    throw masksError("invalid_token", "the id token was issued in the future");
+    throw InvalidToken.of("issued_in_future");
   }
 
   if (claims.nonce !== nonce) {
-    throw masksError(
-      "invalid_nonce",
-      "the id token was issued for another request",
-    );
+    throw InvalidToken.of("id_token_other_sign_in");
   }
 
   return claims;

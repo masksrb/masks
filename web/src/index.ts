@@ -7,6 +7,18 @@ export type {
   LogoutOptions,
 } from "./browser.js";
 export { createBrowserClient } from "./browser.js";
+export {
+  type Described,
+  failure,
+  hasCode,
+  Insecure,
+  InvalidToken,
+  isMasksError,
+  MasksError,
+  Refused,
+  type RefusedOptions,
+  saying,
+} from "./errors.js";
 export type { Jwk, VerifyOptions } from "./jwt.js";
 export { verifyIdToken } from "./jwt.js";
 export type { ClientMetadataOptions } from "./metadata.js";
@@ -28,14 +40,4 @@ export type {
   Status,
   Tenant,
   Tokens,
-} from "./types.js";
-export {
-  AccessDenied,
-  ConsentRequired,
-  InvalidGrant,
-  InvalidIssuer,
-  InvalidToken,
-  LoginRequired,
-  MasksError,
-  masksError,
 } from "./types.js";
