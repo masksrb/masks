@@ -5,7 +5,8 @@ template: splash
 prev: false
 next: false
 hero:
-  tagline: Self-hosted auth for the open&nbsp;web.
+  title: One sign-in for all of your apps.
+  tagline: masks is a sign-in server you run yourself. People sign in once, with a passkey or a password, and every app you connect trusts it.
   image:
     file: ../../assets/masks.svg
     alt: The masks rose window
@@ -20,7 +21,7 @@ hero:
 
 <div class="not-content home">
   <section class="doors" aria-label="Where to start">
-    <div class="door" style="--hue: var(--glass-amber)">
+    <div class="door">
       <h2><a href="/use/">Use masks</a></h2>
       <p>Run masks, invite people, and connect the apps you already have, in the words you see on the screen.</p>
       <ul>
@@ -29,7 +30,7 @@ hero:
         <li><a href="/use/connect-an-app/">Connect an app from the known list</a></li>
       </ul>
     </div>
-    <div class="door" style="--hue: var(--glass-cyan)">
+    <div class="door">
       <h2><a href="/build/">Build with masks</a></h2>
       <p>Connect your own apps, run masks in production, and read the specifications, the manage API, and the SDKs.</p>
       <ul>
@@ -41,29 +42,29 @@ hero:
   </section>
 
   <section class="does">
-    <h2 class="eyebrow">Features</h2>
+    <h2>What it does</h2>
     <div class="does-grid">
-      <a class="feat" href="/reference/specs/" style="--hue: var(--glass-ember)">
+      <a class="feat" href="/reference/specs/">
         <strong>OpenID Connect and OAuth 2.0</strong>
         <span>Passes four OpenID Foundation certification plans with no failures.</span>
       </a>
-      <a class="feat" href="/build/core-concepts/#tenants" style="--hue: var(--glass-gold)">
+      <a class="feat" href="/build/core-concepts/#tenants">
         <strong>Tenants</strong>
         <span>Each tenant has its own actors, clients, and signing keys.</span>
       </a>
-      <a class="feat" href="/use/signing-in/" style="--hue: var(--glass-emerald)">
+      <a class="feat" href="/use/signing-in/">
         <strong>Passkeys and second factors</strong>
         <span>Passkeys, authenticator apps, backup codes, and sign-in codes by email or text message.</span>
       </a>
-      <a class="feat" href="/build/sso-saml/" style="--hue: var(--glass-sky)">
+      <a class="feat" href="/build/sso-saml/">
         <strong>Single sign-on</strong>
         <span>Sign in with Google, Microsoft, or any OpenID Connect or SAML provider.</span>
       </a>
-      <a class="feat" href="/use/organizations/" style="--hue: var(--glass-cobalt)">
+      <a class="feat" href="/use/organizations/">
         <strong>Organizations</strong>
         <span>Each organization has its own members, roles, and sign-in policy.</span>
       </a>
-      <a class="feat" href="/build/event-streams/" style="--hue: var(--glass-violet)">
+      <a class="feat" href="/build/event-streams/">
         <strong>Event streams</strong>
         <span>masks records each sign-in and change as an event, and sends events to a URL you choose.</span>
       </a>
