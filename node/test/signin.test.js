@@ -5,10 +5,10 @@ import {
   DelegationRefused,
   Delegations,
   DelegationUnavailable,
-  ForbiddenError,
+  Forbidden,
   Handshake,
   hasCode,
-  InvalidTokenError,
+  InvalidToken,
   Issuer,
   member,
   organizationKey,
@@ -119,7 +119,7 @@ test("a sign-in refuses what did not come back from this request", async () => {
 
   await assert.rejects(
     client.complete(fake.authorize(again.url), again),
-    (error) => hasCode(error, "invalid_nonce"),
+    (error) => hasCode(error, "invalid_token"),
   );
 });
 
@@ -152,7 +152,7 @@ test("an id token for another client is refused", async () => {
   ]) {
     await assert.rejects(
       client.identity(await fake.issue(claims, typ)),
-      InvalidTokenError,
+      InvalidToken,
       name,
     );
   }
@@ -177,7 +177,7 @@ test("a sign-in older than the max_age the app asked for is refused", async () =
     if (accepted) {
       assert.equal((await completing).claims.sub, "ada", name);
     } else {
-      await assert.rejects(completing, InvalidTokenError, name);
+      await assert.rejects(completing, InvalidToken, name);
     }
 
     const relaxed = await client.start({ redirectURI });
@@ -253,7 +253,7 @@ test("a logout token is checked before it ends anything", async () => {
   };
 
   for (const [name, token] of Object.entries(cases)) {
-    await assert.rejects(client.logoutToken(token), InvalidTokenError, name);
+    await assert.rejects(client.logoutToken(token), InvalidToken, name);
   }
 });
 
@@ -453,8 +453,7 @@ test("organizations and roles are read from claims", () => {
 
   assert.throws(
     () => member(claims, ["owner"]),
-    (error) =>
-      error instanceof ForbiddenError && error.code === "insufficient_role",
+    (error) => error instanceof Forbidden && error.code === "insufficient_role",
   );
   assert.throws(
     () => member(claims, [], "globex"),

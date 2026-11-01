@@ -78,7 +78,7 @@ cookie to the page. Without the proxy, `requireAuth` sends a person whose token 
 `/auth/refresh`.
 
 `requireAuth` sends a signed-out person to sign in, and asks masks once for a privilege's missing
-scopes. It throws a `ForbiddenError` for a privilege the person does not hold, which the nearest
+scopes. It throws a `Forbidden` for a privilege the person does not hold, which the nearest
 `error.tsx` shows.
 
 After a sign-in, `requireAuth` sends the person back to the path the proxy recorded. Without the

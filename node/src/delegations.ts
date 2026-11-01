@@ -4,7 +4,14 @@ import {
   constantEqual,
   UPSTREAM_ACCESS_TOKEN_TYPE,
 } from "./client.js";
-import { InvalidTokenError, MasksError } from "./errors.js";
+import {
+  DelegationRefused,
+  DelegationUnavailable,
+  InvalidToken,
+  Refused,
+} from "./errors.js";
+
+export { DelegationRefused, DelegationUnavailable } from "./errors.js";
 
 export const DELEGATION_SCOPE = "masks:delegate:";
 
@@ -19,45 +26,6 @@ const REFUSALS = new Set([
   "consent_required",
   "invalid_scope",
 ]);
-
-export class DelegationRefused extends Error {
-  readonly code: string;
-  readonly description?: string;
-  readonly secret?: string;
-
-  constructor(
-    code: string,
-    description?: string,
-    options: { secret?: string; cause?: unknown } = {},
-  ) {
-    super(description ? `masks: ${code}: ${description}` : `masks: ${code}`, {
-      cause: options.cause,
-    });
-    this.name = "DelegationRefused";
-    this.code = code;
-    this.description = description;
-    this.secret = options.secret;
-  }
-
-  get signedInAgain(): boolean {
-    return (
-      this.code === "login_required" || this.code === "interaction_required"
-    );
-  }
-}
-
-export class DelegationUnavailable extends Error {
-  readonly secret?: string;
-
-  constructor(
-    message: string,
-    options: { secret?: string; cause?: unknown } = {},
-  ) {
-    super(`masks: unavailable: ${message}`, { cause: options.cause });
-    this.name = "DelegationUnavailable";
-    this.secret = options.secret;
-  }
-}
 
 export interface DelegationStart extends AuthorizationStart {
   provider: string;
@@ -163,10 +131,7 @@ export class Delegations {
     }
 
     if (!constantEqual(params.get("state") ?? "", started?.state ?? "")) {
-      throw new DelegationRefused(
-        "invalid_state",
-        "the state did not match the one this connection started with",
-      );
+      throw DelegationRefused.of("state_mismatch");
     }
 
     const { token, claims } = await answered(() =>
@@ -177,17 +142,11 @@ export class Delegations {
     );
 
     if (!held) {
-      throw new DelegationRefused(
-        "access_denied",
-        `masks connected nothing for ${started.provider}`,
-      );
+      throw DelegationRefused.of("nothing_connected", started.provider);
     }
 
     if (!token.refresh_token) {
-      throw new DelegationRefused(
-        "invalid_grant",
-        "masks issued no refresh token to keep the connection with",
-      );
+      throw DelegationRefused.of("no_refresh_for_connection");
     }
 
     return {
@@ -260,7 +219,7 @@ async function answered<T>(
   try {
     return await work();
   } catch (error) {
-    if (error instanceof MasksError) {
+    if (error instanceof Refused) {
       if (error.code === "invalid_client") throw error;
 
       if (
@@ -281,8 +240,8 @@ async function answered<T>(
       });
     }
 
-    if (error instanceof InvalidTokenError) {
-      throw new DelegationRefused("invalid_token", error.message, {
+    if (error instanceof InvalidToken) {
+      throw new DelegationRefused(error.code, error.description, {
         secret,
         cause: error,
       });

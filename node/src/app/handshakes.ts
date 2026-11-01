@@ -1,4 +1,4 @@
-import { isMasksError, MasksError, UnavailableError } from "../errors.js";
+import { isRefused, Refused, Unavailable } from "../errors.js";
 import { type Handshake, originOf } from "../handshake.js";
 import type { Issuer } from "../issuer.js";
 import type { CredentialStore } from "./credentials.js";
@@ -245,8 +245,7 @@ export class Handshakes {
       return true;
     } catch (error) {
       return !(
-        error instanceof MasksError &&
-        [401, 403, 404].includes(error.status ?? 0)
+        error instanceof Refused && [401, 403, 404].includes(error.status ?? 0)
       );
     }
   }
@@ -284,8 +283,8 @@ export class Handshakes {
       try {
         await (await this.#host.issuer(request)).deleteRegistration(held);
       } catch (error) {
-        if (!isMasksError(error) || (error.status ?? 500) >= 500) {
-          throw new UnavailableError(
+        if (!isRefused(error) || (error.status ?? 500) >= 500) {
+          throw new Unavailable(
             "masks could not be reached to delete this app's registration",
             { cause: error },
           );

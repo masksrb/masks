@@ -1,5 +1,5 @@
 import { constantEqual } from "./client.js";
-import { MasksError } from "./errors.js";
+import { Refused } from "./errors.js";
 import type { Issuer } from "./issuer.js";
 import { random } from "./key.js";
 import type { Registration } from "./registration.js";
@@ -128,20 +128,17 @@ export class Handshake {
     const error = params.get("error");
 
     if (error) {
-      throw new MasksError(error, params.get("error_description") ?? undefined);
+      throw new Refused(error, params.get("error_description") ?? undefined);
     }
 
     if (!constantEqual(params.get("state") ?? "", state ?? "")) {
-      throw new MasksError(
-        "invalid_state",
-        "the handshake did not match this browser",
-      );
+      throw Refused.of("state_mismatch");
     }
 
     const named = params.get("iss");
 
     if (named && untrailed(named) !== this.issuer.url) {
-      throw new MasksError(
+      throw new Refused(
         "invalid_issuer",
         `that came back from ${named}, and this app shakes hands with ${this.issuer.url}`,
       );
@@ -152,7 +149,7 @@ export class Handshake {
 
   redeem(token: string): Promise<Registration> {
     if (!token) {
-      throw new MasksError(
+      throw new Refused(
         "invalid_request",
         "the handshake came back without a token",
       );

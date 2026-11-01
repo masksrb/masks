@@ -1,6 +1,6 @@
 import { constantEqual, type Token } from "../client.js";
 import type { PendingDelegation } from "../delegations.js";
-import { UnavailableError } from "../errors.js";
+import { failure, Unavailable } from "../errors.js";
 import { random } from "../key.js";
 import {
   mergeCookies,
@@ -249,7 +249,7 @@ export class Sessions {
     try {
       held = await store.get(await keyed("session", id));
     } catch (error) {
-      throw new UnavailableError("the session store could not be reached", {
+      throw new Unavailable(failure("store_unreachable").description, {
         cause: error,
       });
     }

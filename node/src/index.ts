@@ -33,8 +33,6 @@ export { memoryStore, replayStore, type Store } from "./app/stores.js";
 export {
   type Avatars,
   avatarsOf,
-  type ForbiddenCode,
-  ForbiddenError,
   member,
   type Organization,
   organizationKey,
@@ -79,20 +77,29 @@ export {
 export {
   type Connection,
   DELEGATION_SCOPE,
-  DelegationRefused,
   type DelegationStart,
   Delegations,
-  DelegationUnavailable,
   type Upstream,
 } from "./delegations.js";
 export { DPOP, proof } from "./dpop.js";
 export {
-  ForeignError,
+  DelegationRefused,
+  DelegationUnavailable,
+  type Described,
+  Forbidden,
+  Foreign,
+  failure,
   hasCode,
-  InsecureError,
-  InvalidTokenError,
+  Insecure,
+  InvalidToken,
+  isMasksError,
+  isRefused,
   MasksError,
-  UnavailableError,
+  Refused,
+  type RefusedOptions,
+  rejected,
+  saying,
+  Unavailable,
 } from "./errors.js";
 export {
   Handshake,

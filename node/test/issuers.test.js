@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, mock, test } from "node:test";
 import { IssuerCache } from "../dist/app/issuers.js";
-import { Issuer, memoryStore, UnavailableError } from "../dist/index.js";
+import { Issuer, memoryStore, Unavailable } from "../dist/index.js";
 import { Fake } from "./fake.js";
 
 const closers = [];
@@ -118,7 +118,7 @@ test("while masks is down, a known key keeps checking tokens and the keys are no
     assert.equal((await issuer.key(kid)).kid, kid);
     assert.equal(fetched(), 2);
     assert.equal((await issuer.key(kid)).kid, kid);
-    await assert.rejects(issuer.key("unknown"), UnavailableError);
+    await assert.rejects(issuer.key("unknown"), Unavailable);
     assert.equal(fetched(), 2);
 
     mock.timers.tick(60 * 60 * 1000);

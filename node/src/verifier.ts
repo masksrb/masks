@@ -6,9 +6,8 @@ import {
   type JWTPayload,
   jwtVerify,
 } from "jose";
-import { ForbiddenError } from "./claims.js";
 import { DPOP, PROOF_TYPE, type ProofClaims, tokenHash } from "./dpop.js";
-import { InvalidTokenError, UnavailableError } from "./errors.js";
+import { Forbidden, failure, InvalidToken, Unavailable } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
 import { unverified } from "./jwt.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
@@ -95,7 +94,7 @@ export class Verifier {
         },
       ));
     } catch (error) {
-      throw unverified(error);
+      throw unverified(error, this.issuer, { token, typ: ACCESS_TOKEN_TYPE });
     }
 
     return payload as Claims;
@@ -138,12 +137,10 @@ export class Verifier {
     let description: string;
     let scope: string | undefined;
 
-    if (error instanceof InvalidTokenError) {
-      code = error.missing ? "" : "invalid_token";
-      description = error.missing
-        ? ""
-        : error.message.replace(/^masks: invalid token: /, "");
-    } else if (error instanceof ForbiddenError) {
+    if (error instanceof InvalidToken) {
+      code = error.missing ? "" : error.code;
+      description = error.missing ? "" : error.description;
+    } else if (error instanceof Forbidden) {
       code = error.code;
       description = error.description;
       scope = error.scope;
@@ -170,14 +167,14 @@ export class Verifier {
     status: 401 | 403 | 503;
     headers: Record<string, string[]>;
   } {
-    if (error instanceof InvalidTokenError) {
+    if (error instanceof InvalidToken) {
       return {
         status: 401,
         headers: { "www-authenticate": this.challengeHeaders(error) },
       };
     }
 
-    if (error instanceof ForbiddenError) {
+    if (error instanceof Forbidden) {
       return {
         status: 403,
         headers: { "www-authenticate": this.challengeHeaders(error) },
@@ -219,9 +216,7 @@ export class Verifier {
     const token = space > 0 ? authorization.slice(space + 1).trim() : "";
 
     if (!scheme || !token) {
-      throw new InvalidTokenError("the request carries no token", {
-        missing: true,
-      });
+      throw InvalidToken.of("no_token");
     }
 
     const claims = await this.verify(token);
@@ -243,12 +238,10 @@ export class Verifier {
     }
 
     if (bearer) {
-      throw new InvalidTokenError(
-        "that token is held to a key and is presented with DPoP",
-      );
+      throw InvalidToken.of("bound_as_bearer");
     }
 
-    throw new InvalidTokenError("that token is presented as a Bearer token");
+    throw InvalidToken.of("unbound_as_dpop");
   }
 
   async #proven(
@@ -259,7 +252,7 @@ export class Verifier {
     presented: string | null,
   ): Promise<void> {
     if (!presented || presented.includes(",")) {
-      throw new InvalidTokenError("exactly one DPoP proof is required");
+      throw InvalidToken.of("one_proof");
     }
 
     let payload: JWTPayload;
@@ -272,9 +265,7 @@ export class Verifier {
         { algorithms: PROOF_ALGORITHMS, typ: PROOF_TYPE },
       ));
     } catch {
-      throw new InvalidTokenError(
-        "that proof was not signed by the public key it carries",
-      );
+      throw InvalidToken.of("proof_unsigned");
     }
 
     const claims = payload as unknown as ProofClaims;
@@ -283,23 +274,19 @@ export class Verifier {
     try {
       carried = await calculateJwkThumbprint(header.jwk as JWK, "sha256");
     } catch {
-      throw new InvalidTokenError(
-        "that proof carries a key this API cannot read",
-      );
+      throw InvalidToken.of("proof_key_unreadable");
     }
 
     if (!same(carried, thumbprint)) {
-      throw new InvalidTokenError(
-        "that proof was signed by another key than the token is held to",
-      );
+      throw InvalidToken.of("proof_other_key");
     }
 
     if (String(claims.htm ?? "").toUpperCase() !== method.toUpperCase()) {
-      throw new InvalidTokenError("that proof was made for another method");
+      throw InvalidToken.of("proof_other_method");
     }
 
     if (!sameTarget(String(claims.htu ?? ""), target)) {
-      throw new InvalidTokenError("that proof was made for another URL");
+      throw InvalidToken.of("proof_other_url");
     }
 
     const now = Date.now() / 1000;
@@ -309,19 +296,19 @@ export class Verifier {
       now - claims.iat > PROOF_WINDOW + LEEWAY ||
       claims.iat - now > LEEWAY
     ) {
-      throw new InvalidTokenError("that proof was not made just now");
+      throw InvalidToken.of("proof_not_now");
     }
 
     if (!same(String(claims.ath ?? ""), await tokenHash(token))) {
-      throw new InvalidTokenError("that proof was made for another token");
+      throw InvalidToken.of("proof_other_token");
     }
 
     if (typeof claims.jti !== "string" || claims.jti === "") {
-      throw new InvalidTokenError("that proof carries no jti");
+      throw InvalidToken.of("proof_no_jti");
     }
 
     if (!(await this.#first(`${thumbprint}:${claims.jti}`))) {
-      throw new InvalidTokenError("that proof has already been used");
+      throw InvalidToken.of("proof_replayed");
     }
   }
 
@@ -331,15 +318,13 @@ export class Verifier {
     try {
       answer = await this.replay.first(key, REMEMBERED);
     } catch (error) {
-      throw new UnavailableError("the replay store could not be reached", {
+      throw new Unavailable(failure("replay_store_unreachable").description, {
         cause: error,
       });
     }
 
     if (typeof answer !== "boolean") {
-      throw new UnavailableError(
-        `the replay store answered ${typeof answer} instead of true or false`,
-      );
+      throw Unavailable.of("replay_store_answer");
     }
 
     return answer;

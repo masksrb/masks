@@ -37,7 +37,7 @@ import {
 import { Sealer } from "./app/seal.js";
 import { claim, fresh, keep, now, pick } from "./app/session.js";
 import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
-import { avatarsOf, ForbiddenError, organizationKey } from "./claims.js";
+import { avatarsOf, organizationKey } from "./claims.js";
 import { type Client, constantEqual, scopes as scopesOf } from "./client.js";
 import {
   type Connection,
@@ -48,10 +48,11 @@ import {
   pendingFor,
 } from "./delegations.js";
 import {
-  InvalidTokenError,
-  isMasksError,
-  MasksError,
-  UnavailableError,
+  Forbidden,
+  InvalidToken,
+  isRefused,
+  Refused,
+  Unavailable,
 } from "./errors.js";
 import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
@@ -475,7 +476,7 @@ export class MasksAuth {
           return text(404, "not found", []);
       }
     } catch (error) {
-      if (isMasksError(error)) {
+      if (isRefused(error)) {
         return errorResponse(
           request,
           400,
@@ -484,7 +485,7 @@ export class MasksAuth {
         );
       }
 
-      if (error instanceof UnavailableError || isNetwork(error)) {
+      if (error instanceof Unavailable || isNetwork(error)) {
         return errorResponse(
           request,
           503,
@@ -526,10 +527,7 @@ export class MasksAuth {
     if (asked.length === 0 && first) masked.member(first);
 
     if (askedBefore((await cookies()).get(STEPPED_COOKIE)?.value, asked)) {
-      throw new ForbiddenError(
-        "insufficient_scope",
-        `masks did not grant ${asked.join(", ")}`,
-      );
+      throw Forbidden.of("not_granted", asked.join(", "));
     }
 
     return navigate(this.signInPath({ returnTo: path, privilege: asked }));
@@ -566,10 +564,7 @@ export class MasksAuth {
     const client = await this.#client(request);
 
     if (!client) {
-      throw new MasksError(
-        "handshake_required",
-        "this app has not shaken hands with masks",
-      );
+      throw Refused.of("not_connected", "masks");
     }
 
     return new Delegations(client, redirectURI);
@@ -802,7 +797,7 @@ export class MasksAuth {
     const client = await this.#client();
 
     if (!client) {
-      throw new UnavailableError("this app is not connected to masks");
+      throw new Unavailable("this app is not connected to masks");
     }
 
     const resource = this.#resource();
@@ -1256,7 +1251,7 @@ export class MasksAuth {
     try {
       logout = await client.logoutToken(token);
     } catch (error) {
-      if (error instanceof InvalidTokenError) return refuse(error.message);
+      if (error instanceof InvalidToken) return refuse(error.message);
 
       throw error;
     }
@@ -1472,5 +1467,5 @@ const nextServer = lazy(() => import("next/server"));
 const nextAuthJWT = lazy(() => import("next-auth/jwt"));
 
 export { Masked, type MaskedJSON } from "./app/masked.js";
-export { ForbiddenError } from "./claims.js";
+export { Forbidden } from "./errors.js";
 export { PATH_HEADER };

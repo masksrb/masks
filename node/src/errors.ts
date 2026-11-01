@@ -1,3 +1,36 @@
+import { FAILURES, type Failure } from "./failures.js";
+
+export interface Described {
+  code: string;
+  description: string;
+}
+
+export interface RefusedOptions {
+  uri?: string;
+  status?: number;
+  cause?: unknown;
+}
+
+export function failure(key: Failure, ...values: unknown[]): Described {
+  const [code, template] = FAILURES[key];
+  let index = 0;
+
+  return {
+    code,
+    description: template.replaceAll(/\{[a-z_]+\}/g, () =>
+      String(values[index++]),
+    ),
+  };
+}
+
+export function saying(key: Failure, ...values: unknown[]): string {
+  return failure(key, ...values).description;
+}
+
+function worded(code: string, description?: string): string {
+  return description ? `masks: ${code}: ${description}` : `masks: ${code}`;
+}
+
 export class MasksError extends Error {
   readonly code: string;
   readonly description?: string;
@@ -7,9 +40,9 @@ export class MasksError extends Error {
   constructor(
     code: string,
     description?: string,
-    options: { uri?: string; status?: number } = {},
+    options: RefusedOptions = {},
   ) {
-    super(description ? `masks: ${code}: ${description}` : `masks: ${code}`);
+    super(worded(code, description), { cause: options.cause });
     this.name = "MasksError";
     this.code = code;
     this.description = description;
@@ -18,57 +51,182 @@ export class MasksError extends Error {
   }
 }
 
-export class InvalidTokenError extends Error {
+export class Refused extends MasksError {
+  constructor(
+    code: string,
+    description?: string,
+    options: RefusedOptions = {},
+  ) {
+    super(code, description, options);
+    this.name = "Refused";
+  }
+
+  static of(key: Failure, ...values: unknown[]): Refused {
+    const { code, description } = failure(key, ...values);
+
+    return new Refused(code, description);
+  }
+}
+
+export class InvalidToken extends MasksError {
+  declare readonly description: string;
   readonly missing: boolean;
 
   constructor(
-    message: string,
-    options?: { cause?: unknown; missing?: boolean },
+    description: string,
+    options: { code?: string; missing?: boolean; cause?: unknown } = {},
   ) {
-    super(`masks: invalid token: ${message}`, { cause: options?.cause });
-    this.name = "InvalidTokenError";
-    this.missing = options?.missing ?? false;
+    super(options.code ?? "invalid_token", description, {
+      cause: options.cause,
+    });
+    this.name = "InvalidToken";
+    this.missing = options.missing ?? false;
+  }
+
+  static of(key: Failure, ...values: unknown[]): InvalidToken {
+    const { code, description } = failure(key, ...values);
+
+    return new InvalidToken(description, { code, missing: key === "no_token" });
   }
 }
 
-export class UnavailableError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(`masks: unavailable: ${message}`, options);
-    this.name = "UnavailableError";
+export class Forbidden extends MasksError {
+  declare readonly description: string;
+  readonly scope?: string;
+
+  constructor(
+    code: string,
+    description: string,
+    options: { scope?: string } = {},
+  ) {
+    super(code, description);
+    this.name = "Forbidden";
+    this.scope = options.scope;
+  }
+
+  static of(key: Failure, ...values: unknown[]): Forbidden {
+    const { code, description } = failure(key, ...values);
+
+    return new Forbidden(code, description);
   }
 }
 
-export class InsecureError extends Error {
-  constructor(target: string) {
-    super(`masks: plain http is allowed only on this machine: ${target}`);
-    this.name = "InsecureError";
+export class Unavailable extends MasksError {
+  declare readonly description: string;
+
+  constructor(description: string, options: { cause?: unknown } = {}) {
+    super("temporarily_unavailable", description, { cause: options.cause });
+    this.name = "Unavailable";
+  }
+
+  static of(key: Failure, ...values: unknown[]): Unavailable {
+    return new Unavailable(failure(key, ...values).description);
   }
 }
 
-export class ForeignError extends Error {
-  constructor(message: string) {
-    super(`masks: that URL belongs to another origin: ${message}`);
-    this.name = "ForeignError";
+export class Insecure extends MasksError {
+  declare readonly description: string;
+
+  constructor(description: string) {
+    super("insecure_url", description);
+    this.name = "Insecure";
   }
+
+  static of(key: Failure, ...values: unknown[]): Insecure {
+    return new Insecure(failure(key, ...values).description);
+  }
+}
+
+export class Foreign extends MasksError {
+  declare readonly description: string;
+
+  constructor(description: string) {
+    super("foreign_origin", description);
+    this.name = "Foreign";
+  }
+
+  static of(key: Failure, ...values: unknown[]): Foreign {
+    return new Foreign(failure(key, ...values).description);
+  }
+}
+
+export class DelegationRefused extends MasksError {
+  readonly secret?: string;
+
+  constructor(
+    code: string,
+    description?: string,
+    options: { secret?: string; status?: number; cause?: unknown } = {},
+  ) {
+    super(code, description, { status: options.status, cause: options.cause });
+    this.name = "DelegationRefused";
+    this.secret = options.secret;
+  }
+
+  get signedInAgain(): boolean {
+    return (
+      this.code === "login_required" || this.code === "interaction_required"
+    );
+  }
+
+  static of(key: Failure, ...values: unknown[]): DelegationRefused {
+    const { code, description } = failure(key, ...values);
+
+    return new DelegationRefused(code, description);
+  }
+}
+
+export class DelegationUnavailable extends MasksError {
+  declare readonly description: string;
+  readonly secret?: string;
+
+  constructor(
+    description: string,
+    options: { secret?: string; cause?: unknown } = {},
+  ) {
+    super("temporarily_unavailable", description, { cause: options.cause });
+    this.name = "DelegationUnavailable";
+    this.secret = options.secret;
+  }
+
+  static of(key: Failure, ...values: unknown[]): DelegationUnavailable {
+    return new DelegationUnavailable(failure(key, ...values).description);
+  }
+}
+
+const KINDS = new Set([
+  "MasksError",
+  "Refused",
+  "InvalidToken",
+  "Forbidden",
+  "Unavailable",
+  "Insecure",
+  "Foreign",
+  "DelegationRefused",
+  "DelegationUnavailable",
+]);
+
+function coded(error: unknown): error is Error & { code: string } {
+  return (
+    error instanceof Error &&
+    typeof (error as { code?: unknown }).code === "string"
+  );
+}
+
+export function isMasksError(error: unknown): error is MasksError {
+  return error instanceof MasksError || (coded(error) && KINDS.has(error.name));
+}
+
+export function isRefused(error: unknown): error is Refused {
+  return error instanceof Refused || (coded(error) && error.name === "Refused");
 }
 
 export function hasCode(error: unknown, code: string): boolean {
   return isMasksError(error) && error.code === code;
 }
 
-export function isMasksError(error: unknown): error is MasksError {
-  return (
-    error instanceof MasksError ||
-    (error instanceof Error &&
-      error.name === "MasksError" &&
-      typeof (error as { code?: unknown }).code === "string")
-  );
-}
-
 export function rejected(error: unknown): boolean {
-  return (
-    isMasksError(error) && (error.status ?? 0) < 500 && error.status !== 429
-  );
+  return isRefused(error) && (error.status ?? 0) < 500 && error.status !== 429;
 }
 
 export const READ_LIMIT = 1 << 20;
@@ -78,10 +236,7 @@ export async function bounded(response: Response): Promise<string> {
 
   if (declared > READ_LIMIT) {
     await response.body?.cancel();
-    throw new MasksError(
-      "server_error",
-      `${redacted(response.url)} answered with more than a megabyte`,
-    );
+    throw Refused.of("too_large", redacted(response.url));
   }
 
   if (!response.body) return "";
@@ -98,10 +253,7 @@ export async function bounded(response: Response): Promise<string> {
 
     if (size > READ_LIMIT) {
       await reader.cancel();
-      throw new MasksError(
-        "server_error",
-        `${redacted(response.url)} answered with more than a megabyte`,
-      );
+      throw Refused.of("too_large", redacted(response.url));
     }
 
     chunks.push(value);
@@ -118,7 +270,7 @@ export async function bounded(response: Response): Promise<string> {
   return new TextDecoder().decode(joined);
 }
 
-export async function refused(response: Response): Promise<MasksError> {
+export async function refused(response: Response): Promise<Refused> {
   let body: Record<string, unknown> = {};
 
   try {
@@ -128,14 +280,16 @@ export async function refused(response: Response): Promise<MasksError> {
   }
 
   if (typeof body.error !== "string" || body.error === "") {
-    return new MasksError(
-      "server_error",
-      `${redacted(response.url)} answered ${response.status}`,
-      { status: response.status },
+    const { code, description } = failure(
+      "answered_status",
+      redacted(response.url),
+      response.status,
     );
+
+    return new Refused(code, description, { status: response.status });
   }
 
-  return new MasksError(
+  return new Refused(
     body.error,
     typeof body.error_description === "string"
       ? body.error_description
@@ -157,10 +311,7 @@ export async function decoded<T>(response: Response): Promise<T> {
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new MasksError(
-      "server_error",
-      `${redacted(response.url)} answered with something other than JSON`,
-    );
+    throw Refused.of("not_json", redacted(response.url));
   }
 }
 

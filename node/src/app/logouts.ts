@@ -1,4 +1,4 @@
-import { UnavailableError } from "../errors.js";
+import { failure, Unavailable } from "../errors.js";
 import type { LogoutToken } from "../idtoken.js";
 import { keyed, type Store } from "./stores.js";
 
@@ -70,8 +70,8 @@ export async function departed(
   return ended.some((at) => at !== undefined && Number(at) >= since);
 }
 
-function unreachable(error: unknown): UnavailableError {
-  return new UnavailableError("the store could not be reached", {
+function unreachable(error: unknown): Unavailable {
+  return new Unavailable(failure("store_unreachable").description, {
     cause: error,
   });
 }

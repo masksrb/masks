@@ -2,10 +2,10 @@ import { organizationKey } from "./claims.js";
 import { DPOP, proof } from "./dpop.js";
 import {
   decoded,
-  ForeignError,
+  Foreign,
   hasCode,
-  InvalidTokenError,
-  MasksError,
+  InvalidToken,
+  Refused,
   refused,
 } from "./errors.js";
 import {
@@ -277,20 +277,17 @@ export class Client {
     const error = params.get("error");
 
     if (error) {
-      throw new MasksError(error, params.get("error_description") ?? undefined);
+      throw new Refused(error, params.get("error_description") ?? undefined);
     }
 
     if (!constantEqual(params.get("state") ?? "", pending?.state ?? "")) {
-      throw new MasksError(
-        "invalid_state",
-        "that sign-in was not started by this browser",
-      );
+      throw Refused.of("state_mismatch");
     }
 
     const named = params.get("iss");
 
     if (named !== null && untrailed(named) !== this.issuer.url) {
-      throw new MasksError(
+      throw new Refused(
         "invalid_issuer",
         `that sign-in came back from ${JSON.stringify(named)}`,
       );
@@ -301,7 +298,7 @@ export class Client {
       this.issuer.metadata.authorization_response_iss_parameter_supported ===
         true
     ) {
-      throw new MasksError(
+      throw new Refused(
         "invalid_issuer",
         "that sign-in came back without naming its issuer",
       );
@@ -310,20 +307,14 @@ export class Client {
     const code = params.get("code");
 
     if (!code) {
-      throw new MasksError(
-        "invalid_request",
-        "that sign-in came back without a code",
-      );
+      throw Refused.of("no_callback_code");
     }
 
     const token = await this.authorizationCode(code, pending);
 
     if (!token.id_token) {
       if (pending.nonce) {
-        throw new MasksError(
-          "invalid_nonce",
-          "the token endpoint answered without an id token",
-        );
+        throw InvalidToken.of("no_id_token");
       }
 
       return { token };
@@ -335,19 +326,14 @@ export class Client {
       pending.nonce &&
       !constantEqual(String(claims.nonce ?? ""), pending.nonce)
     ) {
-      throw new MasksError(
-        "invalid_nonce",
-        "the id token was issued for another sign-in",
-      );
+      throw InvalidToken.of("id_token_other_sign_in");
     }
 
     if (
       pending.maxAge !== undefined &&
       !recent(claims.auth_time, pending.maxAge)
     ) {
-      throw new InvalidTokenError(
-        "the person signed in longer ago than max_age allows",
-      );
+      throw InvalidToken.of("too_old");
     }
 
     return { token, claims };
@@ -394,7 +380,7 @@ export class Client {
     );
 
     if (!answer || typeof answer.sub !== "string" || answer.sub === "") {
-      throw new MasksError(
+      throw new Refused(
         "server_error",
         "the userinfo endpoint answered without a subject",
       );
@@ -470,10 +456,7 @@ export class Client {
 
     for (;;) {
       if (device.expires_at && Date.now() / 1000 > device.expires_at) {
-        throw new MasksError(
-          "expired_token",
-          "the code expired before anyone approved it",
-        );
+        throw Refused.of("code_expired");
       }
 
       await pause(interval, options.signal);
@@ -531,7 +514,7 @@ export class Client {
     const held = await this.#token(form, undefined, upstream);
 
     if (upstream && held.issued_token_type !== UPSTREAM_ACCESS_TOKEN_TYPE) {
-      throw new MasksError(
+      throw new Refused(
         "server_error",
         "the token endpoint answered an upstream exchange with another kind of token",
       );
@@ -571,7 +554,7 @@ export class Client {
       held.iss !== undefined &&
       untrailed(String(held.iss)) !== this.issuer.url
     ) {
-      throw new MasksError(
+      throw new Refused(
         "invalid_issuer",
         `the introspection endpoint described a token from ${JSON.stringify(held.iss)}`,
       );
@@ -605,7 +588,7 @@ export class Client {
       typeof held?.initial_access_token !== "string" ||
       !held.initial_access_token
     ) {
-      throw new MasksError(
+      throw new Refused(
         "server_error",
         "the enrollment endpoint answered without an initial access token",
       );
@@ -647,10 +630,7 @@ export class Client {
 
     return reuse(held, async () => {
       if (!current?.refresh_token) {
-        throw new MasksError(
-          "invalid_grant",
-          "there is no refresh token to renew this session with",
-        );
+        throw Refused.of("no_refresh_token");
       }
 
       const renewed = await this.refresh(current.refresh_token, asked);
@@ -686,7 +666,7 @@ export class Client {
     );
 
     if (!held?.access_token) {
-      throw new MasksError(
+      throw new Refused(
         "server_error",
         "the token endpoint answered without an access token",
       );
@@ -697,10 +677,7 @@ export class Client {
     }
 
     if (this.dpop && !bound(held) && !unbound) {
-      throw new MasksError(
-        "invalid_dpop_proof",
-        "the token endpoint answered with a token that is not held to this key",
-      );
+      throw Refused.of("not_held_to_key");
     }
 
     return held;
@@ -942,9 +919,7 @@ export function signedFetch(options: SignedFetchOptions): typeof fetch {
     const origin = new URL(request.url).origin;
 
     if (!allowed.has(origin)) {
-      throw new ForeignError(
-        `this fetch holds tokens only for ${[...allowed].join(", ")}`,
-      );
+      throw Foreign.of("tokens_only_for", [...allowed].join(", "), origin);
     }
 
     const token = await options.source.token();

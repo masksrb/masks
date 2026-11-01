@@ -12,7 +12,7 @@ import {
   requireArguments,
 } from "./app/requests.js";
 import { withCookies } from "./app/responses.js";
-import { ForbiddenError } from "./claims.js";
+import { Forbidden } from "./errors.js";
 import { untrailed } from "./slashes.js";
 
 export { PATH_HEADER };
@@ -96,7 +96,7 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
 
       throw (
         outcome.refusal.error ??
-        new ForbiddenError("insufficient_scope", "this request is refused")
+        new Forbidden("insufficient_scope", "this request is refused")
       );
     }) as RequireAuth,
 

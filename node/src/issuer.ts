@@ -1,12 +1,12 @@
 import type { JWK } from "jose";
 import type { Client } from "./client.js";
 import {
-  ForeignError,
-  InsecureError,
-  InvalidTokenError,
-  MasksError,
+  Foreign,
+  Insecure,
+  InvalidToken,
+  Refused,
   redacted,
-  UnavailableError,
+  Unavailable,
 } from "./errors.js";
 import { getJSON } from "./http.js";
 import type { Key } from "./key.js";
@@ -111,10 +111,7 @@ export class Issuer {
     );
 
     if (untrailed(String(metadata.issuer ?? "")) !== named) {
-      throw new MasksError(
-        "invalid_issuer",
-        `${named} publishes a document naming ${JSON.stringify(metadata.issuer)}`,
-      );
+      throw Refused.of("names_another", named, String(metadata.issuer));
     }
 
     for (const name of ENDPOINTS) {
@@ -141,10 +138,7 @@ export class Issuer {
     const value = this.metadata[name];
 
     if (typeof value !== "string" || value === "") {
-      throw new MasksError(
-        "invalid_issuer",
-        `${this.url} publishes no ${name}`,
-      );
+      throw Refused.of("publishes_nothing", this.url, name);
     }
 
     return value;
@@ -154,7 +148,7 @@ export class Issuer {
     const held = new URL(target);
 
     if (held.origin !== new URL(this.url).origin) {
-      throw new ForeignError(redacted(target));
+      throw Foreign.of("other_origin", redacted(target));
     }
   }
 
@@ -195,9 +189,7 @@ export class Issuer {
 
     try {
       if (Date.now() - this.#keysFailedAt < KEYS_PATIENCE) {
-        throw new UnavailableError(
-          `${this.url} could not be reached for its keys`,
-        );
+        throw Unavailable.of("keys_unreachable", this.url);
       }
 
       if (age >= KEYS_PATIENCE) await this.#fetchKeys();
@@ -212,9 +204,7 @@ export class Issuer {
     const held = kid ? found() : undefined;
 
     if (!held) {
-      throw new InvalidTokenError(
-        `${this.url} publishes no key ${JSON.stringify(kid ?? null)}`,
-      );
+      throw InvalidToken.of("no_key", this.url, String(kid ?? ""));
     }
 
     return held;
@@ -258,10 +248,7 @@ export async function discoverResource(
   const found = await getJSON<ResourceMetadata>(options, document);
 
   if (untrailed(String(found.resource ?? "")) !== named) {
-    throw new MasksError(
-      "invalid_resource",
-      `${named} publishes metadata naming ${JSON.stringify(found.resource)}`,
-    );
+    throw Refused.of("resource_names_another", named, String(found.resource));
   }
 
   return found;
@@ -273,9 +260,7 @@ export function check(target: string, options: Options = {}): void {
   try {
     parsed = new URL(target);
   } catch {
-    throw new Error(
-      `masks: ${JSON.stringify(target)} is not an http or https URL`,
-    );
+    throw Insecure.of("not_http", target);
   }
 
   if (parsed.protocol === "https:" && parsed.host !== "") return;
@@ -283,12 +268,10 @@ export function check(target: string, options: Options = {}): void {
   if (parsed.protocol === "http:") {
     if (options.allowPlainHTTP || loopback(parsed.hostname)) return;
 
-    throw new InsecureError(redacted(target));
+    throw Insecure.of("plain_http", redacted(target));
   }
 
-  throw new Error(
-    `masks: ${JSON.stringify(target)} is not an http or https URL`,
-  );
+  throw Insecure.of("not_http", target);
 }
 
 export function loopback(host: string): boolean {

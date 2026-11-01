@@ -1,6 +1,6 @@
 import { organizationKey } from "../claims.js";
 import type { Token } from "../client.js";
-import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
+import { InvalidToken, Refused, Unavailable } from "../errors.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { random } from "../key.js";
 import { untrailed } from "../slashes.js";
@@ -92,11 +92,11 @@ export async function handle(
         return text(404, "not found", visit.out);
     }
   } catch (error) {
-    if (error instanceof MasksError) {
+    if (error instanceof Refused) {
       return answer(visit, 400, error.code, error.description ?? error.code);
     }
 
-    if (error instanceof UnavailableError || isNetwork(error)) {
+    if (error instanceof Unavailable || isNetwork(error)) {
       return answer(
         visit,
         503,
@@ -195,7 +195,7 @@ async function callback(core: Core, visit: Visit): Promise<Response> {
     signedIn = await client.complete(params, { ...pending, state });
   } catch (error) {
     if (
-      error instanceof MasksError &&
+      error instanceof Refused &&
       error.code === "invalid_client" &&
       (await core.handshakes.forget(visit.request))
     ) {
@@ -407,7 +407,7 @@ async function backchannel(core: Core, visit: Visit): Promise<Response> {
   try {
     logout = await client.logoutToken(token);
   } catch (error) {
-    if (error instanceof InvalidTokenError) {
+    if (error instanceof InvalidToken) {
       return answer(visit, 400, "invalid_request", describe(error), true);
     }
 

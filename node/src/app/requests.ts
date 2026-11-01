@@ -1,4 +1,4 @@
-import { MasksError } from "../errors.js";
+import { Refused } from "../errors.js";
 import type { Masked } from "./masked.js";
 
 export type PerRequest<T> = T | ((request: Request) => T | Promise<T>);
@@ -104,8 +104,8 @@ export async function readForm(request: Request): Promise<URLSearchParams> {
   return new URLSearchParams(new TextDecoder().decode(joined));
 }
 
-function tooLarge(): MasksError {
-  return new MasksError(
+function tooLarge(): Refused {
+  return new Refused(
     "invalid_request",
     "that request body is larger than 64 KiB",
   );

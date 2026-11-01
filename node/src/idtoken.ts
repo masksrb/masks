@@ -1,4 +1,4 @@
-import { InvalidTokenError } from "./errors.js";
+import { InvalidToken } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
 import { verifyIssued } from "./jwt.js";
 
@@ -51,9 +51,7 @@ export async function verifyIdToken(
   const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
 
   if (audience.length > 1 && claims.azp !== clientId) {
-    throw new InvalidTokenError(
-      "that id token names several audiences and was not issued to this client",
-    );
+    throw InvalidToken.of("id_token_several_audiences");
   }
 
   return claims;
@@ -71,19 +69,15 @@ export async function verifyLogoutToken(
   })) as LogoutToken;
 
   if ("nonce" in claims) {
-    throw new InvalidTokenError(
-      "that logout token carries a nonce, so it is an id token",
-    );
+    throw InvalidToken.of("logout_with_nonce");
   }
 
   if (!nonEmpty(claims.sub) && !nonEmpty(claims.sid)) {
-    throw new InvalidTokenError(
-      "that logout token names neither a subject nor a session",
-    );
+    throw InvalidToken.of("logout_names_nobody");
   }
 
   if (claims.iat > Date.now() / 1000 + LOGOUT_LEEWAY) {
-    throw new InvalidTokenError("that logout token was issued in the future");
+    throw InvalidToken.of("issued_in_future");
   }
 
   const events = claims.events;
@@ -95,7 +89,7 @@ export async function verifyLogoutToken(
     !events[BACKCHANNEL_LOGOUT_EVENT] ||
     typeof events[BACKCHANNEL_LOGOUT_EVENT] !== "object"
   ) {
-    throw new InvalidTokenError("that logout token is not about a logout");
+    throw InvalidToken.of("not_a_logout");
   }
 
   return claims;

@@ -1,6 +1,5 @@
-import { ForbiddenError } from "../claims.js";
 import { scopes as scopesOf } from "../client.js";
-import { InvalidTokenError } from "../errors.js";
+import { Forbidden, failure, InvalidToken } from "../errors.js";
 import type { Claims, Verifier } from "../verifier.js";
 import type { Core } from "./core.js";
 import { Masked } from "./masked.js";
@@ -20,7 +19,7 @@ export type RefusalKind =
 export class Refusal {
   readonly kind: RefusalKind;
   readonly url?: string;
-  readonly error?: ForbiddenError | InvalidTokenError;
+  readonly error?: Forbidden | InvalidToken;
   readonly cookies: string[];
   readonly #request: Request;
   readonly #answer: (request: Request) => Response;
@@ -31,7 +30,7 @@ export class Refusal {
     cookies: string[];
     answer: (request: Request) => Response;
     url?: string;
-    error?: ForbiddenError | InvalidTokenError;
+    error?: Forbidden | InvalidToken;
   }) {
     this.kind = fields.kind;
     this.url = fields.url;
@@ -90,8 +89,7 @@ export async function check(
   try {
     for (const privilege of wanted) masked.member(privilege);
   } catch (error) {
-    if (error instanceof ForbiddenError)
-      return { refusal: forbidden(visit, error) };
+    if (error instanceof Forbidden) return { refusal: forbidden(visit, error) };
     throw error;
   }
 
@@ -104,15 +102,15 @@ export async function check(
   if (missing.length === 0) return { masked, cookies: visit.handOut() };
 
   if (steppedUp(await core.sessions.readFlow(visit), missing)) {
-    const error = new ForbiddenError(
-      "insufficient_scope",
-      `this account does not hold the ${missing.join(" and ")} privilege`,
-      {
-        scope: unique(
-          missing.flatMap((name) => core.privileges.get(name).scopes),
-        ).join(" "),
-      },
+    const { code, description } = failure(
+      "no_privilege",
+      missing.join(" and "),
     );
+    const error = new Forbidden(code, description, {
+      scope: unique(
+        missing.flatMap((name) => core.privileges.get(name).scopes),
+      ).join(" "),
+    });
 
     return { refusal: forbidden(visit, error) };
   }
@@ -168,7 +166,7 @@ export async function protect(
     verifier = await core.verifier(visit);
     claims = await verifier.authenticate(request);
   } catch (error) {
-    if (verifier && error instanceof InvalidTokenError) {
+    if (verifier && error instanceof InvalidToken) {
       return { refusal: challenged(request, verifier, error) };
     }
 
@@ -205,18 +203,18 @@ export async function protect(
     for (const privilege of wanted) {
       for (const scope of privilege.scopes) {
         if (!masked.permits(scope)) {
-          throw new ForbiddenError(
-            "insufficient_scope",
-            `this token does not carry ${scope}`,
-            { scope: privilege.scopes.join(" ") },
-          );
+          const { code, description } = failure("no_scope", scope);
+
+          throw new Forbidden(code, description, {
+            scope: privilege.scopes.join(" "),
+          });
         }
       }
 
       masked.member(privilege);
     }
   } catch (error) {
-    if (!(error instanceof ForbiddenError)) throw error;
+    if (!(error instanceof Forbidden)) throw error;
 
     return { refusal: challenged(request, verifier, error) };
   }
@@ -331,10 +329,10 @@ export function answer(
 }
 
 export function describe(error: Error): string {
-  return error.message.replace(/^masks: (invalid token: )?/, "");
+  return error.message.replace(/^masks: (?:[a-z_]+: )?/, "");
 }
 
-function forbidden(visit: Visit, error: ForbiddenError): Refusal {
+function forbidden(visit: Visit, error: Forbidden): Refusal {
   return new Refusal({
     kind: "forbidden",
     request: visit.request,
@@ -348,16 +346,13 @@ function forbidden(visit: Visit, error: ForbiddenError): Refusal {
 function challenged(
   request: Request,
   verifier: Verifier,
-  error: InvalidTokenError | ForbiddenError,
+  error: InvalidToken | Forbidden,
 ): Refusal {
   const { status, headers } = verifier.refusal(error);
-  const body =
-    error instanceof InvalidTokenError
-      ? { error: "invalid_token", error_description: describe(error) }
-      : { error: error.code, error_description: error.description };
+  const body = { error: error.code, error_description: error.description };
 
   return new Refusal({
-    kind: error instanceof InvalidTokenError ? "invalid_token" : "forbidden",
+    kind: error instanceof InvalidToken ? "invalid_token" : "forbidden",
     request,
     error,
     cookies: [],

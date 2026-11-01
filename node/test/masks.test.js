@@ -5,19 +5,19 @@ import {
   ACCESS_TOKEN_TYPE,
   Client,
   discoverResource,
-  ForeignError,
+  Foreign,
   GRANT_TOKEN_EXCHANGE,
   hasCode,
   hasScope,
   ID_TOKEN_TYPE,
-  InsecureError,
-  InvalidTokenError,
+  Insecure,
+  InvalidToken,
   Issuer,
   Key,
   MasksError,
   MemoryReplayStore,
   proof,
-  UnavailableError,
+  Unavailable,
   UPSTREAM_ACCESS_TOKEN_TYPE,
   Verifier,
   valid,
@@ -86,7 +86,7 @@ test("plain http is allowed only on this machine", () => {
     assert.throws(() => check(refused), undefined, refused);
   }
 
-  assert.throws(() => check("http://10.0.0.4"), InsecureError);
+  assert.throws(() => check("http://10.0.0.4"), Insecure);
   check("http://10.0.0.4", { allowPlainHTTP: true });
 });
 
@@ -339,7 +339,7 @@ test("a registration URI on another origin never sees the token", async () => {
 
   const issuer = await Issuer.discover(held.url);
 
-  await assert.rejects(issuer.register({}, "one-time"), ForeignError);
+  await assert.rejects(issuer.register({}, "one-time"), Foreign);
 });
 
 test("introspection describes an active token", async () => {
@@ -710,7 +710,7 @@ test("a signed fetch refuses an origin it was not given", async () => {
     "https://files.example",
   ]);
 
-  await assert.rejects(signed(`${held.url}/elsewhere`), ForeignError);
+  await assert.rejects(signed(`${held.url}/elsewhere`), Foreign);
 });
 
 test("a signed fetch hands a redirect back without following it", async () => {
@@ -726,7 +726,7 @@ test("a signed fetch hands a redirect back without following it", async () => {
   const response = await signed(server.url);
 
   assert.equal(response.status, 302);
-  await assert.rejects(signed(response.headers.get("location")), ForeignError);
+  await assert.rejects(signed(response.headers.get("location")), Foreign);
 });
 
 test("a signed fetch sends a Bearer token when the token is not held", async () => {
@@ -853,11 +853,7 @@ test("a verifier refuses misused proofs", async () => {
   for (const [name, change] of Object.entries(cases)) {
     const request = await boundRequest(client, dpop, "GET", target, change);
 
-    await assert.rejects(
-      verifier.authenticate(request),
-      InvalidTokenError,
-      name,
-    );
+    await assert.rejects(verifier.authenticate(request), InvalidToken, name);
   }
 });
 
@@ -917,8 +913,8 @@ test("a failing replay store is unavailable, and only false is a replay", async 
       (failed) => failed,
     );
 
-    assert.ok(error instanceof UnavailableError, name);
-    assert.ok(!(error instanceof InvalidTokenError), name);
+    assert.ok(error instanceof Unavailable, name);
+    assert.ok(!(error instanceof InvalidToken), name);
     if (name === "throws" || name === "rejects") {
       assert.equal(error.cause, refused, name);
     }
@@ -945,7 +941,7 @@ test("a failing replay store is unavailable, and only false is a replay", async 
     (failed) => failed,
   );
 
-  assert.ok(error instanceof InvalidTokenError);
+  assert.ok(error instanceof InvalidToken);
   assert.match(error.message, /already been used/);
 
   const { status, headers } = verifier.refusal(error);
@@ -986,7 +982,7 @@ test("an issuer whose keys cannot be fetched is unavailable", async () => {
       }),
     ),
     (error) => {
-      assert.ok(error instanceof UnavailableError);
+      assert.ok(error instanceof Unavailable);
       assert.ok(error.cause instanceof MasksError);
       assert.equal(verifier.challenge(error).status, 503);
       return true;
@@ -1079,11 +1075,11 @@ test("a verifier checks the token itself", async () => {
     ],
     "no jti": [
       await held.issue(without("jti"), "at+jwt"),
-      "that token is missing a claim it needs",
+      "that token is missing jti",
     ],
     "an ID token": [
       await held.issue(good, "JWT"),
-      "that token is not typed at+jwt",
+      "that token is typed JWT, not at+jwt",
     ],
     "not a JWT": ["nonsense", "that token is not a signed JWT"],
   };
@@ -1092,8 +1088,8 @@ test("a verifier checks the token itself", async () => {
     await assert.rejects(
       verifier.verify(token),
       (error) =>
-        error instanceof InvalidTokenError &&
-        error.message === `masks: invalid token: ${said}`,
+        error instanceof InvalidToken &&
+        error.message === `masks: invalid_token: ${said}`,
       name,
     );
   }
@@ -1101,7 +1097,7 @@ test("a verifier checks the token itself", async () => {
   const forged = await Key.generate();
   await assert.rejects(
     verifier.verify(await forged.sign("at+jwt", good, false)),
-    InvalidTokenError,
+    InvalidToken,
   );
 });
 
@@ -1116,7 +1112,7 @@ test("a request with no token is challenged with no error code", async () => {
       (failed) => failed,
     );
 
-  assert.ok(error instanceof InvalidTokenError);
+  assert.ok(error instanceof InvalidToken);
   assert.ok(error.missing);
 
   const [bearer, dpop] = verifier.challengeHeaders(error);
@@ -1130,9 +1126,7 @@ test("a challenge names both schemes", async () => {
   const held = await fake();
   const verifier = new Verifier(await Issuer.discover(held.url), held.audience);
 
-  const response = verifier.challenge(
-    new InvalidTokenError('a "quoted" reason'),
-  );
+  const response = verifier.challenge(new InvalidToken('a "quoted" reason'));
 
   assert.equal(response.status, 401);
   assert.match(

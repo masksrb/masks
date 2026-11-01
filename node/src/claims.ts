@@ -1,3 +1,5 @@
+import { Forbidden, failure } from "./errors.js";
+
 export const ORGANIZATION_CLAIM = "org";
 export const ORGANIZATIONS_CLAIM = "orgs";
 export const AVATARS_CLAIM = "masks:avatars";
@@ -16,29 +18,6 @@ export interface Avatars {
   photo?: string;
   identicon?: string;
   initials?: string;
-}
-
-export type ForbiddenCode =
-  | "insufficient_scope"
-  | "insufficient_role"
-  | "insufficient_organization";
-
-export class ForbiddenError extends Error {
-  readonly code: ForbiddenCode;
-  readonly description: string;
-  readonly scope?: string;
-
-  constructor(
-    code: ForbiddenCode,
-    description: string,
-    options: { scope?: string } = {},
-  ) {
-    super(`masks: ${code}: ${description}`);
-    this.name = "ForbiddenError";
-    this.code = code;
-    this.description = description;
-    this.scope = options.scope;
-  }
 }
 
 export function organizationKey(value: unknown): string | undefined {
@@ -102,26 +81,18 @@ export function member(
   const held = organizationOf(claims);
 
   if (!held) {
-    throw new ForbiddenError(
-      "insufficient_organization",
-      "this sign-in names no organization",
-      { scope: "organization" },
-    );
+    const { code, description } = failure("no_organization");
+
+    throw new Forbidden(code, description, { scope: "organization" });
   }
 
   if (named && held.key !== named && held.id !== named) {
-    throw new ForbiddenError(
-      "insufficient_organization",
-      `this sign-in is for ${held.key}, and this needs ${named}`,
-    );
+    throw Forbidden.of("other_organization", held.key, named);
   }
 
   if (roles.length === 0 || roles.includes(held.role)) return held;
 
-  throw new ForbiddenError(
-    "insufficient_role",
-    `${held.role} in ${held.key} is not ${roles.join(" or ")}`,
-  );
+  throw Forbidden.of("other_role", held.role, held.key, roles.join(" or "));
 }
 
 function organization(value: unknown): Organization | undefined {

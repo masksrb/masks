@@ -1,5 +1,11 @@
-import { errors, type JWTPayload, jwtVerify } from "jose";
-import { InvalidTokenError, UnavailableError } from "./errors.js";
+import {
+  decodeProtectedHeader,
+  errors,
+  type JWTPayload,
+  jwtVerify,
+  type ProtectedHeaderParameters,
+} from "jose";
+import { InvalidToken, saying, Unavailable } from "./errors.js";
 import type { Issuer } from "./issuer.js";
 
 export const SIGNING_ALGORITHMS = ["RS256", "ES256"];
@@ -31,29 +37,42 @@ export async function verifyIssued(
       },
     );
   } catch (error) {
-    throw unverified(error);
+    throw unverified(error, issuer, { token });
   }
 
   const typ = typed(verified.protectedHeader.typ);
 
   if (!expected.types.includes(typ)) {
-    throw new InvalidTokenError(
-      `that token is typed ${JSON.stringify(verified.protectedHeader.typ ?? null)}`,
+    throw InvalidToken.of(
+      "wrong_type",
+      verified.protectedHeader.typ ?? "nothing",
+      expected.types.filter(Boolean).join(" or "),
     );
   }
 
   return verified.payload;
 }
 
-export function unverified(error: unknown): Error {
-  if (error instanceof InvalidTokenError) return error;
+export interface Expecting {
+  token?: string;
+  typ?: string;
+}
+
+export function unverified(
+  error: unknown,
+  issuer?: Issuer,
+  expecting: Expecting = {},
+): Error {
+  if (error instanceof InvalidToken) return error;
 
   if (error instanceof errors.JOSEError) {
-    return new InvalidTokenError(described(error), { cause: error });
+    return new InvalidToken(described(error, issuer, expecting), {
+      cause: error,
+    });
   }
 
-  return new UnavailableError(
-    "the issuer's keys could not be fetched to check that token",
+  return new Unavailable(
+    saying("keys_unreachable", issuer?.url ?? "the issuer"),
     { cause: error },
   );
 }
@@ -64,43 +83,64 @@ function typed(value: unknown): string | undefined {
   return value.toLowerCase().replace(/^application\//, "");
 }
 
-function described(error: InstanceType<typeof errors.JOSEError>): string {
-  if (error instanceof errors.JWTExpired) return "that token has expired";
+function header(token?: string): ProtectedHeaderParameters | undefined {
+  if (!token) return undefined;
+
+  try {
+    return decodeProtectedHeader(token);
+  } catch {
+    return undefined;
+  }
+}
+
+function described(
+  error: InstanceType<typeof errors.JOSEError>,
+  issuer?: Issuer,
+  expecting: Expecting = {},
+): string {
+  if (error instanceof errors.JWTExpired) return saying("expired");
 
   if (error instanceof errors.JWTClaimValidationFailed) {
     if (error.reason === "missing") {
-      return "that token is missing a claim it needs";
+      return saying("missing_claims", error.claim);
     }
 
     switch (error.claim) {
       case "iss":
-        return "that token was issued by another server";
+        return saying("other_issuer");
       case "aud":
-        return "that token was issued for another app";
+        return saying("other_audience");
       case "nbf":
       case "iat":
-        return "that token is not valid yet";
+        return saying("not_valid_yet");
       case "typ":
-        return "that token is not typed at+jwt";
+        return saying(
+          "wrong_type",
+          header(expecting.token)?.typ ?? "nothing",
+          expecting.typ ?? "",
+        );
     }
 
-    return "that token could not be verified";
+    return saying("unverified");
   }
 
   if (error instanceof errors.JOSEAlgNotAllowed) {
-    return "that token is signed with an algorithm masks does not use";
+    return saying(
+      "not_an_algorithm",
+      header(expecting.token)?.alg ?? "that algorithm",
+    );
   }
 
   if (error instanceof errors.JWSSignatureVerificationFailed) {
-    return "that token was not signed by this issuer";
+    return saying("not_signed_by", issuer?.url ?? "its issuer");
   }
 
   if (
     error instanceof errors.JWSInvalid ||
     error instanceof errors.JWTInvalid
   ) {
-    return "that token is not a signed JWT";
+    return saying("not_a_jwt");
   }
 
-  return "that token could not be verified";
+  return saying("unverified");
 }

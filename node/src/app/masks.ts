@@ -5,7 +5,7 @@ import {
   Delegations,
   pendingFor,
 } from "../delegations.js";
-import { MasksError } from "../errors.js";
+import { Refused } from "../errors.js";
 import { Core, type MasksOptions } from "./core.js";
 import { check, guard, loginRefusal, type Outcome, protect } from "./guard.js";
 import type { Masked } from "./masked.js";
@@ -173,11 +173,7 @@ export class Masks {
       );
     }
 
-    if (!client)
-      throw new MasksError(
-        "handshake_required",
-        "this app has not shaken hands with masks",
-      );
+    if (!client) throw Refused.of("not_connected", "masks");
 
     return new Delegations(client, back);
   }

@@ -103,7 +103,7 @@ the response.
 | `masks.logoutPath`                                             | The path a sign-out form posts to.                                                                                                                                                                                    |
 | `masks.connection(request)`                                    | Whether the app holds credentials, with its `client_id` and the `issuer`.                                                                                                                                             |
 | `masks.registered(request)`                                    | Whether masks still knows the app.                                                                                                                                                                                    |
-| `masks.disconnect(request)`                                    | Deletes the registration and the credentials, and returns `true`. It returns `false` when the credential store cannot clear. When masks cannot be reached, it throws an `UnavailableError` and keeps the credentials. |
+| `masks.disconnect(request)`                                    | Deletes the registration and the credentials, and returns `true`. It returns `false` when the credential store cannot clear. When masks cannot be reached, it throws an `Unavailable` and keeps the credentials. |
 | `masks.client(request)`                                        | The app's `Client`, for calls of your own.                                                                                                                                                                            |
 | `masks.delegations(request)`                                   | `Delegations` for the app's client. Needs `delegations`.                                                                                                                                                              |
 | `masks.startDelegation(request, provider, { prompt, maxAge })` | Sends a signed-in person to connect a provider.                                                                                                                                                                       |
@@ -117,7 +117,7 @@ A `refusal` says why the request was refused and builds the answer:
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kind`                | `handshake`, `login`, `step_up`, `forbidden`, `invalid_token`, or `unavailable`.                                                                                                                                      |
 | `url`                 | Where to send a browser: the handshake, a sign-in, or a sign-in that asks for a privilege. Only `handshake`, `login`, and `step_up` have one.                                                                         |
-| `error`               | The `ForbiddenError` or `InvalidTokenError` behind a `forbidden` or `invalid_token` refusal.                                                                                                                          |
+| `error`               | The `Forbidden` or `InvalidToken` behind a `forbidden` or `invalid_token` refusal.                                                                                                                          |
 | `cookies`             | The `Set-Cookie` values `toResponse` sets.                                                                                                                                                                            |
 | `toResponse(request)` | The answer for `request`, or for the request that was checked. A browser is sent to `url`, and a request that wants JSON gets `401` or `403` with the error. A refused token gets the `Bearer` and `DPoP` challenges. |
 
@@ -249,7 +249,7 @@ const token = await client.clientCredentials({
 | `fetch(source, origins)`                                   | A `fetch` that gets tokens from `source` and sends them only to `origins`. With `dpop`, it signs a proof for each request. `credentialsSource` and `refreshSource` make a source.                                                     |
 
 `start` takes `maxAge` in seconds. When it did, `complete` refuses an ID token whose `auth_time`
-is missing or older than that, plus 30 seconds of leeway, with an `InvalidTokenError`.
+is missing or older than that, plus 30 seconds of leeway, with an `InvalidToken`.
 
 `issuer.register(metadata, initialAccessToken)` redeems an initial access token, and
 `issuer.client(registration, key, dpop)` builds the client it registered.
@@ -284,12 +284,21 @@ export async function GET(request: Request) {
 - `authenticateNode(request)` takes a Node or Express request. `refusal(error)` returns the
   `status` and `headers` to send.
 - It checks tokens as in [accepting tokens](/reference/javascript/#accepting-tokens).
-- A token that fails a check throws an `InvalidTokenError`, answered with `401` and a challenge. A
+- A token that fails a check throws an `InvalidToken`, answered with `401` and a challenge. A
   request with no token throws one whose `missing` is `true`.
 - When the token cannot be checked, because the issuer's keys could not be fetched or the replay
-  store failed, it throws an `UnavailableError`, answered with `503` and no challenge.
+  store failed, it throws an `Unavailable`, answered with `503` and no challenge.
 - Set `publicURL` when a proxy sits in front of the API, since a DPoP proof names the address the
   client used.
 - An API on more than one instance sets `replay` to a store they share, such as
   `replayStore(redisStore(send))`. By default each instance remembers the proofs it has seen in
   memory, so a proof replayed to another instance passes.
+
+## Errors
+
+Every error the package throws is a `MasksError` and one of the kinds in
+[Errors](/reference/errors/): `Refused`, `InvalidToken`, `Forbidden`, `Unavailable`, `Insecure`,
+`Foreign`, `DelegationRefused`, and `DelegationUnavailable`. Each has `code` and `description`,
+and its message reads `masks: code: description`. `hasCode(error, "invalid_grant")` asks for the
+code, and `isRefused(error)` says whether masks answered with an OAuth error. The description for a
+failure that page lists is the same in every SDK.

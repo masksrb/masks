@@ -1,6 +1,6 @@
 import type { JWK } from "jose";
 import { type AuthMethod, Client } from "./client.js";
-import { MasksError } from "./errors.js";
+import { Refused } from "./errors.js";
 import { sendJSON } from "./http.js";
 import type { Issuer } from "./issuer.js";
 import type { Key } from "./key.js";
@@ -41,7 +41,7 @@ export async function register(
   if (!endpoint && initialAccessToken) endpoint = `${issuer.url}/register`;
 
   if (!endpoint) {
-    throw new MasksError(
+    throw new Refused(
       "access_denied",
       `${issuer.url} registers no clients without an initial access token`,
     );

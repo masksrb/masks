@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  InsecureError,
+  Insecure,
   redisStore,
   replayStore,
   upstashStore,
@@ -126,7 +126,7 @@ test("an Upstash store needs its URL and token, and https away from this machine
   );
   assert.throws(
     () => upstashStore({ url: "http://example.upstash.io", token: "t" }),
-    InsecureError,
+    Insecure,
   );
   assert.ok(upstashStore({ url: "http://localhost:8079", token: "t" }));
 });
