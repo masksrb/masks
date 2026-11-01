@@ -21,11 +21,11 @@ module Masks
         )
 
         @app.call(env)
-      rescue Challenge => e
-        return passthrough(env, e) if @optional && e.is_a?(Unauthenticated)
+      rescue InvalidToken, Forbidden => e
+        return passthrough(env, e) if @optional && e.is_a?(InvalidToken) && e.missing?
 
         refuse(resource(env), e)
-      rescue ReplayUnavailable
+      rescue Unavailable
         unavailable
       end
 

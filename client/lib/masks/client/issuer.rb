@@ -2,7 +2,7 @@ module Masks
   module Client
     # One issuer's discovery document and keys, fetched once and kept for an
     # hour. While masks cannot be reached, the last good copies are served, a
-    # token signed with a key never seen raises Unreachable, and refetches back
+    # token signed with a key never seen raises Unavailable, and refetches back
     # off from 5 seconds to once a minute.
     class Issuer
       DISCOVERY_PATH = "/.well-known/openid-configuration".freeze
@@ -37,7 +37,7 @@ module Masks
           named = self.class.normalize(document["issuer"])
 
           unless named == url
-            raise Rejected.new(*Masks::Client.failure("names_another", url, document["issuer"]))
+            raise Refused.new(*Masks::Client.failure("names_another", url, document["issuer"]))
           end
 
           document
@@ -57,7 +57,7 @@ module Masks
       end
 
       def endpoint(name)
-        discovery.fetch(name) { raise Rejected.new(*Masks::Client.failure("publishes_nothing", url, name)) }
+        discovery.fetch(name) { raise Refused.new(*Masks::Client.failure("publishes_nothing", url, name)) }
       end
 
       def backchannel_logout?
@@ -72,7 +72,7 @@ module Masks
         wanted = (style || Claims::Avatars::FALLBACK).to_s
 
         unless avatar_styles.include?(wanted)
-          raise Rejected.new(*Masks::Client.failure("no_avatars", url, wanted))
+          raise Refused.new(*Masks::Client.failure("no_avatars", url, wanted))
         end
 
         query = size ? "?size=#{size.to_i}" : ""

@@ -39,14 +39,14 @@ module Masks
 
           unless worker.join(HTTP::READ_TIMEOUT)
             worker.kill
-            raise Unreachable, Masks::Client.saying("unreachable", uri.host)
+            raise Unavailable, Masks::Client.saying("unreachable", uri.host)
           end
 
           worker.value
         rescue Error
           raise
         rescue StandardError => e
-          raise Unreachable, Masks::Client.saying("unreachable", uri.host)
+          raise Unavailable, Masks::Client.saying("unreachable", uri.host)
         end
 
         def collected(status, headers, body, uri, limit)
@@ -54,7 +54,7 @@ module Masks
 
           body.each do |chunk|
             held << chunk.to_s.b
-            raise Error, "#{uri.host} answered with more than #{limit} bytes" if limit && held.bytesize > limit
+            raise Refused.new("server_error", "#{uri.host} answered with more than #{limit} bytes") if limit && held.bytesize > limit
           end
 
           [ status.to_i, headers, held ]

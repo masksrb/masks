@@ -77,7 +77,7 @@ module Masks
           read_timeout: READ_TIMEOUT
         ) { |http| limit ? limited(http, request, limit) : http.request(request) }
       rescue SystemCallError, SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
-        raise Unreachable, Masks::Client.saying("unreachable", uri.host)
+        raise Unavailable, Masks::Client.saying("unreachable", uri.host)
       end
 
       def checked(uri)
@@ -88,7 +88,7 @@ module Masks
           raise Insecure, Masks::Client.saying("plain_http", Nonces.origin(uri))
         end
 
-        raise Error, Masks::Client.saying("not_http", uri)
+        raise Insecure.of("not_http", uri)
       end
 
       def loopback?(host)
@@ -107,7 +107,7 @@ module Masks
 
           response.read_body do |chunk|
             body << chunk
-            raise Error, "#{request.uri.host} answered with more than #{limit} bytes" if body.bytesize > limit
+            raise Refused.new("server_error", "#{request.uri.host} answered with more than #{limit} bytes") if body.bytesize > limit
           end
 
           response.body = body
@@ -118,7 +118,7 @@ module Masks
         body = decoded(response)
 
         unless response.is_a?(Net::HTTPSuccess)
-          refusal = Unregistered.raised_by?(body) ? Unregistered : Rejected
+          refusal = Unregistered.raised_by?(body) ? Unregistered : Refused
           code, description = refused_with(body, response)
 
           raise refusal.new(code, description, status: response.code.to_i)
@@ -136,11 +136,11 @@ module Masks
         return held if held.is_a?(Hash)
         return {} unless response.is_a?(Net::HTTPSuccess)
 
-        raise Rejected.new(*Masks::Client.failure("not_an_object", origin(response)), status: response.code.to_i)
+        raise Refused.new(*Masks::Client.failure("not_an_object", origin(response)), status: response.code.to_i)
       rescue JSON::ParserError
         return {} unless response.is_a?(Net::HTTPSuccess)
 
-        raise Rejected.new(*Masks::Client.failure("not_json", origin(response)), status: response.code.to_i)
+        raise Refused.new(*Masks::Client.failure("not_json", origin(response)), status: response.code.to_i)
       end
 
       def refused_with(body, response)

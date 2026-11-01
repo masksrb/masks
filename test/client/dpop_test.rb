@@ -35,7 +35,7 @@ class DpopTest < ClientTest
   end
 
   def refused(&block)
-    assert_raises(Masks::Client::Unauthorized, &block)
+    assert_raises(Masks::Client::InvalidToken, &block)
   end
 
   def test_a_bound_token_with_a_matching_proof_becomes_claims
@@ -104,7 +104,7 @@ class DpopTest < ClientTest
 
     resource.authenticate("DPoP #{token}", proof: held, method: "GET", url: URL)
 
-    assert_raises(Masks::Client::Unauthorized) do
+    assert_raises(Masks::Client::InvalidToken) do
       resource.authenticate("DPoP #{token}", proof: held, method: "GET", url: URL)
     end
   end
@@ -114,7 +114,7 @@ class DpopTest < ClientTest
     error = refused { presented(token, nil) }
 
     assert guarded.challenge(error).start_with?(%(DPoP algs="ES256))
-    assert guarded.challenge(Masks::Client::Unauthorized.new("expired")).start_with?("Bearer ")
+    assert guarded.challenge(Masks::Client::InvalidToken.new("expired")).start_with?("Bearer ")
   end
 
   def test_a_replay_store_that_fails_is_an_outage_rather_than_a_refusal
@@ -123,12 +123,12 @@ class DpopTest < ClientTest
     token = bound
     checked = Masks::Client::Resource.new(issuer: issuer.url, url: URL, replay: failing)
 
-    error = assert_raises(Masks::Client::ReplayUnavailable) do
+    error = assert_raises(Masks::Client::Unavailable) do
       checked.authenticate("DPoP #{token}", proof: proof(token), method: "GET", url: URL)
     end
 
-    refute_kind_of Masks::Client::Challenge, error
-    assert_match "IOError", error.message
+    refute_kind_of Masks::Client::InvalidToken, error
+    assert_kind_of IOError, error.cause
   end
 
   def test_the_metadata_names_the_proof_algorithms

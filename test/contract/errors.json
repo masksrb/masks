@@ -7,7 +7,7 @@
       "code": "the code masks answered with, or server_error when the answer was not an OAuth error",
       "fields": ["code", "description", "uri", "status"],
       "names": {
-        "ruby": "Masks::Client::Rejected",
+        "ruby": "Masks::Client::Refused",
         "node": "Refused",
         "web": "Refused",
         "python": "masks.Refused",
@@ -46,7 +46,7 @@
       "code": "temporarily_unavailable",
       "fields": ["code", "description"],
       "names": {
-        "ruby": "Masks::Client::Unreachable",
+        "ruby": "Masks::Client::Unavailable",
         "node": "Unavailable",
         "web": "",
         "python": "masks.Unavailable",

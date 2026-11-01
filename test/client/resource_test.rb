@@ -83,21 +83,21 @@ class ResourceTest < ClientTest
   end
 
   def test_a_missing_header_is_401_without_an_error_code
-    error = assert_raises(Masks::Client::Unauthenticated) { resource.authenticate(nil) }
+    error = assert_raises(Masks::Client::InvalidToken) { resource.authenticate(nil) }
 
     assert_equal 401, error.status
-    assert_nil error.code
+    assert_predicate error, :missing?
     refute_includes resource.challenge(error), "error"
   end
 
   def test_a_header_that_is_not_bearer_is_refused
-    assert_raises(Masks::Client::Unauthenticated) { resource.authenticate("Basic abc") }
+    assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Basic abc") }
   end
 
   def test_a_token_for_another_audience_is_refused
     token = issuer.access_token(audience: "https://other.test/mcp")
 
-    error = assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+    error = assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{token}") }
 
     assert_equal 401, error.status
     assert_equal "invalid_token", error.code
@@ -106,16 +106,16 @@ class ResourceTest < ClientTest
   def test_an_expired_token_is_refused
     token = issuer.access_token(expires_in: -60)
 
-    error = assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+    error = assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{token}") }
 
     assert_equal "that token has expired", error.description
   end
 
   def test_a_token_that_is_not_a_jwt_is_described_in_plain_words
-    error = assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer not-a-token") }
+    error = assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer not-a-token") }
 
     assert_equal "that token was not signed by #{issuer.url}", error.description
-    assert_kind_of JWT::DecodeError, error.cause.cause
+    assert_kind_of JWT::DecodeError, error.cause
   end
 
   def test_a_token_signed_by_an_unpublished_key_is_refused
@@ -126,14 +126,14 @@ class ResourceTest < ClientTest
       kid: "not-published", key: stranger
     )
 
-    assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+    assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{token}") }
   end
 
   def test_a_token_from_another_issuer_is_refused
     other = FakeIssuer.new
     token = other.access_token
 
-    assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+    assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{token}") }
   ensure
     other&.stop
   end
@@ -141,7 +141,7 @@ class ResourceTest < ClientTest
   def test_an_id_token_is_not_accepted_as_an_access_token
     claims = JWT.decode(issuer.access_token, nil, false).first
 
-    assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{issuer.sign(claims)}") }
+    assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{issuer.sign(claims)}") }
   end
 
   def test_the_media_type_form_of_the_access_token_type_is_accepted
@@ -170,7 +170,7 @@ class ResourceTest < ClientTest
   end
 
   def test_the_challenge_carries_the_metadata_url_and_scopes
-    challenge = resource.challenge(Masks::Client::Unauthorized.new("nope"))
+    challenge = resource.challenge(Masks::Client::InvalidToken.new("nope"))
 
     assert_includes challenge, 'error="invalid_token"'
     assert_includes challenge, 'error_description="nope"'
@@ -180,7 +180,7 @@ class ResourceTest < ClientTest
   end
 
   def test_a_description_cannot_break_out_of_the_challenge
-    challenge = resource.challenge(Masks::Client::Unauthorized.new(%(a "quoted" \\ value\nand more)))
+    challenge = resource.challenge(Masks::Client::InvalidToken.new(%(a "quoted" \\ value\nand more)))
 
     described = challenge[/error_description="([^"]*)"/, 1]
 

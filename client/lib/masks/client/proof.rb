@@ -1,7 +1,9 @@
 module Masks
   module Client
     class Proof
-      class Invalid < Error; end
+      def self.invalid(description)
+        InvalidToken.new(description, code: "invalid_dpop_proof")
+      end
 
       SCHEME = "DPoP".freeze
       TYPE = "dpop+jwt".freeze
@@ -46,10 +48,10 @@ module Masks
       end
 
       def self.thumbprint(jwk)
-        named = THUMBED[jwk["kty"]] || raise(Invalid, "the proof key is of a kind this resource does not read")
+        named = THUMBED[jwk["kty"]] || raise(Proof.invalid("the proof key is of a kind this resource does not read"))
         held = named.to_h { |field| [ field, jwk[field] ] }
 
-        raise Invalid, "the proof key is missing part of itself" if held.any? { |_, value| value.to_s.empty? }
+        raise Proof.invalid("the proof key is missing part of itself") if held.any? { |_, value| value.to_s.empty? }
 
         digest(JSON.generate(held))
       end
@@ -61,7 +63,7 @@ module Masks
       def initialize(proof, method:, url:, replay: nil)
         held = proof.to_s.split(",").map(&:strip).reject(&:empty?)
 
-        raise Invalid, Masks::Client.saying("one_proof") unless held.size == 1
+        raise Proof.invalid(Masks::Client.saying("one_proof")) unless held.size == 1
 
         @proof = held.first
         @method = method.to_s.upcase
@@ -74,11 +76,11 @@ module Masks
         claims = verified(header)
         thumbprint = self.class.thumbprint(header["jwk"])
 
-        raise Invalid, Masks::Client.saying("proof_other_key") unless same?(thumbprint, jkt)
+        raise Proof.invalid(Masks::Client.saying("proof_other_key")) unless same?(thumbprint, jkt)
 
         matches!(claims)
         timely!(claims)
-        raise Invalid, Masks::Client.saying("proof_other_token") unless same?(claims["ath"].to_s, self.class.digest(access_token))
+        raise Proof.invalid(Masks::Client.saying("proof_other_token")) unless same?(claims["ath"].to_s, self.class.digest(access_token))
 
         once!(claims, thumbprint)
 
@@ -90,63 +92,63 @@ module Masks
         def keyed
           header = JWT.decode(@proof, nil, false).last
 
-          raise Invalid, Masks::Client.saying("proof_type", TYPE) unless header["typ"].to_s.casecmp?(TYPE)
-          raise Invalid, Masks::Client.saying("proof_algorithm", header["alg"] || "that") unless ALGORITHMS.include?(header["alg"].to_s)
+          raise Proof.invalid(Masks::Client.saying("proof_type", TYPE)) unless header["typ"].to_s.casecmp?(TYPE)
+          raise Proof.invalid(Masks::Client.saying("proof_algorithm", header["alg"] || "that")) unless ALGORITHMS.include?(header["alg"].to_s)
 
           jwk = header["jwk"]
 
-          raise Invalid, Masks::Client.saying("proof_no_key") unless jwk.is_a?(Hash)
-          raise Invalid, Masks::Client.saying("proof_key_private") if jwk["kty"].to_s == "oct" || jwk.keys.any? { |field| SECRET.include?(field.to_s) }
+          raise Proof.invalid(Masks::Client.saying("proof_no_key")) unless jwk.is_a?(Hash)
+          raise Proof.invalid(Masks::Client.saying("proof_key_private")) if jwk["kty"].to_s == "oct" || jwk.keys.any? { |field| SECRET.include?(field.to_s) }
 
           header
         rescue JWT::DecodeError
-          raise Invalid, Masks::Client.saying("proof_not_a_jwt")
+          raise Proof.invalid(Masks::Client.saying("proof_not_a_jwt"))
         end
 
         def verified(header)
           JWT.decode(@proof, JWT::JWK.new(header["jwk"]).verify_key, true,
                      algorithms: [ header["alg"].to_s ], verify_expiration: false).first
         rescue JWT::DecodeError, JWT::JWKError, OpenSSL::PKey::PKeyError, ArgumentError
-          raise Invalid, Masks::Client.saying("proof_unsigned")
+          raise Proof.invalid(Masks::Client.saying("proof_unsigned"))
         end
 
         def matches!(claims)
-          raise Invalid, Masks::Client.saying("proof_other_method") unless claims["htm"].to_s.upcase == @method
-          raise Invalid, Masks::Client.saying("proof_other_url") unless tidied(claims["htu"]) == tidied(@url)
+          raise Proof.invalid(Masks::Client.saying("proof_other_method")) unless claims["htm"].to_s.upcase == @method
+          raise Proof.invalid(Masks::Client.saying("proof_other_url")) unless tidied(claims["htu"]) == tidied(@url)
         end
 
         def tidied(value)
           uri = URI.parse(value.to_s)
-          raise Invalid, "that proof names no URL" if uri.host.nil?
+          raise Proof.invalid("that proof names no URL") if uri.host.nil?
 
           port = ":#{uri.port}" unless uri.port.nil? || uri.port == uri.default_port
           path = uri.path.to_s == "/" ? "" : uri.path.to_s
 
           "#{uri.scheme.to_s.downcase}://#{uri.host.downcase}#{port}#{path}"
         rescue URI::InvalidURIError
-          raise Invalid, "that proof names a URL this resource cannot read"
+          raise Proof.invalid("that proof names a URL this resource cannot read")
         end
 
         def timely!(claims)
           made = claims["iat"]
 
-          raise Invalid, "a proof must say when it was made" unless made.is_a?(Numeric)
-          raise Invalid, Masks::Client.saying("proof_not_now") if made < Time.now.to_i - WINDOW - LEEWAY || made > Time.now.to_i + LEEWAY
+          raise Proof.invalid("a proof must say when it was made") unless made.is_a?(Numeric)
+          raise Proof.invalid(Masks::Client.saying("proof_not_now")) if made < Time.now.to_i - WINDOW - LEEWAY || made > Time.now.to_i + LEEWAY
         end
 
         def once!(claims, thumbprint)
           jti = claims["jti"].to_s
 
-          raise Invalid, Masks::Client.saying("proof_no_jti") if jti.empty?
+          raise Proof.invalid(Masks::Client.saying("proof_no_jti")) if jti.empty?
           return if @replay.nil? || first?("#{thumbprint}:#{jti}")
 
-          raise Invalid, Masks::Client.saying("proof_replayed")
+          raise Proof.invalid(Masks::Client.saying("proof_replayed"))
         end
 
         def first?(key)
           @replay.first?(key, expires_in: MEMORY)
         rescue StandardError => e
-          raise ReplayUnavailable, "the replay store could not say whether that proof is new (#{e.class})"
+          raise Unavailable.of("replay_store_unreachable")
         end
 
         def same?(held, expected)

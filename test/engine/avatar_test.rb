@@ -87,7 +87,7 @@ class AvatarClaimsTest < EngineTest
     assert_equal "#{subject.url}/avatars/actor-1/photo?size=64",
                  subject.avatar_url("actor-1", style: "photo", size: 64)
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       subject.avatar_url("actor-1", style: "hologram")
     end
 

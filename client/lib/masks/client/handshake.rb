@@ -101,7 +101,7 @@ module Masks
         end
 
         def refuse(code, description)
-          raise Rejected.new(code.to_s, description.to_s)
+          raise Refused.new(code.to_s, description.to_s)
         end
 
         def normalize(params)

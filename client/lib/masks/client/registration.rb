@@ -121,7 +121,7 @@ module Masks
           yield
         rescue Unregistered
           raise
-        rescue Rejected => e
+        rescue Refused => e
           raise unless statuses.include?(e.status)
 
           raise Unregistered.new(Unregistered::CODE, e.description, status: e.status)

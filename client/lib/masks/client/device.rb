@@ -12,7 +12,7 @@ module Masks
         missing = REQUIRED.find { |field| body[field].to_s.empty? }
 
         if missing
-          raise Rejected.new(
+          raise Refused.new(
             body["error"] || "invalid_device_authorization_response",
             body["error_description"] || "the device authorization endpoint answered without a #{missing}"
           )

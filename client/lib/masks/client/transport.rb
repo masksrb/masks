@@ -82,7 +82,7 @@ module Masks
           request = verb.new(uri, HTTP.default_headers.merge(headers))
 
           if held.bound?
-            raise Error, "a DPoP token needs the key it is held to" if key.nil?
+            raise Refused.new("invalid_request", "a DPoP token needs the key it is held to") if key.nil?
 
             request["Authorization"] = "#{Proof::SCHEME} #{held.access_token}"
             request["DPoP"] = key.proof(request.method, uri, access_token: held.access_token, nonce: nonce)

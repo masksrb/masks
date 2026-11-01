@@ -86,7 +86,7 @@ class SessionTest < ClientTest
   def test_unenrolling_a_machine_the_app_did_not_enroll_is_refused
     issuer.override("/enrollments/other", [ 404, { "error" => "invalid_request", "error_description" => "that client was not enrolled by this app" } ])
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       Masks::Client::Session.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh").unenroll("other")
     end
 
@@ -96,7 +96,7 @@ class SessionTest < ClientTest
   def test_an_enrollment_answered_without_a_token_is_refused
     issuer.override("/enrollments", { "error" => "invalid_request", "error_description" => "outside xixo:" })
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       Masks::Client::Session.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh").enroll(scope: "other:agent")
     end
 
@@ -142,7 +142,7 @@ class SessionTest < ClientTest
   def test_a_token_response_without_an_access_token_is_refused
     issuer.override("/token", { "token_type" => "Bearer", "expires_in" => 3600 })
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       session.complete(code: "abc", verifier: "v")
     end
 
@@ -153,7 +153,7 @@ class SessionTest < ClientTest
     issuer.override("/token", { "error" => "invalid_grant",
                                 "error_description" => "that code expired" })
 
-    error = assert_raises(Masks::Client::Rejected) { session.complete(code: "abc", verifier: "v") }
+    error = assert_raises(Masks::Client::Refused) { session.complete(code: "abc", verifier: "v") }
 
     assert_equal "invalid_grant", error.code
     assert_equal "that code expired", error.description
@@ -223,7 +223,7 @@ class SessionTest < ClientTest
 
     issuer.override("/introspect", { "active" => false, "org" => organization })
 
-    assert_raises(Masks::Client::Unauthorized) { session.introspect("revoked").member!("owner") }
+    assert_raises(Masks::Client::InvalidToken) { session.introspect("revoked").member!("owner") }
   end
 
   def test_an_inactive_token_permits_nothing_however_wide_its_scope_reads
@@ -234,7 +234,7 @@ class SessionTest < ClientTest
     refute found.active?
     refute found.permits?("xixo:catalog:read")
 
-    error = assert_raises(Masks::Client::Unauthorized) { found.permit!("xixo:catalog:read") }
+    error = assert_raises(Masks::Client::InvalidToken) { found.permit!("xixo:catalog:read") }
 
     assert_match(/not active/, error.message)
   end
@@ -243,7 +243,7 @@ class SessionTest < ClientTest
     issuer.override("/.well-known/openid-configuration",
                     issuer.discovery.except("introspection_endpoint"))
 
-    error = assert_raises(Masks::Client::Rejected) { session.introspect("whatever") }
+    error = assert_raises(Masks::Client::Refused) { session.introspect("whatever") }
 
     assert_match(/introspection_endpoint/, error.message)
   end

@@ -139,7 +139,7 @@ class HandshakeTest < ClientTest
   def test_a_state_that_does_not_match_this_browser_redeems_nothing
     registered
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       handshake.complete(returned(state: "forged"), state: "a-state")
     end
 
@@ -150,7 +150,7 @@ class HandshakeTest < ClientTest
   def test_a_browser_holding_no_state_redeems_nothing
     registered
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       handshake.complete(returned, state: nil)
     end
 
@@ -161,7 +161,7 @@ class HandshakeTest < ClientTest
   def test_an_answer_from_another_issuer_redeems_nothing
     registered
 
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       handshake.complete(returned(iss: "https://elsewhere.test"), state: "a-state")
     end
 
@@ -170,7 +170,7 @@ class HandshakeTest < ClientTest
   end
 
   def test_a_refusal_is_carried_through_rather_than_read_as_a_token
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       handshake.complete(
         { "error" => "access_denied", "error_description" => "the person declined",
           "state" => "a-state" },
@@ -183,7 +183,7 @@ class HandshakeTest < ClientTest
   end
 
   def test_a_callback_carrying_no_token_is_refused_before_anything_is_sent
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       handshake.complete(returned(initial_access_token: nil), state: "a-state")
     end
 
@@ -192,7 +192,7 @@ class HandshakeTest < ClientTest
   end
 
   def test_a_token_the_issuer_will_not_honour_is_a_refusal_from_the_issuer
-    error = assert_raises(Masks::Client::Rejected) do
+    error = assert_raises(Masks::Client::Refused) do
       handshake.complete(returned, state: "a-state")
     end
 

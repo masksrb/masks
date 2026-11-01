@@ -80,7 +80,7 @@ class MachineTest < ClientTest
   def test_open_registration_still_needs_a_published_endpoint
     issuer.override("/.well-known/openid-configuration", issuer.discovery.except("registration_endpoint"))
 
-    assert_raises(Masks::Client::Rejected) { Masks::Client::Registration.create(issuer.url, jwks: key) }
+    assert_raises(Masks::Client::Refused) { Masks::Client::Registration.create(issuer.url, jwks: key) }
     assert_equal 0, issuer.count("/register")
   end
 
@@ -125,7 +125,7 @@ class MachineTest < ClientTest
   def test_a_bearer_answered_to_a_proven_request_is_refused
     issuer.override("/token", bound.merge("token_type" => "Bearer"))
 
-    error = assert_raises(Masks::Client::Rejected) { machine.client_credentials }
+    error = assert_raises(Masks::Client::Refused) { machine.client_credentials }
 
     assert_equal "invalid_dpop_proof", error.code
   end
@@ -148,7 +148,7 @@ class MachineTest < ClientTest
   def test_a_nonce_asked_for_twice_is_not_chased
     issuer.override("/token", [ 400, { "error" => "use_dpop_nonce" }, { "DPoP-Nonce" => "n-1" } ])
 
-    error = assert_raises(Masks::Client::Rejected) { machine.client_credentials }
+    error = assert_raises(Masks::Client::Refused) { machine.client_credentials }
 
     assert_equal "use_dpop_nonce", error.code
     assert_equal 2, issuer.count("/token")
@@ -157,7 +157,7 @@ class MachineTest < ClientTest
   def test_a_refusal_without_a_new_nonce_is_not_retried
     issuer.override("/token", [ 400, { "error" => "invalid_dpop_proof", "error_description" => "that proof was made for another URL" } ])
 
-    assert_raises(Masks::Client::Rejected) { machine.client_credentials }
+    assert_raises(Masks::Client::Refused) { machine.client_credentials }
     assert_equal 1, issuer.count("/token")
   end
 
@@ -226,7 +226,7 @@ class MachineTest < ClientTest
   def test_a_transport_with_no_refresh_token_to_renew_with_is_refused
     expired = Masks::Client::Tokens.new(bound("stale", "expires_in" => 0))
 
-    error = assert_raises(Masks::Client::Rejected) { machine.transport(issuer.url, tokens: expired).get("#{issuer.url}/api") }
+    error = assert_raises(Masks::Client::Refused) { machine.transport(issuer.url, tokens: expired).get("#{issuer.url}/api") }
 
     assert_equal "invalid_grant", error.code
   end

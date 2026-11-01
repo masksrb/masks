@@ -52,7 +52,7 @@ class EmbeddedTest < ClientTest
   end
 
   def test_a_refusal_comes_back_as_it_does_over_the_network
-    error = assert_raises(Masks::Client::Rejected) { Masks::Client::HTTP.post_form("#{ISSUER}/token", { "code" => "spent" }) }
+    error = assert_raises(Masks::Client::Refused) { Masks::Client::HTTP.post_form("#{ISSUER}/token", { "code" => "spent" }) }
 
     assert_equal "invalid_grant", error.code
     assert_equal 400, error.status
@@ -75,7 +75,7 @@ class EmbeddedTest < ClientTest
   end
 
   def test_an_app_that_raises_is_unreachable
-    error = assert_raises(Masks::Client::Unreachable) { Masks::Client::HTTP.get("#{ISSUER}/missing") }
+    error = assert_raises(Masks::Client::Unavailable) { Masks::Client::HTTP.get("#{ISSUER}/missing") }
 
     assert_match "could not be reached", error.message
   end

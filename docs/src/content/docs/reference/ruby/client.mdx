@@ -20,29 +20,6 @@ Which one you want depends on what the application is doing:
 Generated from `client/lib` by `bundle exec rake reference`. Its shape is the code's; the
 prose is the RDoc in the source.
 
-## Masks::Client::Challenge
-
-Inherits `Masks::Client::Error`.
-
-| Attribute | Access |
-| --- | --- |
-| `code` | R |
-| `description` | R |
-| `scope` | R |
-| `status` | R |
-
-### ::new
-
-```ruby
-::new(code, description, status:, scope: nil, dpop: false)
-```
-
-### #dpop?
-
-```ruby
-#dpop?()
-```
-
 ## Masks::Client::Claims
 
 | Constant | Value |
@@ -428,14 +405,18 @@ Inherits `Error`.
 
 | Attribute | Access |
 | --- | --- |
-| `code` | R |
-| `description` | R |
 | `secret` | R |
 
 ### ::new
 
 ```ruby
-::new(code, description, secret: nil)
+::new(code, description, status: nil, secret: nil)
+```
+
+### ::of
+
+```ruby
+::of(key, *values)
 ```
 
 ### #signed_in_again?
@@ -455,7 +436,7 @@ Inherits `Error`.
 ### ::new
 
 ```ruby
-::new(message, secret: nil)
+::new(description, secret: nil)
 ```
 
 ## Masks::Client::Device
@@ -578,9 +559,26 @@ Inherits `Error`.
 
 Inherits `StandardError`.
 
+| Attribute | Access |
+| --- | --- |
+| `code` | R |
+| `description` | R |
+| `status` | R |
+| `uri` | R |
+
+### ::new
+
+```ruby
+::new(code, description = nil, status: nil, uri: nil)
+```
+
 ## Masks::Client::Forbidden
 
-Inherits `Masks::Client::Challenge`.
+Inherits `Masks::Client::Error`.
+
+| Attribute | Access |
+| --- | --- |
+| `scope` | R |
 
 ### ::new
 
@@ -588,9 +586,27 @@ Inherits `Masks::Client::Challenge`.
 ::new(code, description, scope: nil)
 ```
 
+### ::of
+
+```ruby
+::of(key, *values)
+```
+
 ## Masks::Client::Foreign
 
 Inherits `Masks::Client::Error`.
+
+### ::new
+
+```ruby
+::new(description)
+```
+
+### ::of
+
+```ruby
+::of(key, *values)
+```
 
 ## Masks::Client::HTTP
 
@@ -709,6 +725,12 @@ Inherits `Masks::Client::Error`.
 #put_json(url, body, headers = {})
 ```
 
+### #refused_with
+
+```ruby
+#refused_with(body, response)
+```
+
 ### #request
 
 ```ruby
@@ -779,6 +801,18 @@ Inherits `Masks::Client::Error`.
 
 Inherits `Masks::Client::Error`.
 
+### ::new
+
+```ruby
+::new(description)
+```
+
+### ::of
+
+```ruby
+::of(key, *values)
+```
+
 ## Masks::Client::Introspection
 
 Inherits `Masks::Client::Claims`.
@@ -823,11 +857,35 @@ Inherits `Masks::Client::Claims`.
 
 Inherits `Masks::Client::Error`.
 
+### ::new
+
+```ruby
+::new(description, code: "invalid_token", missing: false, dpop: nil)
+```
+
+### ::of
+
+```ruby
+::of(key, *values)
+```
+
+### #dpop?
+
+```ruby
+#dpop?()
+```
+
+### #missing?
+
+```ruby
+#missing?()
+```
+
 ## Masks::Client::Issuer
 
 One issuer's discovery document and keys, fetched once and kept for an hour.
 While masks cannot be reached, the last good copies are served, a token signed
-with a key never seen raises Unreachable, and refetches back off from 5
+with a key never seen raises Unavailable, and refetches back off from 5
 seconds to once a minute.
 
 | Constant | Value |
@@ -1157,6 +1215,12 @@ seconds to once a minute.
 ::digest(value)
 ```
 
+### ::invalid
+
+```ruby
+::invalid(description)
+```
+
 ### ::memory
 
 ```ruby
@@ -1180,10 +1244,6 @@ seconds to once a minute.
 ```ruby
 #check!(access_token:, jkt:)
 ```
-
-## Masks::Client::Proof::Invalid
-
-Inherits `Masks::Client::Error`.
 
 ## Masks::Client::Proof::Memory
 
@@ -1216,6 +1276,16 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #call(env)
+```
+
+## Masks::Client::Refused
+
+Inherits `Masks::Client::Error`.
+
+### ::of
+
+```ruby
+::of(key, *values)
 ```
 
 ## Masks::Client::Registration
@@ -1340,26 +1410,6 @@ Inherits `Masks::Client::Error`.
 ```ruby
 #clear!()
 ```
-
-## Masks::Client::Rejected
-
-Inherits `Masks::Client::Error`.
-
-| Attribute | Access |
-| --- | --- |
-| `code` | R |
-| `description` | R |
-| `status` | R |
-
-### ::new
-
-```ruby
-::new(code, description, status: nil)
-```
-
-## Masks::Client::ReplayUnavailable
-
-Inherits `Masks::Client::Error`.
 
 ## Masks::Client::Resource
 
@@ -1830,33 +1880,25 @@ leeway, raises InvalidToken.
 #tokens()
 ```
 
-## Masks::Client::Unauthenticated
-
-Inherits `Masks::Client::Challenge`.
-
-### ::new
-
-```ruby
-::new(description = "a bearer token is required", code: nil)
-```
-
-## Masks::Client::Unauthorized
-
-Inherits `Masks::Client::Challenge`.
-
-### ::new
-
-```ruby
-::new(description, code: "invalid_token", dpop: false)
-```
-
-## Masks::Client::Unreachable
+## Masks::Client::Unavailable
 
 Inherits `Masks::Client::Error`.
 
+### ::new
+
+```ruby
+::new(description)
+```
+
+### ::of
+
+```ruby
+::of(key, *values)
+```
+
 ## Masks::Client::Unregistered
 
-Inherits `Masks::Client::Rejected`.
+Inherits `Masks::Client::Refused`.
 
 | Constant | Value |
 | --- | --- |

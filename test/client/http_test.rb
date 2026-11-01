@@ -63,7 +63,7 @@ class HttpTest < ClientTest
   def test_a_json_answer_that_is_not_an_object_is_refused
     issuer.override("/list", [ 200, [ "a", "b" ] ])
 
-    error = assert_raises(Masks::Client::Rejected) { Masks::Client::HTTP.get("#{issuer.url}/list") }
+    error = assert_raises(Masks::Client::Refused) { Masks::Client::HTTP.get("#{issuer.url}/list") }
 
     assert_equal "server_error", error.code
     assert_match "not an object", error.message
@@ -72,7 +72,7 @@ class HttpTest < ClientTest
   def test_a_refusal_with_a_body_that_is_not_an_object_still_names_its_status
     issuer.override("/broken", [ 502, [ "a" ] ])
 
-    error = assert_raises(Masks::Client::Rejected) { Masks::Client::HTTP.get("#{issuer.url}/broken") }
+    error = assert_raises(Masks::Client::Refused) { Masks::Client::HTTP.get("#{issuer.url}/broken") }
 
     assert_equal "server_error", error.code
   end

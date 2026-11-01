@@ -5,7 +5,7 @@ module Masks
 
       def self.issued(body)
         if body["initial_access_token"].to_s.empty?
-          raise Rejected.new(
+          raise Refused.new(
             body["error"] || "invalid_enrollment_response",
             body["error_description"] || "the enrollment endpoint answered without an initial_access_token"
           )

@@ -53,7 +53,7 @@ class RackTest < ClientTest
     status, _, body = guarded.call(env)
 
     assert_equal 200, status
-    assert_equal [ "Masks::Client::Unauthenticated" ], body
+    assert_equal [ "Masks::Client::InvalidToken" ], body
   end
 
   def test_optional_still_refuses_a_bad_token

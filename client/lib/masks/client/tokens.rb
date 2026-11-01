@@ -12,7 +12,7 @@ module Masks
         token = new(body)
 
         if token.access_token.to_s.empty?
-          raise Rejected.new(
+          raise Refused.new(
             body["error"] || "invalid_token_response",
             body["error_description"] || "the token endpoint answered without an access_token"
           )

@@ -40,7 +40,7 @@ class IssuerTest < ClientTest
       kid: "unknown", key: stranger
     )
 
-    assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+    assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{token}") }
     assert_operator issuer.count(JWKS), :>, 1
   end
 
@@ -48,7 +48,7 @@ class IssuerTest < ClientTest
     subject = Masks::Client.issuer(issuer.url)
     issuer.override(DISCOVERY, issuer.discovery.merge("issuer" => "https://elsewhere.test"))
 
-    error = assert_raises(Masks::Client::Rejected) { subject.discovery }
+    error = assert_raises(Masks::Client::Refused) { subject.discovery }
 
     assert_equal "invalid_issuer", error.code
     assert_includes error.description, "elsewhere.test"
@@ -58,7 +58,7 @@ class IssuerTest < ClientTest
     subject = Masks::Client.issuer(issuer.url)
     issuer.override(DISCOVERY, issuer.discovery.reject { |key, _| key == "token_endpoint" })
 
-    error = assert_raises(Masks::Client::Rejected) { subject.endpoint("token_endpoint") }
+    error = assert_raises(Masks::Client::Refused) { subject.endpoint("token_endpoint") }
 
     assert_includes error.description, "token_endpoint"
   end
@@ -75,7 +75,7 @@ class IssuerTest < ClientTest
   def test_an_unreachable_issuer_says_so
     dead = Masks::Client.issuer("http://127.0.0.1:1")
 
-    assert_raises(Masks::Client::Unreachable) { dead.discovery }
+    assert_raises(Masks::Client::Unavailable) { dead.discovery }
   end
 
   def test_the_last_good_document_and_keys_are_served_while_masks_is_down
@@ -109,7 +109,7 @@ class IssuerTest < ClientTest
       kid: "unknown", key: stranger
     )
 
-    assert_raises(Masks::Client::Unreachable) do
+    assert_raises(Masks::Client::Unavailable) do
       Masks::Client::Verifier.new(issuer.url, audience: "https://app.test/mcp").verify(token)
     end
   end

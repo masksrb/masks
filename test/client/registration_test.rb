@@ -71,7 +71,7 @@ class RegistrationTest < ClientTest
   def test_a_registration_that_is_refused_raises_rather_than_returning_a_shell
     issuer.override("/register", nil)
 
-    error = assert_raises(Masks::Client::Rejected) { create }
+    error = assert_raises(Masks::Client::Refused) { create }
 
     assert_equal "not_found", error.code
   end

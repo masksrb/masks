@@ -1,8 +1,6 @@
 module Masks
   module Rails
     class Cache
-      class Unavailable < Masks::Client::Error; end
-
       CLAIM = 30
       RESULT = 60
       WAIT = 0.05
@@ -41,7 +39,7 @@ module Masks
 
         kept = begin
           write(self.class.key("departed", issuer, kind, value), self.class.now, expires_in: DEPARTURE)
-        rescue Unavailable
+        rescue Masks::Client::Unavailable
           false
         end
 
@@ -49,7 +47,7 @@ module Masks
 
         forgotten { delete(self.class.key("logout", issuer, logout.jti)) }
 
-        raise Unavailable, "the cache did not keep that logout"
+        raise Masks::Client::Unavailable, "the cache did not keep that logout"
       end
 
       def departed?(issuer, identity, since:)
@@ -87,7 +85,7 @@ module Masks
           return true if write(key, 1, unless_exist: true, expires_in: expires_in)
           return false unless read(key).nil?
 
-          raise Unavailable, "the cache neither kept that key nor holds it, so it is not answering"
+          raise Masks::Client::Unavailable, "the cache neither kept that key nor holds it, so it is not answering"
         end
 
         def read(key)
@@ -104,15 +102,15 @@ module Masks
 
         def reached
           yield
-        rescue Unavailable
+        rescue Masks::Client::Unavailable
           raise
         rescue StandardError => e
-          raise Unavailable, Masks::Client.saying("store_unreachable")
+          raise Masks::Client::Unavailable, Masks::Client.saying("store_unreachable")
         end
 
         def forgotten
           yield
-        rescue Unavailable
+        rescue Masks::Client::Unavailable
           nil
         end
 

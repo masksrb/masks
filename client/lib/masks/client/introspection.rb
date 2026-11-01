@@ -19,14 +19,14 @@ module Masks
 
       def permit!(scope)
         unless active?
-          raise Unauthorized.new(Masks::Client.saying("not_active"))
+          raise InvalidToken.new(Masks::Client.saying("not_active"))
         end
 
         super
       end
 
       def member!(*roles, organization: nil)
-        raise Unauthorized.new(Masks::Client.saying("not_active")) unless active?
+        raise InvalidToken.new(Masks::Client.saying("not_active")) unless active?
 
         super
       end

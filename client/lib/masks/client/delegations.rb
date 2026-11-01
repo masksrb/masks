@@ -7,14 +7,16 @@ module Masks
                     login_required interaction_required consent_required invalid_scope].freeze
 
       class Refused < Error
-        attr_reader :code, :description, :secret
+        attr_reader :secret
 
-        def initialize(code, description, secret: nil)
-          super([ code, description ].compact.join(": "))
+        def self.of(key, *values)
+          new(*Masks::Client.failure(key, *values))
+        end
 
-          @code = code
-          @description = description
+        def initialize(code, description, status: nil, secret: nil)
           @secret = secret
+
+          super(code, description, status: status)
         end
 
         def signed_in_again?
@@ -25,10 +27,10 @@ module Masks
       class Unavailable < Error
         attr_reader :secret
 
-        def initialize(message, secret: nil)
-          super(message)
-
+        def initialize(description, secret: nil)
           @secret = secret
+
+          super("temporarily_unavailable", description, status: 503)
         end
       end
 
@@ -63,14 +65,14 @@ module Masks
         raise Refused.new(params["error"], params["error_description"]) if params["error"].to_s != ""
 
         unless params["state"].to_s != "" && OpenSSL.secure_compare(params["state"].to_s, started["state"].to_s)
-          raise Refused.new(*Masks::Client.failure("state_mismatch"))
+          raise Refused.of("state_mismatch")
         end
 
         tokens = answered { session.complete(code: params["code"].to_s, verifier: started["verifier"].to_s) }
         held = tokens.delegations.find { |one| one["provider"] == started["provider"] }
 
-        raise Refused.new(*Masks::Client.failure("nothing_connected", started["provider"])) if held.nil?
-        raise Refused.new(*Masks::Client.failure("no_refresh_for_connection")) if tokens.refresh_token.to_s == ""
+        raise Refused.of("nothing_connected", started["provider"]) if held.nil?
+        raise Refused.of("no_refresh_for_connection") if tokens.refresh_token.to_s == ""
 
         Held.new(
           connection: held["connection"], provider: held["provider"], provider_name: held["provider_name"],
@@ -99,11 +101,11 @@ module Masks
           yield
         rescue Unregistered
           raise
-        rescue Rejected => e
+        rescue Masks::Client::Refused => e
           raise Unavailable.new("masks answered #{e.status}: #{e.message}", secret: secret) if unavailable?(e)
 
-          raise Refused.new(e.code, e.description, secret: secret)
-        rescue Unreachable => e
+          raise Refused.new(e.code, e.description, status: e.status, secret: secret)
+        rescue Masks::Client::Unavailable => e
           raise Unavailable.new(e.message, secret: secret)
         end
 

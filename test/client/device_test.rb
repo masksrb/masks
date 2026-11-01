@@ -41,7 +41,7 @@ class DeviceTest < ClientTest
   def test_a_device_authorization_without_a_user_code_is_refused
     issuer.override("/device_authorization", { "device_code" => "dc", "verification_uri" => "#{issuer.url}/device" })
 
-    error = assert_raises(Masks::Client::Rejected) { session.device_authorization }
+    error = assert_raises(Masks::Client::Refused) { session.device_authorization }
 
     assert_match(/user_code/, error.message)
   end
@@ -78,7 +78,7 @@ class DeviceTest < ClientTest
   def test_a_denied_device_stops_polling
     answers([ 400, { "error" => "access_denied", "error_description" => "the person turned this device away" } ])
 
-    error = assert_raises(Masks::Client::Rejected) { session.await_device(device, pause: 0.01) }
+    error = assert_raises(Masks::Client::Refused) { session.await_device(device, pause: 0.01) }
 
     assert_equal "access_denied", error.code
     assert_equal 1, issuer.count("/token")
@@ -87,13 +87,13 @@ class DeviceTest < ClientTest
   def test_an_expired_code_stops_polling
     answers([ 400, { "error" => "expired_token", "error_description" => "that device code has expired" } ])
 
-    error = assert_raises(Masks::Client::Rejected) { session.await_device(device, pause: 0.01) }
+    error = assert_raises(Masks::Client::Refused) { session.await_device(device, pause: 0.01) }
 
     assert_equal "expired_token", error.code
   end
 
   def test_a_code_past_its_expiry_is_not_polled
-    error = assert_raises(Masks::Client::Rejected) { session.await_device(device(expires_in: -1), pause: 0.01) }
+    error = assert_raises(Masks::Client::Refused) { session.await_device(device(expires_in: -1), pause: 0.01) }
 
     assert_equal "expired_token", error.code
     assert_equal 0, issuer.count("/token")

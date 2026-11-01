@@ -6,7 +6,7 @@ module Masks
       include Masks::Rails::Privileged
 
       included do
-        rescue_from Masks::Client::ReplayUnavailable, with: :masks_unavailable if respond_to?(:rescue_from)
+        rescue_from Masks::Client::Unavailable, with: :masks_unavailable if respond_to?(:rescue_from)
       end
 
       def masks_resource
@@ -25,7 +25,9 @@ module Masks
       def masks_authenticate(scope: nil, role: nil, organization: nil)
         masks_resource.authenticate(request.authorization, scope: scope, role: role, organization: organization,
                                                            **masks_proof)
-      rescue Masks::Client::Unauthenticated
+      rescue Masks::Client::InvalidToken => e
+        raise unless e.missing?
+
         nil
       end
 
@@ -34,15 +36,15 @@ module Masks
       end
 
       def masks_challenge(error)
-        error = Masks::Client::Unauthorized.new(error.to_s) unless error.is_a?(Masks::Client::Challenge)
+        error = Masks::Client::InvalidToken.new(error.to_s) unless error.is_a?(Masks::Client::Error)
 
         response.headers["WWW-Authenticate"] = masks_resource.challenge(error)
         response.headers["Cache-Control"] = "no-store"
 
         render json: {
-          "error" => error.code || "invalid_token",
+          "error" => error.code,
           "error_description" => error.description
-        }, status: error.status
+        }, status: error.status || 401
       end
 
       def masks_unavailable
@@ -72,7 +74,7 @@ module Masks
 
           @masks_token_claims = claims
           true
-        rescue Masks::Client::Challenge => e
+        rescue Masks::Client::InvalidToken, Masks::Client::Forbidden => e
           masks_challenge(e)
           false
         end

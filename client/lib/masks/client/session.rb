@@ -152,13 +152,13 @@ module Masks
         interval = device.interval.positive? ? device.interval : pause
 
         loop do
-          raise Rejected.new(*Masks::Client.failure("code_expired")) if device.expired?
+          raise Refused.new(*Masks::Client.failure("code_expired")) if device.expired?
 
           sleep(interval)
 
           begin
             return token(form)
-          rescue Rejected => e
+          rescue Refused => e
             case e.code
             when "authorization_pending" then next
             when "slow_down" then interval += pause
@@ -240,7 +240,7 @@ module Masks
 
         def renew(held, scope:, resource:)
           if held&.refresh_token.to_s.empty?
-            raise Rejected.new(*Masks::Client.failure("no_refresh_token"))
+            raise Refused.new(*Masks::Client.failure("no_refresh_token"))
           end
 
           renewed = refresh(held.refresh_token, scope: scope, resource: resource)
@@ -254,7 +254,7 @@ module Masks
           tokens = Tokens.granted(dpop ? proven(issuer.endpoint("token_endpoint"), form) : post("token_endpoint", form))
 
           if dpop && !tokens.bound?
-            raise Rejected.new(*Masks::Client.failure("not_held_to_key"))
+            raise Refused.new(*Masks::Client.failure("not_held_to_key"))
           end
 
           tokens
@@ -273,7 +273,7 @@ module Masks
 
           begin
             HTTP.parse(response)
-          rescue Rejected => e
+          rescue Refused => e
             raise unless e.code == NO_NONCE && wanted && wanted != nonce
 
             response = HTTP.deliver(proven_request(url, form, wanted))

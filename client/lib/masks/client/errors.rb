@@ -14,29 +14,26 @@ module Masks
       [ "masks", code, description ].reject { |part| part.to_s.empty? }.join(": ")
     end
 
-    class Error < StandardError; end
+    class Error < StandardError
+      attr_reader :code, :description, :status, :uri
 
-    class Unreachable < Error; end
-
-    class Foreign < Error; end
-
-    class Insecure < Error; end
-
-    class ReplayUnavailable < Error; end
-
-    class Rejected < Error
-      attr_reader :code, :description, :status
-
-      def initialize(code, description, status: nil)
-        super(Masks::Client.worded(code, description))
-
-        @code = code
+      def initialize(code, description = nil, status: nil, uri: nil)
+        @code = code.to_s
         @description = description
         @status = status
+        @uri = uri
+
+        super(Masks::Client.worded(@code, description))
       end
     end
 
-    class Unregistered < Rejected
+    class Refused < Error
+      def self.of(key, *values)
+        new(*Masks::Client.failure(key, *values))
+      end
+    end
+
+    class Unregistered < Refused
       CODE = "invalid_client".freeze
 
       def self.raised_by?(body)
@@ -44,19 +41,22 @@ module Masks
       end
     end
 
-    class InvalidToken < Error; end
+    class InvalidToken < Error
+      def self.of(key, *values)
+        code, description = Masks::Client.failure(key, *values)
 
-    class Challenge < Error
-      attr_reader :code, :description, :status, :scope
+        new(description, code: code, missing: key.to_s == "no_token")
+      end
 
-      def initialize(code, description, status:, scope: nil, dpop: false)
-        super(Masks::Client.worded(code, description))
+      def initialize(description, code: "invalid_token", missing: false, dpop: nil)
+        @missing = missing
+        @dpop = dpop.nil? ? code == "invalid_dpop_proof" : dpop
 
-        @code = code
-        @description = description
-        @status = status
-        @scope = scope
-        @dpop = dpop
+        super(code, description, status: 401)
+      end
+
+      def missing?
+        @missing
       end
 
       def dpop?
@@ -64,21 +64,47 @@ module Masks
       end
     end
 
-    class Unauthenticated < Challenge
-      def initialize(description = Masks::Client.saying("no_token"), code: nil)
-        super(code, description, status: 401)
-      end
-    end
+    class Forbidden < Error
+      attr_reader :scope
 
-    class Unauthorized < Challenge
-      def initialize(description, code: "invalid_token", dpop: false)
-        super(code, description, status: 401, dpop: dpop)
+      def self.of(key, *values)
+        new(*Masks::Client.failure(key, *values))
       end
-    end
 
-    class Forbidden < Challenge
       def initialize(code, description, scope: nil)
-        super(code, description, status: 403, scope: scope)
+        @scope = scope
+
+        super(code, description, status: 403)
+      end
+    end
+
+    class Unavailable < Error
+      def self.of(key, *values)
+        new(Masks::Client.saying(key, *values))
+      end
+
+      def initialize(description)
+        super("temporarily_unavailable", description, status: 503)
+      end
+    end
+
+    class Insecure < Error
+      def self.of(key, *values)
+        new(Masks::Client.saying(key, *values))
+      end
+
+      def initialize(description)
+        super("insecure_url", description)
+      end
+    end
+
+    class Foreign < Error
+      def self.of(key, *values)
+        new(Masks::Client.saying(key, *values))
+      end
+
+      def initialize(description)
+        super("foreign_origin", description)
       end
     end
   end

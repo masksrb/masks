@@ -11,7 +11,7 @@ module Masks
         end
 
         if respond_to?(:rescue_from) && method_defined?(:render)
-          rescue_from Masks::Rails::Cache::Unavailable, with: :masks_cache_unavailable
+          rescue_from Masks::Client::Unavailable, with: :masks_cache_unavailable
         end
       end
 
@@ -163,7 +163,7 @@ module Masks
 
         renewal = begin
           masks_cache.renew(masks_config.issuer_for(request).to_s, spent) { masks_renewal(spent) }
-        rescue Masks::Rails::Cache::Unavailable
+        rescue Masks::Client::Unavailable
           Masks::Rails::Renewal.unreachable
         end
 
@@ -240,7 +240,7 @@ module Masks
           Masks::Rails::Renewal.renewed(refreshed, masks_refreshed_identity(refreshed))
         rescue Masks::Client::Unregistered
           Masks::Rails::Renewal.unregistered
-        rescue Masks::Client::Rejected => e
+        rescue Masks::Client::Refused => e
           e.status.to_i >= 500 || e.status.to_i == 429 ? Masks::Rails::Renewal.unreachable : Masks::Rails::Renewal.refused
         rescue Masks::Client::Error
           Masks::Rails::Renewal.unreachable
@@ -274,7 +274,7 @@ module Masks
 
           if masks_asked_already?(session.delete(STEPPED_UP), missing)
             raise Masks::Client::Forbidden.new(
-              "insufficient_scope", "this account does not hold the #{missing.join(' and ')} privilege",
+              *Masks::Client.failure("no_privilege", missing.join(" and ")),
               scope: missing.flat_map { |name| masks_config.privilege(name).scopes }.join(" ")
             )
           end

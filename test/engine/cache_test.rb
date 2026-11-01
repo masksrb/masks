@@ -105,15 +105,15 @@ class CacheTest < ActiveSupport::TestCase
     cache = Masks::Rails::Cache.new(RaisingCache.new)
     logout = Masks::Client::Logout.new("jti" => "j-1", "sub" => "actor-1", "exp" => Time.now.to_i + 60)
 
-    assert_raises(Masks::Rails::Cache::Unavailable) { cache.first?("proof", expires_in: 60) }
-    assert_raises(Masks::Rails::Cache::Unavailable) { cache.first_logout?(ISSUER, logout) }
-    assert_raises(Masks::Rails::Cache::Unavailable) { cache.departed?(ISSUER, { "sub" => "actor-1" }, since: 0) }
+    assert_raises(Masks::Client::Unavailable) { cache.first?("proof", expires_in: 60) }
+    assert_raises(Masks::Client::Unavailable) { cache.first_logout?(ISSUER, logout) }
+    assert_raises(Masks::Client::Unavailable) { cache.departed?(ISSUER, { "sub" => "actor-1" }, since: 0) }
   end
 
   test "a cache that swallows its errors, as Rails.cache does, is still told apart from a repeat" do
     cache = Masks::Rails::Cache.new(SwallowingCache.new)
 
-    assert_raises(Masks::Rails::Cache::Unavailable) { cache.first?("proof", expires_in: 60) }
+    assert_raises(Masks::Client::Unavailable) { cache.first?("proof", expires_in: 60) }
 
     assert @cache.first?("proof", expires_in: 60)
     assert_not @cache.first?("proof", expires_in: 60)

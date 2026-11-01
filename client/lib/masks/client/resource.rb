@@ -29,8 +29,6 @@ module Masks
         claims.member!(*Array(role), organization: organization) if role || organization
 
         claims
-      rescue InvalidToken => e
-        raise Unauthorized.new(e.message)
       end
 
       def token(authorization)
@@ -53,16 +51,19 @@ module Masks
       end
 
       def challenge(error = nil)
-        error = Unauthorized.new(error.to_s) unless error.is_a?(Challenge)
+        error = InvalidToken.new(error.to_s) unless error.is_a?(Error)
+        missing = error.respond_to?(:missing?) && error.missing?
+        dpop = error.respond_to?(:dpop?) && error.dpop?
+        scope = error.respond_to?(:scope) ? error.scope : nil
 
         parameters = [
-          [ "error", error.code ],
-          [ "error_description", (error.description if error.code) ],
-          [ "scope", error.scope || (scopes.join(" ") if scopes.any?) ],
+          [ "error", (error.code unless missing) ],
+          [ "error_description", (error.description unless missing) ],
+          [ "scope", scope || (scopes.join(" ") if scopes.any?) ],
           [ "resource_metadata", metadata_url ]
         ]
 
-        scheme = error.dpop? ? "#{Proof::SCHEME} algs=\"#{Proof::ALGORITHMS.join(' ')}\", " : "Bearer "
+        scheme = dpop ? "#{Proof::SCHEME} algs=\"#{Proof::ALGORITHMS.join(' ')}\", " : "Bearer "
 
         scheme + parameters.filter_map { |name, value|
           %(#{name}="#{quote(value)}") if value && !value.to_s.empty?
@@ -80,7 +81,7 @@ module Masks
         end
 
         def presented!(authorization)
-          match = authorization.to_s.match(PRESENTED) || raise(Unauthenticated.new)
+          match = authorization.to_s.match(PRESENTED) || raise(InvalidToken.of("no_token"))
 
           [ match[1].casecmp?(Proof::SCHEME) ? :dpop : :bearer, match[2] ]
         end
@@ -88,13 +89,11 @@ module Masks
         def bound!(claims, scheme, token, proof:, method:, url:)
           jkt = claims.dig("cnf", "jkt")
 
-          raise Unauthorized.new(Masks::Client.saying("unbound_as_dpop")) if jkt.nil? && scheme == :dpop
-          raise Unauthorized.new(Masks::Client.saying("bound_as_bearer"), dpop: true) if jkt && scheme != :dpop
+          raise InvalidToken.of("unbound_as_dpop") if jkt.nil? && scheme == :dpop
+          raise InvalidToken.new(Masks::Client.saying("bound_as_bearer"), dpop: true) if jkt && scheme != :dpop
           return if jkt.nil?
 
           Proof.new(proof, method: method, url: url || self.url, replay: @replay).check!(access_token: token, jkt: jkt)
-        rescue Proof::Invalid => e
-          raise Unauthorized.new(e.message, code: "invalid_dpop_proof", dpop: true)
         end
 
         def origin
