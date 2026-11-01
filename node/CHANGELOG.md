@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/node-v0.3.3...node-v0.4.0) (2026-11-01)
+
+
+### Features
+
+* **node:** @masks/server raises Refused, InvalidToken, Forbidden, Unavailable, Insecure, and Foreign from the shared error table ([042cff8](https://github.com/masksrb/masks/commit/042cff8b8b7a69581c0625bdf2aa2d11e99d8b7d))
+
 ## [0.3.3](https://github.com/masksrb/masks/compare/node-v0.3.2...node-v0.3.3) (2026-10-22)
 
 

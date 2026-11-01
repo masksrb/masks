@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/masksrb/masks/compare/gem/v0.12.2...gem/v0.13.0) (2026-11-01)
+
+
+### Features
+
+* **client:** the Ruby client raises Refused, InvalidToken, Forbidden, Unavailable, Insecure, and Foreign, the names every other SDK uses ([7d78435](https://github.com/masksrb/masks/commit/7d78435eed9b40f8da156c89890c104f23f3b70b))
+* **client:** the Ruby client words every failure from the shared error table, and a refusal or a challenge reads masks: code: description ([9674a55](https://github.com/masksrb/masks/commit/9674a5543d8154830330f49e4ba20da886d42e5e))
+
 ## [0.12.2](https://github.com/masksrb/masks/compare/gem/v0.12.1...gem/v0.12.2) (2026-10-20)
 
 

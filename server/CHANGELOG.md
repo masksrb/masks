@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/masksrb/masks/compare/server-v0.14.1...server-v0.15.0) (2026-11-01)
+
+
+### Features
+
+* **server:** the sign-in pages are one plain light sheet, left aligned, with the tenant as the only brand ([e9100f8](https://github.com/masksrb/masks/commit/e9100f8362013621085d2e3c622d61a6302d337e))
+
 ## [0.14.1](https://github.com/masksrb/masks/compare/server-v0.14.0...server-v0.14.1) (2026-11-01)
 
 
