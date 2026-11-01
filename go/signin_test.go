@@ -132,7 +132,7 @@ func TestAHandshakeRefusesWhatItDidNotStart(t *testing.T) {
 		elsewhere := *handshake
 		change(&elsewhere)
 
-		if _, _, err := elsewhere.Start(); !errors.Is(err, ErrForeign) {
+		if _, _, err := elsewhere.Start(); !is[*Foreign](err) {
 			t.Fatalf("expected a URL on another origin to be refused, got %v", err)
 		}
 	}
@@ -255,19 +255,19 @@ func TestAnIDTokenForAnotherClientIsRefused(t *testing.T) {
 		"exp": time.Now().Add(time.Minute).Unix(), "iat": time.Now().Unix(),
 	}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); !errors.Is(err, ErrInvalidToken) {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); !is[*InvalidToken](err) {
 		t.Fatalf("expected ErrInvalidToken, got %v", err)
 	}
 
 	claims["aud"] = []string{client.ID, "someone-else"}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); !errors.Is(err, ErrInvalidToken) {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); !is[*InvalidToken](err) {
 		t.Fatalf("a token with several audiences and no azp was accepted: %v", err)
 	}
 
 	claims["aud"] = client.ID
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, accessTokenType)); !errors.Is(err, ErrInvalidToken) {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, accessTokenType)); !is[*InvalidToken](err) {
 		t.Fatalf("an access token was accepted as an ID token: %v", err)
 	}
 
@@ -385,15 +385,16 @@ func TestADelegationConnectsAnAccountAndReleasesItsToken(t *testing.T) {
 
 	_, err = client.UpstreamToken(context.Background(), connected.Secret, connected.Connection)
 
-	var refused *DelegationError
-	if !errors.As(err, &refused) || !errors.Is(err, ErrDelegationRefused) || refused.Code != "invalid_grant" {
+	var refused *DelegationRefused
+	if !errors.As(err, &refused) || refused.Code != "invalid_grant" {
 		t.Fatalf("expected the spent secret to be refused, got %v", err)
 	}
 
 	held.upstreamDown = true
 
 	_, err = client.UpstreamToken(context.Background(), upstream.Secret, connected.Connection)
-	if !errors.Is(err, ErrDelegationUnavailable) || !errors.As(err, &refused) || refused.Secret == "" || refused.Secret == upstream.Secret {
+	var busy *DelegationUnavailable
+	if !errors.As(err, &busy) || busy.Secret == "" || busy.Secret == upstream.Secret {
 		t.Fatalf("a failed exchange lost the rotated secret: %v", err)
 	}
 }

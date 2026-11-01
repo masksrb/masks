@@ -146,7 +146,7 @@ func (c *Client) AwaitDevice(ctx context.Context, device *DeviceAuthorization) (
 
 	for {
 		if !device.expiry.IsZero() && time.Now().After(device.expiry) {
-			return nil, &Error{Code: "expired_token", Description: "the code expired before anyone approved it"}
+			return nil, refuse("code_expired")
 		}
 
 		select {
@@ -216,7 +216,7 @@ func (c *Client) grant(ctx context.Context, form url.Values, held bool) (*Token,
 	}
 
 	if granted.AccessToken == "" {
-		return nil, &Error{Code: "server_error", Description: "the token endpoint answered without an access token"}
+		return nil, &Refused{Code: "server_error", Description: "the token endpoint answered without an access token"}
 	}
 
 	if granted.ExpiresIn > 0 {
@@ -224,7 +224,7 @@ func (c *Client) grant(ctx context.Context, form url.Values, held bool) (*Token,
 	}
 
 	if held && !granted.Bound() {
-		return nil, &Error{Code: "invalid_dpop_proof", Description: "the token endpoint answered with a token that is not held to this key"}
+		return nil, refuse("not_held_to_key")
 	}
 
 	return granted, nil

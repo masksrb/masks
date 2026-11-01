@@ -134,7 +134,7 @@ func (c *Client) VerifyIDToken(ctx context.Context, raw string) (*Identity, erro
 	}
 
 	if held.Subject == "" || held.Expiry == nil || held.IssuedAt == nil {
-		return nil, invalid("an ID token carries sub, exp, and iat")
+		return nil, invalid("missing_claims", "sub, exp, and iat")
 	}
 
 	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}
@@ -144,7 +144,7 @@ func (c *Client) VerifyIDToken(ctx context.Context, raw string) (*Identity, erro
 	}
 
 	if (len(held.Audience) > 1 || held.AuthorizedParty != "") && held.AuthorizedParty != c.ID {
-		return nil, invalid("that ID token was issued to %q", held.AuthorizedParty)
+		return nil, invalid("id_token_other_client")
 	}
 
 	return held, nil
@@ -153,17 +153,17 @@ func (c *Client) VerifyIDToken(ctx context.Context, raw string) (*Identity, erro
 func (i *Issuer) verified(ctx context.Context, raw string, types []string, into any) error {
 	parsed, err := jwt.ParseSigned(raw, tokenAlgorithms)
 	if err != nil {
-		return &InvalidTokenError{Description: "that token is not a signed JWT", cause: err}
+		return &InvalidToken{Code: "invalid_token", Description: Saying("not_a_jwt"), cause: err}
 	}
 
 	if len(parsed.Headers) != 1 {
-		return invalid("a token carries exactly one signature")
+		return invalid("not_a_jwt")
 	}
 
 	header := parsed.Headers[0]
 
 	if !slices.ContainsFunc(types, func(want string) bool { return typed(header, want) }) {
-		return invalid("that token is not typed %s", types[0])
+		return invalid("wrong_type", typeOf(header), types[0])
 	}
 
 	key, err := i.key(ctx, header.KeyID)
@@ -172,7 +172,7 @@ func (i *Issuer) verified(ctx context.Context, raw string, types []string, into 
 	}
 
 	if err := parsed.Claims(key.Key, into); err != nil {
-		return invalid("that token was not signed by %s", i.URL)
+		return invalid("not_signed_by", i.URL)
 	}
 
 	return nil
@@ -195,7 +195,7 @@ func (c *Client) UserInfo(ctx context.Context, token *Token) (*Identity, error) 
 	}
 
 	if token == nil || token.AccessToken == "" {
-		return nil, invalid("userinfo needs an access token")
+		return nil, &InvalidToken{Code: "invalid_token", Description: "userinfo needs an access token"}
 	}
 
 	transport := &Transport{
@@ -226,7 +226,7 @@ func (c *Client) UserInfo(ctx context.Context, token *Token) (*Identity, error) 
 	}
 
 	if held.Subject == "" {
-		return nil, &Error{Code: "server_error", Description: "userinfo answered without a subject"}
+		return nil, &Refused{Code: "server_error", Description: "userinfo answered without a subject"}
 	}
 
 	return held, nil
@@ -250,7 +250,7 @@ func (c *Client) VerifyLogoutToken(ctx context.Context, raw string) (*LogoutToke
 	}
 
 	if held.ID == "" || held.IssuedAt == nil || held.Expiry == nil {
-		return nil, invalid("a logout token carries jti, iat, and exp")
+		return nil, invalid("missing_claims", "jti, iat, and exp")
 	}
 
 	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}
@@ -261,11 +261,11 @@ func (c *Client) VerifyLogoutToken(ctx context.Context, raw string) (*LogoutToke
 
 	switch event, found := held.Events[BackchannelLogoutEvent]; {
 	case held.Nonce != nil:
-		return nil, invalid("a logout token carries no nonce")
+		return nil, invalid("logout_with_nonce")
 	case held.Subject == "" && held.SessionID == "":
-		return nil, invalid("a logout token names a subject or a session")
+		return nil, invalid("logout_names_nobody")
 	case !found || len(event) == 0 || event[0] != '{':
-		return nil, invalid("that token is not about a logout")
+		return nil, invalid("not_a_logout")
 	}
 
 	return held, nil

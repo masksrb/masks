@@ -105,7 +105,7 @@ func (a *App) refresh(ctx context.Context, s *site, data *session) *renewal {
 
 	token, err := client.Refresh(ctx, data.Token.RefreshToken, masks.TokenRequest{Resource: []string{s.resource}})
 
-	var refusal *masks.Error
+	var refusal *masks.Refused
 
 	switch {
 	case errors.As(err, &refusal) && refusal.Code == "invalid_client":

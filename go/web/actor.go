@@ -71,18 +71,18 @@ func (p *Actor) refused(privilege Privilege) *Forbidden {
 
 	held := p.Organization
 	if held == nil || held.Key == "" {
-		return &Forbidden{Code: "insufficient_organization", Description: "this sign-in names no organization", Scope: masks.ScopeOrganization}
+		return forbidden("no_organization", masks.ScopeOrganization)
 	}
 
 	if privilege.Organization != "" && held.Key != privilege.Organization && held.ID != privilege.Organization {
-		return &Forbidden{Code: "insufficient_organization", Description: "this sign-in is for " + held.Key + ", not " + privilege.Organization}
+		return forbidden("other_organization", "", held.Key, privilege.Organization)
 	}
 
 	if len(privilege.Role) == 0 || held.HasRole(privilege.Role...) {
 		return nil
 	}
 
-	return &Forbidden{Code: "insufficient_role", Description: held.Role + " in " + held.Key + " is not " + strings.Join(privilege.Role, " or ")}
+	return forbidden("other_role", "", held.Role, held.Key, strings.Join(privilege.Role, " or "))
 }
 
 func (p *Actor) Holds(privilege Privilege) bool {

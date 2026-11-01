@@ -125,11 +125,7 @@ func (a *App) askAgain(w http.ResponseWriter, r *http.Request, held *state, miss
 		}
 
 		if a.save(w, r, held) {
-			a.forbid(w, r, &Forbidden{
-				Code:        "insufficient_scope",
-				Description: "this account does not hold the " + strings.Join(missing, " and ") + " privilege",
-				Scope:       strings.Join(scopes, " "),
-			})
+			a.forbid(w, r, forbidden("no_privilege", strings.Join(scopes, " "), strings.Join(missing, " and ")))
 		}
 
 		return
@@ -243,13 +239,15 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 
 	claims, err := verifier.Authenticate(r)
 	if err != nil {
-		var bad *masks.InvalidTokenError
+		var bad *masks.InvalidToken
 		if !errors.As(err, &bad) {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "temporarily_unavailable", "error_description": "the token could not be checked"})
 			return
 		}
 
-		a.challenge(w, verifier, http.StatusUnauthorized, &Forbidden{Code: bad.Code(), Description: bad.Description})
+		code, description := bad.Challenged()
+
+		a.challenge(w, verifier, http.StatusUnauthorized, &Forbidden{Code: code, Description: description})
 
 		return
 	}
@@ -266,9 +264,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 	}
 
 	if len(scopes) > 0 {
-		a.challenge(w, verifier, http.StatusForbidden, &Forbidden{
-			Code: "insufficient_scope", Description: "this token does not carry " + strings.Join(scopes, " "), Scope: strings.Join(scopes, " "),
-		})
+		a.challenge(w, verifier, http.StatusForbidden, forbidden("no_scope", strings.Join(scopes, " "), strings.Join(scopes, " ")))
 
 		return
 	}
@@ -413,11 +409,11 @@ func (a *App) FinishDelegation(w http.ResponseWriter, r *http.Request) (*masks.C
 	}
 
 	if pending == nil || pending.Provider == "" {
-		return nil, &masks.DelegationError{Code: "invalid_state", Description: "that connection is not one this browser started, or it expired"}
+		return nil, &masks.DelegationRefused{Code: "invalid_state", Description: "that connection is not one this browser started, or it expired"}
 	}
 
 	if !actor.SignedIn || pending.Account == "" || actor.Subject != pending.Account {
-		return nil, &masks.DelegationError{Code: "access_denied", Description: "someone other than the person signed in finished that connection"}
+		return nil, &masks.DelegationRefused{Code: "access_denied", Description: "someone other than the person signed in finished that connection"}
 	}
 
 	connected, err := client.FinishDelegation(r.Context(), r.URL.Query(), &pending.Authorization)
@@ -426,7 +422,7 @@ func (a *App) FinishDelegation(w http.ResponseWriter, r *http.Request) (*masks.C
 	}
 
 	if connected.Subject != pending.Account {
-		return nil, &masks.DelegationError{Code: "access_denied", Description: "masks connected that provider for another account"}
+		return nil, &masks.DelegationRefused{Code: "access_denied", Description: "masks connected that provider for another account"}
 	}
 
 	return connected, nil

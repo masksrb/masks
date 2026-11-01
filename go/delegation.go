@@ -11,9 +11,6 @@ import (
 const ScopeDelegate = "masks:delegate:"
 
 var (
-	ErrDelegationRefused     = errors.New("masks: the delegation was refused")
-	ErrDelegationUnavailable = errors.New("masks: the delegation is unavailable for now")
-
 	delegationRefusals = []string{
 		"invalid_grant", "insufficient_scope", "invalid_target", "unauthorized_client", "access_denied",
 		"login_required", "interaction_required", "consent_required", "invalid_scope",
@@ -45,43 +42,6 @@ func (u *Upstream) Valid() bool {
 	return u != nil && u.AccessToken != "" && time.Until(u.Expiry) > time.Minute
 }
 
-type DelegationError struct {
-	Code        string
-	Description string
-	Secret      string
-	Unavailable bool
-	Err         error
-}
-
-func (e *DelegationError) Error() string {
-	held := ErrDelegationRefused.Error()
-	if e.Unavailable {
-		held = ErrDelegationUnavailable.Error()
-	}
-
-	if e.Code != "" {
-		held += ": " + e.Code
-	}
-
-	if e.Description != "" {
-		held += ": " + e.Description
-	}
-
-	return held
-}
-
-func (e *DelegationError) Is(target error) bool {
-	return (target == ErrDelegationUnavailable && e.Unavailable) || (target == ErrDelegationRefused && !e.Unavailable)
-}
-
-func (e *DelegationError) Unwrap() error {
-	return e.Err
-}
-
-func (e *DelegationError) SignInAgain() bool {
-	return e.Code == "login_required" || e.Code == "interaction_required"
-}
-
 func (c *Client) StartDelegation(provider string, asked AuthRequest) (*Authorization, error) {
 	if provider == "" {
 		return nil, errors.New("masks: a delegation names a provider")
@@ -101,7 +61,7 @@ func (c *Client) StartDelegation(provider string, asked AuthRequest) (*Authoriza
 
 func (c *Client) FinishDelegation(ctx context.Context, returned url.Values, pending *Authorization) (*Connected, error) {
 	if pending == nil || pending.Provider == "" {
-		return nil, &DelegationError{Code: "invalid_state", Description: "that answer is not for a connection this client started"}
+		return nil, &DelegationRefused{Code: "invalid_state", Description: "that answer is not for a connection this client started"}
 	}
 
 	signed, err := c.Complete(ctx, returned, pending)
@@ -112,17 +72,17 @@ func (c *Client) FinishDelegation(ctx context.Context, returned url.Values, pend
 	found := slices.IndexFunc(signed.Token.Delegations, func(held Delegation) bool { return held.Provider == pending.Provider })
 
 	if found < 0 {
-		return nil, &DelegationError{Code: "access_denied", Description: "masks connected nothing for " + pending.Provider}
+		return nil, delegationRefused("nothing_connected", pending.Provider)
 	}
 
 	if signed.Token.RefreshToken == "" {
-		return nil, &DelegationError{Code: "invalid_grant", Description: "masks issued no refresh token to keep the connection with"}
+		return nil, delegationRefused("no_refresh_for_connection")
 	}
 
 	held := signed.Token.Delegations[found]
 
 	if signed.Identity != nil && held.Subject != "" && held.Subject != signed.Identity.Subject {
-		return nil, &DelegationError{Code: "access_denied", Description: "the connection belongs to someone other than the person who signed in"}
+		return nil, &DelegationRefused{Code: "access_denied", Description: "the connection belongs to someone other than the person who signed in"}
 	}
 
 	return &Connected{Delegation: held, Secret: signed.Token.RefreshToken}, nil
@@ -156,18 +116,20 @@ func (c *Client) UpstreamToken(ctx context.Context, secret, connection string) (
 }
 
 func delegationFailed(err error, secret string) error {
-	var refused *Error
-
-	if errors.Is(err, ErrInvalidToken) {
-		return &DelegationError{Code: "invalid_token", Description: err.Error(), Secret: secret, Err: err}
+	var bad *InvalidToken
+	if errors.As(err, &bad) {
+		return &DelegationRefused{Code: bad.Code, Description: bad.Description, Secret: secret, cause: err}
 	}
 
+	var refused *Refused
 	if !errors.As(err, &refused) {
-		return &DelegationError{Description: err.Error(), Secret: secret, Unavailable: true, Err: err}
+		return &DelegationUnavailable{Description: Saying("delegation_not_answering"), Secret: secret, cause: err}
 	}
 
-	unavailable := !slices.Contains(delegationRefusals, refused.Code) &&
-		(refused.Code == "temporarily_unavailable" || refused.Status >= 500 || refused.Status == 429)
+	if !slices.Contains(delegationRefusals, refused.Code) &&
+		(refused.Code == "temporarily_unavailable" || refused.Status >= 500 || refused.Status == 429) {
+		return &DelegationUnavailable{Description: refused.Description, Secret: secret, cause: err}
+	}
 
-	return &DelegationError{Code: refused.Code, Description: refused.Description, Secret: secret, Unavailable: unavailable, Err: err}
+	return &DelegationRefused{Code: refused.Code, Description: refused.Description, Status: refused.Status, Secret: secret, cause: err}
 }

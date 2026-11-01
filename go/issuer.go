@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -127,7 +126,7 @@ func Discover(ctx context.Context, issuer string, options ...Option) (*Issuer, e
 	}
 
 	if strings.TrimSuffix(found.Metadata.Issuer, "/") != named {
-		return nil, fmt.Errorf("masks: %s publishes a document naming %q", named, found.Metadata.Issuer)
+		return nil, refuse("names_another", named, found.Metadata.Issuer)
 	}
 
 	metadata := found.Metadata
@@ -172,7 +171,7 @@ func DiscoverResource(ctx context.Context, resource string, options ...Option) (
 	}
 
 	if strings.TrimSuffix(found.Resource, "/") != named {
-		return nil, fmt.Errorf("masks: %s publishes metadata naming %q", named, found.Resource)
+		return nil, refuse("resource_names_another", named, found.Resource)
 	}
 
 	return found, nil
@@ -206,9 +205,9 @@ func (s settings) check(target string) error {
 	case parsed.Scheme == "http" && (s.plainHTTP || loopback(parsed.Hostname())):
 		return nil
 	case parsed.Scheme == "http":
-		return fmt.Errorf("%w: %s", ErrInsecure, parsed.Redacted())
+		return insecure("plain_http", parsed.Redacted())
 	default:
-		return fmt.Errorf("masks: %q is not an http or https URL", target)
+		return insecure("not_http", target)
 	}
 }
 
@@ -224,7 +223,7 @@ func loopback(host string) bool {
 
 func (i *Issuer) endpoint(named, value string) (string, error) {
 	if value == "" {
-		return "", fmt.Errorf("masks: %s publishes no %s", i.URL, named)
+		return "", refuse("publishes_nothing", i.URL, named)
 	}
 
 	return value, nil
@@ -242,7 +241,7 @@ func (i *Issuer) sameOrigin(target string) error {
 	}
 
 	if origin(held) != origin(want) {
-		return fmt.Errorf("%w: %s", ErrForeign, held.Redacted())
+		return foreign("other_origin", held.Redacted())
 	}
 
 	return nil
@@ -279,7 +278,7 @@ func (i *Issuer) key(ctx context.Context, kid string) (*jose.JSONWebKey, error) 
 		return &found[0], nil
 	}
 
-	return nil, invalid("%s publishes no key %q", i.URL, kid)
+	return nil, invalid("no_key", i.URL, kid)
 }
 
 func (i *Issuer) refreshKeys(ctx context.Context) error {
@@ -368,7 +367,7 @@ func decoded(response *http.Response, into any) error {
 	}
 
 	if err := json.NewDecoder(io.LimitReader(response.Body, readLimit)).Decode(into); err != nil {
-		return errors.Join(fmt.Errorf("masks: %s answered with something other than JSON", response.Request.URL.Redacted()), err)
+		return errors.Join(refuse("not_json", response.Request.URL.Redacted()), err)
 	}
 
 	return nil

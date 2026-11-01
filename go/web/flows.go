@@ -285,7 +285,7 @@ func (a *App) callback(w http.ResponseWriter, r *http.Request) {
 
 	signed, err := a.signIn(s).Complete(r.Context(), query, &pending.Authorization)
 
-	var refused *masks.Error
+	var refused *masks.Refused
 
 	switch {
 	case errors.As(err, &refused) && refused.Code == "invalid_client":
@@ -549,7 +549,7 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 
 	logout, err := a.signIn(s).VerifyLogoutToken(r.Context(), presented)
 	if err != nil {
-		var bad *masks.InvalidTokenError
+		var bad *masks.InvalidToken
 		if errors.As(err, &bad) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "error_description": bad.Description})
 			return
@@ -831,7 +831,7 @@ func (a *App) disconnect(w http.ResponseWriter, r *http.Request) {
 	if s.held.RegistrationAccessToken != "" && s.held.RegistrationClientURI != "" {
 		err := s.issuer.DeleteRegistration(r.Context(), s.held.Registration())
 
-		var refused *masks.Error
+		var refused *masks.Refused
 		if err != nil && !(errors.As(err, &refused) && refused.Status < 500) {
 			a.failed(w, r, err)
 			return

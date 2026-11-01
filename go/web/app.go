@@ -519,7 +519,7 @@ func registered(ctx context.Context, s *site) (bool, error) {
 
 	_, err := s.issuer.ReadRegistration(ctx, s.held.Registration())
 
-	var refused *masks.Error
+	var refused *masks.Refused
 	if errors.As(err, &refused) && slices.Contains([]int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound}, refused.Status) {
 		return false, nil
 	}
@@ -528,18 +528,16 @@ func registered(ctx context.Context, s *site) (bool, error) {
 }
 
 var (
-	ErrNotConnected       = errors.New("masks/web: this app has not shaken hands with its issuer")
-	ErrForeignCredentials = errors.New("masks/web: the app's credentials were issued by another issuer")
+	ErrNotConnected       error = &masks.Refused{Code: "handshake_required", Description: masks.Saying("not_connected", "its issuer")}
+	ErrForeignCredentials       = errors.New("masks/web: the app's credentials were issued by another issuer")
 )
 
-type Forbidden struct {
-	Code        string
-	Description string
-	Scope       string
-}
+type Forbidden = masks.Forbidden
 
-func (f *Forbidden) Error() string {
-	return "masks/web: " + f.Code + ": " + f.Description
+func forbidden(key, scope string, values ...any) *Forbidden {
+	code, description := masks.Failure(key, values...)
+
+	return &Forbidden{Code: code, Description: description, Scope: scope}
 }
 
 func wantsJSON(r *http.Request) bool {
@@ -578,15 +576,15 @@ func (a *App) refuse(w http.ResponseWriter, r *http.Request, status int, code, d
 }
 
 func (a *App) failed(w http.ResponseWriter, r *http.Request, err error) {
-	var refused *masks.Error
+	var refused *masks.Refused
 	if errors.As(err, &refused) {
 		a.refuse(w, r, http.StatusBadRequest, refused.Code, refused.Description)
 		return
 	}
 
-	var bad *masks.InvalidTokenError
+	var bad *masks.InvalidToken
 	if errors.As(err, &bad) {
-		a.refuse(w, r, http.StatusBadRequest, "invalid_token", bad.Description)
+		a.refuse(w, r, http.StatusBadRequest, bad.Code, bad.Description)
 		return
 	}
 

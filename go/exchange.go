@@ -67,7 +67,7 @@ func (c *Client) Exchange(ctx context.Context, asked ExchangeRequest) (*Token, e
 	}
 
 	if granted.IssuedTokenType != wanted {
-		return nil, &Error{Code: "server_error", Description: "the token endpoint issued " + or(granted.IssuedTokenType, "an unnamed type") + " for " + wanted}
+		return nil, &Refused{Code: "server_error", Description: "the token endpoint issued " + or(granted.IssuedTokenType, "an unnamed type") + " for " + wanted}
 	}
 
 	return granted, nil

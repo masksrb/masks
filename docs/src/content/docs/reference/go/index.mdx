@@ -196,7 +196,7 @@ A JSON request gets `401` instead of a redirect, with `login_required` and a `lo
 | `Groups`                                                | The groups the person belongs to.                                                                                                                        |
 | `Scopes`, `HasScope("catalog:read")`                    | What the token carries.                                                                                                                                  |
 | `Privileges`, `HasPrivilege("admin")`                   | See [privileges](#privileges).                                                                                                                           |
-| `Holds(privilege)`, `Member(privilege)`                 | Check a `web.Privilege` that `Privileges` does not name. `Member` checks only its role and organization, and returns a `*web.Forbidden` with the reason. |
+| `Holds(privilege)`, `Member(privilege)`                 | Check a `web.Privilege` that `Privileges` does not name. `Member` checks only its role and organization, and returns a `*masks.Forbidden` with the reason. |
 | `AccessToken`                                           | The token to send to a resource server.                                                                                                                  |
 | `ExpiresAt`, `AccountURL`                               | When the access token expires, in seconds since the epoch, and the person's account page at masks.                                                       |
 | `Claim("groups", &groups)`                              | Any other claim the sign-in kept.                                                                                                                        |
@@ -438,13 +438,13 @@ save(connection, upstream.Secret)
 ```
 
 Save `upstream.Secret` before anything else, since each call replaces the secret. A
-`*masks.DelegationError` carries the replacement in `Secret` even when the call fails after the
-refresh. The upstream token is a Bearer token, even when the client holds a DPoP key.
+`*masks.DelegationRefused` or `*masks.DelegationUnavailable` carries the replacement in `Secret`
+even when the call fails after the refresh. The upstream token is a Bearer token, even when the client holds a DPoP key.
 
-- `errors.Is(err, masks.ErrDelegationUnavailable)` means masks or the provider did not answer, and
-  nothing was lost.
-- `errors.Is(err, masks.ErrDelegationRefused)` means masks refused the call. Its `SignInAgain()` is
-  `true` when the person has to sign in again.
+- A `*masks.DelegationUnavailable` means masks or the provider did not answer, and nothing was
+  lost.
+- A `*masks.DelegationRefused` means masks refused the call. Its `SignInAgain()` is `true` when the
+  person has to sign in again. Read either with `errors.As`.
 
 ## Machines
 
@@ -472,7 +472,7 @@ enrollment, err := client.Enroll(r.Context(), masks.EnrollmentRequest{
 
 `client.Unenroll(ctx, machineClientID)` archives the machine and revokes every token it holds.
 Unenrolling a machine twice succeeds both times. A client the app did not enroll answers with a
-`*masks.Error` whose `Status` is `404`.
+`*masks.Refused` whose `Status` is `404`.
 
 ### Registering with the token
 
@@ -604,7 +604,7 @@ verifier.Replay = masks.ReplayStoreFunc(func(ctx context.Context, key string, ex
 })
 ```
 
-An error from the store refuses the request with `masks.ErrReplayStore`, and the middleware answers
+An error from the store refuses the request with a `*masks.Unavailable`, and the middleware answers
 `503`.
 
 ## Redirects and plain HTTP
@@ -612,7 +612,16 @@ An error from the store refuses the request with `masks.ErrReplayStore`, and the
 A request that carries a credential does not follow a redirect. That covers the token, revocation,
 introspection, device, enrollment, and registration endpoints, so a client secret, a code, or a
 refresh token goes only to the address the issuer published. A redirect there is a
-`*masks.Error`.
+`*masks.Refused`.
+
+## Errors
+
+Every error the SDK returns is one of the kinds in [Errors](/reference/errors/): `*masks.Refused`,
+`*masks.InvalidToken`, `*masks.Forbidden`, `*masks.Unavailable`, `*masks.Insecure`,
+`*masks.Foreign`, `*masks.DelegationRefused`, and `*masks.DelegationUnavailable`. Read one with
+`errors.As`, or ask `masks.HasCode(err, "invalid_grant")` for its code. Each message reads
+`masks: code: description`, and the description for a failure that page lists is the same in every
+SDK.
 
 Every URL is `https`, except on this machine: `localhost`, a `.localhost` name, or a loopback
 address. `masks.AllowPlainHTTP()` lifts that for a private network.

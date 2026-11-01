@@ -43,7 +43,7 @@ func (i *Issuer) Register(ctx context.Context, metadata ClientMetadata, initialA
 	}
 
 	if endpoint == "" {
-		return nil, &Error{Code: "access_denied", Description: i.URL + " registers no clients without an initial access token"}
+		return nil, &Refused{Code: "access_denied", Description: i.URL + " registers no clients without an initial access token"}
 	}
 
 	held := &Registration{}

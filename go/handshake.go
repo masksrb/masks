@@ -62,20 +62,20 @@ func (h *Handshake) Start() (target, state string, err error) {
 
 func (h *Handshake) Complete(ctx context.Context, returned url.Values, state string) (*Registration, error) {
 	if !sameString(returned.Get("state"), state) {
-		return nil, &Error{Code: "invalid_state", Description: "the handshake did not match this browser"}
+		return nil, refuse("state_mismatch")
 	}
 
 	if code := returned.Get("error"); code != "" {
-		return nil, &Error{Code: code, Description: returned.Get("error_description")}
+		return nil, &Refused{Code: code, Description: returned.Get("error_description")}
 	}
 
 	if named := strings.TrimSuffix(returned.Get("iss"), "/"); named != h.Issuer.URL {
-		return nil, &Error{Code: "invalid_issuer", Description: fmt.Sprintf("the handshake came back from %q instead of %s", named, h.Issuer.URL)}
+		return nil, &Refused{Code: "invalid_issuer", Description: fmt.Sprintf("the handshake came back from %q instead of %s", named, h.Issuer.URL)}
 	}
 
 	token := returned.Get("initial_access_token")
 	if token == "" {
-		return nil, &Error{Code: "invalid_request", Description: "the handshake came back without a token"}
+		return nil, &Refused{Code: "invalid_request", Description: "the handshake came back without a token"}
 	}
 
 	return h.Issuer.Register(ctx, ClientMetadata{
@@ -121,7 +121,7 @@ func (h *Handshake) check() error {
 
 		parsed, err := url.Parse(held)
 		if err != nil || origin(parsed) != origin(resource) {
-			return fmt.Errorf("%w: %s is not on %s", ErrForeign, held, origin(resource))
+			return foreign("other_origin", held)
 		}
 	}
 

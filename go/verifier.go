@@ -115,17 +115,17 @@ func NewVerifier(issuer *Issuer, audience ...string) *Verifier {
 func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 	parsed, err := jwt.ParseSigned(token, tokenAlgorithms)
 	if err != nil {
-		return nil, &InvalidTokenError{Description: "that token is not a signed JWT", cause: err}
+		return nil, &InvalidToken{Code: "invalid_token", Description: Saying("not_a_jwt"), cause: err}
 	}
 
 	if len(parsed.Headers) != 1 {
-		return nil, invalid("a token carries exactly one signature")
+		return nil, invalid("not_a_jwt")
 	}
 
 	header := parsed.Headers[0]
 
 	if !typed(header, accessTokenType) {
-		return nil, invalid("that token is not typed %s", accessTokenType)
+		return nil, invalid("wrong_type", typeOf(header), accessTokenType)
 	}
 
 	key, err := v.Issuer.key(ctx, header.KeyID)
@@ -136,11 +136,11 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 	claims := &Claims{}
 
 	if err := parsed.Claims(key.Key, claims); err != nil {
-		return nil, invalid("that token was not signed by %s", v.Issuer.URL)
+		return nil, invalid("not_signed_by", v.Issuer.URL)
 	}
 
 	if claims.ID == "" || claims.Expiry == nil {
-		return nil, invalid("a token carries jti and exp")
+		return nil, invalid("missing_claims", "jti and exp")
 	}
 
 	expected := jwt.Expected{Issuer: v.Issuer.URL, AnyAudience: jwt.Audience(v.Audience), Time: time.Now()}
@@ -155,7 +155,7 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 func (v *Verifier) Authenticate(request *http.Request) (*Claims, error) {
 	scheme, token, found := strings.Cut(request.Header.Get("Authorization"), " ")
 	if !found || token == "" {
-		return nil, &InvalidTokenError{Description: "the request carries no token", Missing: true}
+		return nil, invalid("no_token")
 	}
 
 	claims, err := v.Verify(request.Context(), token)
@@ -169,9 +169,9 @@ func (v *Verifier) Authenticate(request *http.Request) (*Claims, error) {
 	case strings.EqualFold(scheme, DPoP) && claims.Bound():
 		return claims, v.proven(request, token, claims.Confirmation.Thumbprint)
 	case strings.EqualFold(scheme, "Bearer"):
-		return nil, invalid("that token is held to a key and is presented with DPoP")
+		return nil, invalid("bound_as_bearer")
 	default:
-		return nil, invalid("that token is presented as a Bearer token")
+		return nil, invalid("unbound_as_dpop")
 	}
 }
 
@@ -179,13 +179,15 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		claims, err := v.Authenticate(request)
 		if err != nil {
-			var refused *InvalidTokenError
+			var refused *InvalidToken
 			if !errors.As(err, &refused) {
 				http.Error(response, "the token could not be checked", http.StatusServiceUnavailable)
 				return
 			}
 
-			for _, challenge := range v.Challenge(refused.Code(), refused.Description, "") {
+			code, description := refused.Challenged()
+
+			for _, challenge := range v.Challenge(code, description, "") {
 				response.Header().Add("WWW-Authenticate", challenge)
 			}
 
@@ -222,20 +224,20 @@ func (v *Verifier) Challenge(code, description, scope string) []string {
 }
 
 func unverified(err error) error {
-	description := "that token could not be verified"
+	description := Saying("unverified")
 
 	switch {
 	case errors.Is(err, jwt.ErrExpired):
-		description = "that token has expired"
+		description = Saying("expired")
 	case errors.Is(err, jwt.ErrNotValidYet), errors.Is(err, jwt.ErrIssuedInTheFuture):
-		description = "that token is not valid yet"
+		description = Saying("not_valid_yet")
 	case errors.Is(err, jwt.ErrInvalidIssuer):
-		description = "that token was issued by another server"
+		description = Saying("other_issuer")
 	case errors.Is(err, jwt.ErrInvalidAudience):
-		description = "that token was issued for another app"
+		description = Saying("other_audience")
 	}
 
-	return &InvalidTokenError{Description: description, cause: err}
+	return &InvalidToken{Code: "invalid_token", Description: description, cause: err}
 }
 
 func quoted(value string) string {
@@ -259,69 +261,69 @@ func ClaimsFrom(ctx context.Context) (*Claims, bool) {
 func (v *Verifier) proven(request *http.Request, token, bound string) error {
 	presented := request.Header.Values(DPoP)
 	if len(presented) != 1 || strings.Contains(presented[0], ",") {
-		return invalid("exactly one DPoP proof is required")
+		return invalid("one_proof")
 	}
 
 	parsed, err := jwt.ParseSigned(presented[0], proofAlgorithms)
 	if err != nil || len(parsed.Headers) != 1 {
-		return invalid("that proof is not a signed JWT")
+		return invalid("proof_not_a_jwt")
 	}
 
 	header := parsed.Headers[0]
 
 	if !typed(header, proofType) {
-		return invalid("a proof is typed %s", proofType)
+		return invalid("proof_type", proofType)
 	}
 
 	carried := header.JSONWebKey
 	if carried == nil || !carried.IsPublic() || !carried.Valid() {
-		return invalid("a proof carries the public key that signed it")
+		return invalid("proof_no_key")
 	}
 
 	if _, symmetric := carried.Key.([]byte); symmetric {
-		return invalid("a proof key is public")
+		return invalid("proof_key_private")
 	}
 
 	claims := proofClaims{}
 
 	if err := parsed.Claims(carried.Key, &claims); err != nil {
-		return invalid("that proof was not signed by the key it carries")
+		return invalid("proof_unsigned")
 	}
 
 	held, err := thumbprint(*carried)
 	if err != nil || subtle.ConstantTimeCompare([]byte(held), []byte(bound)) != 1 {
-		return invalid("that proof was signed by another key than the token is held to")
+		return invalid("proof_other_key")
 	}
 
 	if !strings.EqualFold(claims.Method, request.Method) {
-		return invalid("that proof was made for another method")
+		return invalid("proof_other_method")
 	}
 
 	if target, err := tidiedString(claims.Target); err != nil || target != tidied(v.target(request)) {
-		return invalid("that proof was made for another URL")
+		return invalid("proof_other_url")
 	}
 
 	made := time.Unix(claims.IssuedAt, 0)
 
 	if time.Since(made) > proofWindow+verifyLeeway || time.Until(made) > verifyLeeway {
-		return invalid("that proof was not made just now")
+		return invalid("proof_not_now")
 	}
 
 	if subtle.ConstantTimeCompare([]byte(claims.Hash), []byte(tokenHash(token))) != 1 {
-		return invalid("that proof was made for another token")
+		return invalid("proof_other_token")
 	}
 
 	if claims.ID == "" {
-		return invalid("a proof carries a jti")
+		return invalid("proof_no_jti")
 	}
 
 	first, err := v.replay().First(request.Context(), bound+":"+claims.ID, replayMemory)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrReplayStore, err)
+		return &Unavailable{Description: Saying("replay_store_unreachable"), cause: err}
 	}
 
 	if !first {
-		return invalid("that proof has already been used")
+		return invalid("proof_replayed")
 	}
 
 	return nil
@@ -356,6 +358,12 @@ func (v *Verifier) target(request *http.Request) *url.URL {
 	}
 
 	return &held
+}
+
+func typeOf(header jose.Header) string {
+	held, _ := header.ExtraHeaders[jose.HeaderType].(string)
+
+	return held
 }
 
 func typed(header jose.Header, want string) bool {

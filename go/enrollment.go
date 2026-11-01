@@ -51,7 +51,7 @@ func (c *Client) Enroll(ctx context.Context, asked EnrollmentRequest) (*Enrollme
 	}
 
 	if held.InitialAccessToken == "" {
-		return nil, &Error{Code: "server_error", Description: "the enrollment endpoint answered without an initial access token"}
+		return nil, &Refused{Code: "server_error", Description: "the enrollment endpoint answered without an initial access token"}
 	}
 
 	if held.ExpiresIn > 0 {

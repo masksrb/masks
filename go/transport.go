@@ -3,7 +3,6 @@ package masks
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -31,7 +30,7 @@ type reused struct {
 func ReuseTokenSource(held *Token, fetch TokenSourceFunc) TokenSource {
 	return &reused{held: held, fetch: func(ctx context.Context, _ *Token) (*Token, error) {
 		if fetch == nil {
-			return nil, &Error{Code: "invalid_token", Description: "the token expired and nothing can fetch another"}
+			return nil, &Refused{Code: "invalid_token", Description: "the token expired and nothing can fetch another"}
 		}
 
 		return fetch(ctx)
@@ -65,7 +64,7 @@ func (c *Client) CredentialsSource(asked TokenRequest) TokenSource {
 func (c *Client) RefreshSource(held *Token, asked TokenRequest, keep func(*Token) error) TokenSource {
 	return &reused{held: held, fetch: func(ctx context.Context, current *Token) (*Token, error) {
 		if current == nil || current.RefreshToken == "" {
-			return nil, &Error{Code: "invalid_grant", Description: "there is no refresh token to renew this session with"}
+			return nil, refuse("no_refresh_token")
 		}
 
 		renewed, err := c.Refresh(ctx, current.RefreshToken, asked)
@@ -105,7 +104,7 @@ func (c *Client) HTTPClient(source TokenSource, origins ...string) *http.Client 
 func (t *Transport) RoundTrip(request *http.Request) (*http.Response, error) {
 	if !t.allows(request.URL) {
 		closeBody(request)
-		return nil, fmt.Errorf("%w: this transport holds tokens only for %s", ErrForeign, strings.Join(t.Origins, ", "))
+		return nil, foreign("tokens_only_for", strings.Join(t.Origins, ", "), origin(request.URL))
 	}
 
 	token, err := t.Source.Token(request.Context())

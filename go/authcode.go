@@ -135,20 +135,20 @@ func (c *Client) AuthCodeURL(asked AuthRequest) (*Authorization, error) {
 
 func (c *Client) Complete(ctx context.Context, returned url.Values, pending *Authorization) (*SignIn, error) {
 	if pending == nil || !sameString(returned.Get("state"), pending.State) {
-		return nil, &Error{Code: "invalid_state", Description: "that answer is not for a sign-in this client started"}
+		return nil, refuse("state_mismatch")
 	}
 
 	if named := strings.TrimSuffix(returned.Get("iss"), "/"); named != c.Issuer.URL {
-		return nil, &Error{Code: "invalid_issuer", Description: "that answer came from " + strconv.Quote(named) + " instead of " + c.Issuer.URL}
+		return nil, &Refused{Code: "invalid_issuer", Description: "that answer came from " + strconv.Quote(named) + " instead of " + c.Issuer.URL}
 	}
 
 	if code := returned.Get("error"); code != "" {
-		return nil, &Error{Code: code, Description: returned.Get("error_description")}
+		return nil, &Refused{Code: code, Description: returned.Get("error_description")}
 	}
 
 	code := returned.Get("code")
 	if code == "" {
-		return nil, &Error{Code: "invalid_request", Description: "the answer carries no code"}
+		return nil, refuse("no_callback_code")
 	}
 
 	form := TokenRequest{Resource: pending.Resource}.form()
@@ -169,7 +169,7 @@ func (c *Client) Complete(ctx context.Context, returned url.Values, pending *Aut
 	}
 
 	if token.IDToken == "" {
-		return nil, invalid("the token endpoint answered without an ID token")
+		return nil, invalid("no_id_token")
 	}
 
 	identity, err := c.VerifyIDToken(ctx, token.IDToken)
@@ -178,16 +178,16 @@ func (c *Client) Complete(ctx context.Context, returned url.Values, pending *Aut
 	}
 
 	if !sameString(identity.Nonce, pending.Nonce) {
-		return nil, invalid("that ID token was issued for another sign-in")
+		return nil, invalid("id_token_other_sign_in")
 	}
 
 	if identity.AccessTokenHash != "" && !sameString(identity.AccessTokenHash, accessTokenHash(token.AccessToken)) {
-		return nil, invalid("that ID token was issued with another access token")
+		return nil, invalid("id_token_other_access_token")
 	}
 
 	if pending.MaxAge > 0 && (identity.AuthTime == 0 ||
 		time.Since(time.Unix(identity.AuthTime, 0)) > time.Duration(pending.MaxAge)*time.Second+verifyLeeway) {
-		return nil, invalid("the person signed in longer ago than max_age allows")
+		return nil, invalid("too_old")
 	}
 
 	signed.Identity = identity

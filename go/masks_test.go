@@ -65,7 +65,7 @@ func TestPlainHTTPIsAllowedOnlyOnThisMachine(t *testing.T) {
 		}
 	}
 
-	if err := held.check("http://10.0.0.4"); !errors.Is(err, ErrInsecure) {
+	if err := held.check("http://10.0.0.4"); !is[*Insecure](err) {
 		t.Errorf("expected ErrInsecure, got %v", err)
 	}
 
@@ -102,7 +102,7 @@ func TestAWrongSecretIsAnInvalidClient(t *testing.T) {
 
 	_, err := client.ClientCredentials(context.Background(), TokenRequest{})
 
-	var refused *Error
+	var refused *Refused
 	if !errors.As(err, &refused) || refused.Code != "invalid_client" || refused.Status != http.StatusUnauthorized {
 		t.Fatalf("expected invalid_client, got %v", err)
 	}
@@ -356,7 +356,7 @@ func TestARegistrationURIOnAnotherOriginNeverSeesTheToken(t *testing.T) {
 	held.initial["one-time"] = "enrolled"
 	held.foreignURI = true
 
-	if _, err := discovered(t, held).Register(context.Background(), ClientMetadata{}, "one-time"); !errors.Is(err, ErrForeign) {
+	if _, err := discovered(t, held).Register(context.Background(), ClientMetadata{}, "one-time"); !is[*Foreign](err) {
 		t.Fatalf("expected ErrForeign, got %v", err)
 	}
 }
@@ -448,7 +448,7 @@ func TestATransportRefusesAnOriginItWasNotGiven(t *testing.T) {
 
 	http := client.HTTPClient(client.CredentialsSource(TokenRequest{}), "https://files.example")
 
-	if _, err := http.Get(held.url() + "/elsewhere"); !errors.Is(err, ErrForeign) {
+	if _, err := http.Get(held.url() + "/elsewhere"); !is[*Foreign](err) {
 		t.Fatalf("expected ErrForeign, got %v", err)
 	}
 }
@@ -519,7 +519,7 @@ func TestAVerifierRefusesMisusedProofs(t *testing.T) {
 			request, _ := boundRequest(t, client, dpop, http.MethodGet, target)
 			change(request)
 
-			if _, err := verifier.Authenticate(request); !errors.Is(err, ErrInvalidToken) {
+			if _, err := verifier.Authenticate(request); !is[*InvalidToken](err) {
 				t.Fatalf("expected ErrInvalidToken, got %v", err)
 			}
 		})
@@ -556,8 +556,8 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 		"another audience": {held.issue(changed("aud", "https://other.example"), accessTokenType), "that token was issued for another app"},
 		"another issuer":   {held.issue(changed("iss", "https://other.example"), accessTokenType), "that token was issued by another server"},
 		"expired":          {held.issue(changed("exp", time.Now().Add(-time.Hour).Unix()), accessTokenType), "that token has expired"},
-		"no jti":           {held.issue(changed("jti", nil), accessTokenType), "a token carries jti and exp"},
-		"an ID token":      {held.issue(good, "JWT"), "that token is not typed at+jwt"},
+		"no jti":           {held.issue(changed("jti", nil), accessTokenType), "that token is missing jti and exp"},
+		"an ID token":      {held.issue(good, "JWT"), "that token is typed JWT, not at+jwt"},
 		"not a JWT":        {"nonsense", "that token is not a signed JWT"},
 	}
 
@@ -565,7 +565,7 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := verifier.Verify(context.Background(), refused[0])
 
-			var bad *InvalidTokenError
+			var bad *InvalidToken
 			if !errors.As(err, &bad) || bad.Description != refused[1] {
 				t.Fatalf("it was refused with %v", err)
 			}
@@ -762,7 +762,7 @@ func TestAnAppUnenrollsOnlyItsOwnMachines(t *testing.T) {
 
 	err := app.Unenroll(context.Background(), "theirs")
 
-	var refused *Error
+	var refused *Refused
 	if !errors.As(err, &refused) || refused.Status != http.StatusNotFound {
 		t.Fatalf("expected a 404, got %v", err)
 	}
@@ -998,7 +998,7 @@ func TestVerifiersSharingAReplayStoreRefuseAProofSeenByEither(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := two.Authenticate(request); !errors.Is(err, ErrInvalidToken) {
+	if _, err := two.Authenticate(request); !is[*InvalidToken](err) {
 		t.Fatalf("the other verifier accepted a replayed proof: %v", err)
 	}
 
@@ -1017,7 +1017,7 @@ func TestAReplayStoreThatFailsRefusesTheRequest(t *testing.T) {
 
 	request, _ := boundRequest(t, client, client.DPoP, http.MethodGet, "http://files.example/files")
 
-	if _, err := resource.verifier.Authenticate(request); !errors.Is(err, ErrReplayStore) || errors.Is(err, ErrInvalidToken) {
+	if _, err := resource.verifier.Authenticate(request); !is[*Unavailable](err) || is[*InvalidToken](err) {
 		t.Fatalf("expected ErrReplayStore, got %v", err)
 	}
 
