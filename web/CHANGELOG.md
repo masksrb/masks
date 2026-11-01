@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/masksrb/masks/compare/client-v2.5.1...client-v2.6.0) (2026-11-01)
+
+
+### Features
+
+* **web:** @masks/client raises Refused, InvalidToken, and Insecure from the shared error table, and hasCode replaces the per-code classes ([d7378f4](https://github.com/masksrb/masks/commit/d7378f4790fea6b9d601a3941babbb1c27e98682))
+
 ## [2.5.1](https://github.com/masksrb/masks/compare/client-v2.5.0...client-v2.5.1) (2026-10-19)
 
 

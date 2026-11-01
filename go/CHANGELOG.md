@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/go/v0.3.2...go/v0.4.0) (2026-11-01)
+
+
+### Features
+
+* **go:** the Go SDK returns Refused, InvalidToken, Forbidden, Unavailable, Insecure, and Foreign from the shared error table, and HasCode reads any of them ([7b7b52b](https://github.com/masksrb/masks/commit/7b7b52b2a55d4cd91450176909b96beafff09a6b))
+
 ## [0.3.2](https://github.com/masksrb/masks/compare/go/v0.3.1...go/v0.3.2) (2026-10-22)
 
 
