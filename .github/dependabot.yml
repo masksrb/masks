@@ -82,3 +82,5 @@ updates:
     groups:
       compose-images:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "mongo"

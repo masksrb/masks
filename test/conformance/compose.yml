@@ -89,7 +89,7 @@ services:
 
   mongodb:
     logging: *logging
-    image: ${MONGODB_IMAGE:-mongo:9.0.2}
+    image: ${MONGODB_IMAGE:-mongo:6.0.13}
     volumes:
       - mongo:/data/db
 

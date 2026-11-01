@@ -47,6 +47,7 @@ jobs:
         run: |
           docker compose logs --no-color server > results/suite.log 2>&1 || true
           docker compose logs --no-color masks > results/masks.log 2>&1 || true
+          docker compose logs --no-color mongodb > results/mongodb.log 2>&1 || true
 
       - name: Count what passed, what needs review, and what was skipped
         if: always()
