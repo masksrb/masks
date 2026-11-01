@@ -477,67 +477,63 @@
   }
 
   .auth-page {
-    --ground: #ececed;
-    --surface: #f7f7f8;
-    --line: #d9d9dc;
-    --line-firm: #c4c4c8;
-    --ink: #18181b;
-    --ink-soft: #5c5c63;
+    --ground: #f3f2ee;
+    --surface: #ffffff;
+    --line: #e4e2dc;
+    --line-firm: #cbc8c0;
+    --ink: #1b1a17;
+    --ink-soft: #686559;
 
-    --brass: #8a5a1c;
-    --brass-lit: #9b6a26;
-    --signal: #b3380f;
+    --brass: #1b1a17;
+    --brass-lit: #1b1a17;
+    --signal: #1b1a17;
     --signal-ink: #ffffff;
-    --ring: rgba(179, 56, 15, 0.3);
+    --focus: #2f6fdc;
+    --ring: rgba(47, 111, 220, 0.28);
 
     --bad: #b0183f;
     --bad-field: #fbeef1;
     --warn: #8b6200;
     --warn-field: #fbf5e8;
-    --info: #0077b2;
+    --info: #0a6aa6;
     --info-field: #edf5fa;
 
-    --glow: rgba(179, 56, 15, 0.05);
-    --window: url("/masks-public/icon.svg");
-    --window-strength: 0.2;
-    --pane: color-mix(in oklab, var(--surface) 58%, transparent);
-    --pane-rim: color-mix(in oklab, var(--brass) 30%, var(--line));
-    --pane-shine: rgba(255, 255, 255, 0.7);
-    --pane-sheen: rgba(255, 255, 255, 0.45);
-    --pane-shadow: 0 1px 1px rgba(20, 20, 24, 0.07), 0 18px 40px -24px rgba(20, 20, 24, 0.4);
-    --bend: 8px;
+    --glow: transparent;
+    --pane: var(--surface);
+    --pane-rim: var(--line);
+    --pane-shine: transparent;
+    --pane-sheen: transparent;
+    --pane-shadow: none;
+    --sheet-shadow: 0 1px 2px rgba(27, 26, 23, 0.04), 0 12px 32px -20px rgba(27, 26, 23, 0.18);
+    --bend: 10px;
 
     --swing: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   @media (prefers-color-scheme: dark) {
     .auth-page {
-      --ground: #0b0b0c;
-      --surface: #1c1c1f;
-      --line: #2a2a2e;
-      --line-firm: #3e3e44;
-      --ink: #ededef;
-      --ink-soft: #9a9a9f;
+      --ground: #121110;
+      --surface: #1d1c19;
+      --line: #2d2b27;
+      --line-firm: #413e38;
+      --ink: #f0eee9;
+      --ink-soft: #9e9a90;
 
-      --brass: #c9a14a;
-      --brass-lit: #e8c27a;
-      --signal: #ff7a4a;
-      --signal-ink: #1f0c06;
-      --ring: rgba(255, 122, 74, 0.4);
+      --brass: #f0eee9;
+      --brass-lit: #f0eee9;
+      --signal: #f0eee9;
+      --signal-ink: #121110;
+      --focus: #7fb0ff;
+      --ring: rgba(127, 176, 255, 0.35);
 
       --bad: #ff7396;
       --bad-field: rgba(255, 115, 150, 0.1);
       --warn: #d4ad03;
       --warn-field: rgba(212, 173, 3, 0.1);
-      --info: #00c2fe;
-      --info-field: rgba(0, 194, 254, 0.1);
+      --info: #6cbcf2;
+      --info-field: rgba(108, 188, 242, 0.1);
 
-      --glow: rgba(255, 122, 74, 0.06);
-      --window-strength: 0.36;
-      --pane: color-mix(in oklab, var(--surface) 52%, transparent);
-      --pane-shine: rgba(255, 255, 255, 0.1);
-      --pane-sheen: rgba(255, 255, 255, 0.045);
-      --pane-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 22px 50px -24px rgba(0, 0, 0, 0.8);
+      --sheet-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
     }
   }
 
@@ -545,7 +541,7 @@
     min-height: 100svh;
     margin: 0;
     display: flex;
-    padding: 2.5rem 1.25rem 3rem;
+    padding: 3rem 1.25rem 4rem;
     background: var(--ground);
     color: var(--ink);
     font-family: var(--font-sans);
@@ -553,28 +549,35 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  .auth-page::before {
-    --window-size: min(64rem, 150vw);
-    content: "";
-    position: fixed;
-    top: calc(var(--window-size) * -0.42);
-    right: calc(var(--window-size) * -0.2);
-    width: var(--window-size);
-    aspect-ratio: 1;
-    pointer-events: none;
-    background: var(--window) center / contain no-repeat;
-    filter: blur(56px) saturate(1.2);
-    opacity: var(--window-strength);
-  }
-
   .auth-col {
     position: relative;
     width: 100%;
-    max-width: 24rem;
+    max-width: 26rem;
     margin: auto;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.75rem;
+    padding: 2rem 2rem 2.25rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sheet-shadow);
+  }
+
+  @media (max-width: 32rem) {
+    .auth-page {
+      padding: 0;
+      background: var(--surface);
+    }
+
+    .auth-col {
+      min-height: 100svh;
+      margin: 0;
+      padding: 1.75rem 1.25rem 3rem;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
   }
 
   .surface-grant {
@@ -675,24 +678,26 @@
 
   .auth-id {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 0.75rem;
-    text-align: center;
+    gap: 0.625rem;
+    text-align: left;
+    min-width: 0;
   }
 
   .auth-mark {
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: var(--bend);
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 7px;
     display: grid;
     place-items: center;
-    background: var(--surface);
-    border: 1px solid color-mix(in oklab, var(--brass) 55%, var(--line));
-    color: var(--signal);
-    font-size: 1.0625rem;
+    background: var(--signal);
+    border: 0;
+    color: var(--signal-ink);
+    font-size: 0.8125rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   .avatar {
@@ -715,6 +720,7 @@
   .auth-tenant {
     font-size: 0.9375rem;
     font-weight: 600;
+    letter-spacing: -0.01em;
     color: var(--ink);
     overflow-wrap: anywhere;
   }
@@ -733,8 +739,9 @@
   }
 
   .auth-mark-client {
+    background: var(--surface);
     color: var(--ink);
-    border-color: var(--line-firm);
+    border: 1px solid var(--line-firm);
   }
 
   .auth-mark-logo {
@@ -844,26 +851,21 @@
     transform: translate(50%, -50%);
   }
 
-  .slab,
   .entry,
   .actor {
-    background:
-      linear-gradient(160deg, var(--pane-sheen), transparent 45%),
-      var(--pane);
-    border: 1px solid var(--pane-rim);
-    box-shadow:
-      inset 0 1px 0 var(--pane-shine),
-      var(--pane-shadow);
-    -webkit-backdrop-filter: blur(22px) saturate(1.5);
-    backdrop-filter: blur(22px) saturate(1.5);
+    background: var(--ground);
+    border: 1px solid var(--line);
+    box-shadow: none;
   }
 
   .slab {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    padding: 1.125rem;
-    border-radius: var(--bend);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
   }
 
   .grant-scope-hot,
@@ -1480,26 +1482,26 @@
   .prompt-head {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.4375rem;
-    text-align: center;
+    align-items: flex-start;
+    gap: 0.5rem;
+    text-align: left;
   }
 
   .prompt-title {
     margin: 0;
-    font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.125rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.06;
+    font-size: 1.5rem;
+    font-weight: 650;
+    letter-spacing: -0.022em;
+    line-height: 1.2;
     text-wrap: balance;
   }
 
   .prompt-lede {
     margin: 0;
-    font-size: 1rem;
-    line-height: 1.5;
+    font-size: 0.9375rem;
+    line-height: 1.55;
     color: var(--ink-soft);
-    max-width: 38ch;
+    max-width: 42ch;
   }
 
   .prompt-lede strong {
@@ -1509,6 +1511,8 @@
 
   .pulse {
     position: relative;
+    display: block;
+    flex: none;
     width: 2.75rem;
     height: 2px;
     margin-bottom: 0.625rem;
@@ -1781,12 +1785,12 @@
     width: 100%;
     font: inherit;
     font-size: 1rem;
-    padding: 0.9375rem 1rem;
+    padding: 0.8125rem 0.9375rem;
     border-radius: var(--bend);
-    border: 1px solid var(--line);
-    background: color-mix(in oklab, var(--surface) 72%, transparent);
+    border: 1px solid var(--line-firm);
+    background: var(--surface);
     color: var(--ink);
-    caret-color: var(--signal);
+    caret-color: var(--ink);
     transition:
       border-color 0.15s ease,
       box-shadow 0.15s ease,
@@ -1795,13 +1799,13 @@
 
   .control:autofill {
     -webkit-text-fill-color: var(--ink);
-    caret-color: var(--signal);
+    caret-color: var(--ink);
     box-shadow: inset 0 0 0 100vmax var(--surface);
   }
 
   .control:autofill:focus {
     box-shadow:
-      inset 0 0 0 1px var(--brass-lit),
+      0 0 0 3px var(--ring),
       inset 0 0 0 100vmax var(--surface);
   }
 
@@ -1810,13 +1814,13 @@
   }
 
   .control:hover:not(:disabled):not([readonly]) {
-    border-color: var(--line-firm);
+    border-color: var(--ink-soft);
   }
 
   .control:focus {
     outline: none;
-    border-color: var(--brass-lit);
-    box-shadow: inset 0 0 0 1px var(--brass-lit);
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px var(--ring);
   }
 
   .control[readonly] {
@@ -1868,7 +1872,7 @@
 
   .check input[type="checkbox"]:focus-visible,
   .check input[type="radio"]:focus-visible {
-    outline: 2px solid var(--signal);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -1884,39 +1888,39 @@
     font-weight: 500;
     letter-spacing: -0.014em;
     text-align: center;
-    padding: 0.9375rem 1.125rem;
+    padding: 0.8125rem 1.125rem;
     border-radius: var(--bend);
-    border: 1px solid color-mix(in oklab, var(--signal) 60%, transparent);
-    background: color-mix(in oklab, var(--signal) 14%, var(--ground));
-    color: var(--signal);
+    border: 1px solid var(--signal);
+    background: var(--signal);
+    color: var(--signal-ink);
     cursor: pointer;
     transition:
       background-color 0.15s ease,
       color 0.15s ease,
-      border-color 0.15s ease;
+      border-color 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .action:hover:not(:disabled) {
-    border-color: var(--signal);
-    background: color-mix(in oklab, var(--signal) 24%, var(--ground));
+    opacity: 0.88;
   }
 
   .action:focus-visible {
-    outline: 2px solid var(--brass-lit);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
   .action:disabled {
-    background: transparent;
-    border-color: var(--line-firm);
-    color: color-mix(in oklab, var(--ink-soft) 66%, transparent);
+    background: var(--ground);
+    border-color: var(--line);
+    color: color-mix(in oklab, var(--ink-soft) 70%, transparent);
     cursor: not-allowed;
   }
 
   .action-busy,
   .action-busy:disabled {
-    background: var(--surface);
-    border-color: var(--line-firm);
+    background: var(--ground);
+    border-color: var(--line);
     color: var(--ink-soft);
     cursor: progress;
   }
@@ -1931,12 +1935,13 @@
   .action-quiet {
     background: var(--surface);
     color: var(--ink);
-    border-color: var(--line);
+    border-color: var(--line-firm);
   }
 
   .action-quiet:hover:not(:disabled) {
-    background: var(--surface);
-    border-color: var(--line-firm);
+    opacity: 1;
+    background: var(--ground);
+    border-color: var(--ink-soft);
   }
 
   .action-plain {
@@ -2002,7 +2007,7 @@
   }
 
   .org-pick:focus-visible {
-    outline: 2px solid var(--brass-lit);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -2056,7 +2061,7 @@
     padding: 0.75rem 1rem;
     border-radius: var(--bend);
     border: 1px solid var(--line);
-    background: color-mix(in oklab, var(--surface) 72%, transparent);
+    background: var(--surface);
     color: var(--ink-soft);
     cursor: pointer;
     transition:
@@ -2071,7 +2076,7 @@
   }
 
   .credential-way:focus-visible {
-    outline: 2px solid var(--signal);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -2092,7 +2097,7 @@
     padding: 0.875rem 1rem;
     border-radius: var(--bend);
     border: 1px solid var(--line-firm);
-    background: color-mix(in oklab, var(--surface) 72%, transparent);
+    background: var(--surface);
     color: var(--ink);
     font: inherit;
     text-align: left;
@@ -2103,11 +2108,12 @@
   }
 
   .way:hover {
-    border-color: var(--signal);
+    border-color: var(--ink);
+    background: var(--ground);
   }
 
   .way:focus-visible {
-    outline: 2px solid var(--signal);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -2136,7 +2142,14 @@
 
   .auth-solo {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+  }
+
+  .auth-solo .auth-mark {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9px;
+    font-size: 1rem;
   }
 
   .providers-rule {
@@ -2218,7 +2231,7 @@
   }
 
   .textlink:focus-visible {
-    outline: 2px solid var(--signal);
+    outline: 2px solid var(--focus);
     outline-offset: 3px;
     border-radius: 3px;
   }
@@ -2556,9 +2569,9 @@
   .over {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 1.5rem;
-    text-align: center;
+    text-align: left;
   }
 
   .over .prompt-lede {
