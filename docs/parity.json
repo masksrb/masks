@@ -120,7 +120,7 @@
     },
     {
       "name": "Enrolling and unenrolling machines",
-      "link": "/guides/features/#enrolling-a-machine",
+      "link": "/build/features/#enrolling-a-machine",
       "cells": {
         "rails": "no",
         "client": {

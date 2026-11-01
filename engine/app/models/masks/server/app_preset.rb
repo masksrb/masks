@@ -10,7 +10,7 @@ module Masks
           key: "proxy", name: "Any app behind Caddy, Traefik, or nginx", forward: true,
           redirects: [ "{base}/masks-auth/callback" ],
           scopes: %w[openid],
-          guide: "https://masks.pages.dev/guides/forward-auth/",
+          guide: "https://masks.pages.dev/build/forward-auth/",
           settings: [
             [ "Caddy", "{host} {\n  forward_auth {masks_origin} {\n    uri /forward-auth\n    header_up Host {masks_host}\n" \
                        "    copy_headers Remote-User Remote-Email Remote-Name Remote-Groups\n  }\n  reverse_proxy your-app:8080\n}" ],
