@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/masksrb/masks/compare/server-v0.14.0...server-v0.14.1) (2026-11-01)
+
+
+### Fixes
+
+* **server:** graphql 2.6.14 and addressable 2.9.2 close two graphql-ruby authorization advisories and four addressable ones ([ff46d29](https://github.com/masksrb/masks/commit/ff46d294a7ab2b2abe6994c20d41d4b1660f1b42))
+
 ## [0.14.0](https://github.com/masksrb/masks/compare/server-v0.13.0...server-v0.14.0) (2026-11-01)
 
 
