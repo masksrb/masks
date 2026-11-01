@@ -63,14 +63,14 @@ module Masks
         raise Refused.new(params["error"], params["error_description"]) if params["error"].to_s != ""
 
         unless params["state"].to_s != "" && OpenSSL.secure_compare(params["state"].to_s, started["state"].to_s)
-          raise Refused.new("invalid_state", "the state did not match the one this connection started with")
+          raise Refused.new(*Masks::Client.failure("state_mismatch"))
         end
 
         tokens = answered { session.complete(code: params["code"].to_s, verifier: started["verifier"].to_s) }
         held = tokens.delegations.find { |one| one["provider"] == started["provider"] }
 
-        raise Refused.new("access_denied", "masks connected nothing for #{started['provider']}") if held.nil?
-        raise Refused.new("invalid_grant", "masks issued no refresh token to keep the connection with") if tokens.refresh_token.to_s == ""
+        raise Refused.new(*Masks::Client.failure("nothing_connected", started["provider"])) if held.nil?
+        raise Refused.new(*Masks::Client.failure("no_refresh_for_connection")) if tokens.refresh_token.to_s == ""
 
         Held.new(
           connection: held["connection"], provider: held["provider"], provider_name: held["provider_name"],

@@ -47,7 +47,7 @@ class DpopTest < ClientTest
   def test_a_bound_token_presented_as_bearer_is_refused
     error = refused { guarded.authenticate("Bearer #{bound}") }
 
-    assert_match "bound to a key", error.description
+    assert_match "held to a key", error.description
   end
 
   def test_a_bound_token_without_a_proof_is_refused
@@ -80,7 +80,7 @@ class DpopTest < ClientTest
   def test_a_stale_proof_is_refused
     token = bound
 
-    assert_match "too long ago", refused { presented(token, proof(token, iat: Time.now.to_i - 300)) }.description
+    assert_match "just now", refused { presented(token, proof(token, iat: Time.now.to_i - 300)) }.description
   end
 
   def test_a_proof_is_used_once
@@ -95,7 +95,7 @@ class DpopTest < ClientTest
   def test_an_unbound_token_presented_as_dpop_is_refused
     token = issuer.access_token
 
-    assert_match "not bound", refused { presented(token) }.description
+    assert_match "held to no key", refused { presented(token) }.description
   end
 
   def test_a_proof_is_used_once_even_when_each_request_builds_its_own_resource

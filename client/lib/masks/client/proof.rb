@@ -61,7 +61,7 @@ module Masks
       def initialize(proof, method:, url:, replay: nil)
         held = proof.to_s.split(",").map(&:strip).reject(&:empty?)
 
-        raise Invalid, "exactly one DPoP proof is required" unless held.size == 1
+        raise Invalid, Masks::Client.saying("one_proof") unless held.size == 1
 
         @proof = held.first
         @method = method.to_s.upcase
@@ -74,11 +74,11 @@ module Masks
         claims = verified(header)
         thumbprint = self.class.thumbprint(header["jwk"])
 
-        raise Invalid, "that proof was made with another key than the token is bound to" unless same?(thumbprint, jkt)
+        raise Invalid, Masks::Client.saying("proof_other_key") unless same?(thumbprint, jkt)
 
         matches!(claims)
         timely!(claims)
-        raise Invalid, "that proof was made for another token" unless same?(claims["ath"].to_s, self.class.digest(access_token))
+        raise Invalid, Masks::Client.saying("proof_other_token") unless same?(claims["ath"].to_s, self.class.digest(access_token))
 
         once!(claims, thumbprint)
 
@@ -90,29 +90,29 @@ module Masks
         def keyed
           header = JWT.decode(@proof, nil, false).last
 
-          raise Invalid, "a proof must be typed #{TYPE}" unless header["typ"].to_s.casecmp?(TYPE)
-          raise Invalid, "#{header['alg'] || 'that'} is not an algorithm a proof may use" unless ALGORITHMS.include?(header["alg"].to_s)
+          raise Invalid, Masks::Client.saying("proof_type", TYPE) unless header["typ"].to_s.casecmp?(TYPE)
+          raise Invalid, Masks::Client.saying("proof_algorithm", header["alg"] || "that") unless ALGORITHMS.include?(header["alg"].to_s)
 
           jwk = header["jwk"]
 
-          raise Invalid, "a proof must carry the public key that signed it" unless jwk.is_a?(Hash)
-          raise Invalid, "a proof key must be public" if jwk["kty"].to_s == "oct" || jwk.keys.any? { |field| SECRET.include?(field.to_s) }
+          raise Invalid, Masks::Client.saying("proof_no_key") unless jwk.is_a?(Hash)
+          raise Invalid, Masks::Client.saying("proof_key_private") if jwk["kty"].to_s == "oct" || jwk.keys.any? { |field| SECRET.include?(field.to_s) }
 
           header
         rescue JWT::DecodeError
-          raise Invalid, "that proof is not a readable JWT"
+          raise Invalid, Masks::Client.saying("proof_not_a_jwt")
         end
 
         def verified(header)
           JWT.decode(@proof, JWT::JWK.new(header["jwk"]).verify_key, true,
                      algorithms: [ header["alg"].to_s ], verify_expiration: false).first
         rescue JWT::DecodeError, JWT::JWKError, OpenSSL::PKey::PKeyError, ArgumentError
-          raise Invalid, "that proof was not signed by the key it carries"
+          raise Invalid, Masks::Client.saying("proof_unsigned")
         end
 
         def matches!(claims)
-          raise Invalid, "that proof was made for another method" unless claims["htm"].to_s.upcase == @method
-          raise Invalid, "that proof was made for another URL" unless tidied(claims["htu"]) == tidied(@url)
+          raise Invalid, Masks::Client.saying("proof_other_method") unless claims["htm"].to_s.upcase == @method
+          raise Invalid, Masks::Client.saying("proof_other_url") unless tidied(claims["htu"]) == tidied(@url)
         end
 
         def tidied(value)
@@ -131,17 +131,16 @@ module Masks
           made = claims["iat"]
 
           raise Invalid, "a proof must say when it was made" unless made.is_a?(Numeric)
-          raise Invalid, "that proof was made too long ago" if made < Time.now.to_i - WINDOW - LEEWAY
-          raise Invalid, "that proof was made in the future" if made > Time.now.to_i + LEEWAY
+          raise Invalid, Masks::Client.saying("proof_not_now") if made < Time.now.to_i - WINDOW - LEEWAY || made > Time.now.to_i + LEEWAY
         end
 
         def once!(claims, thumbprint)
           jti = claims["jti"].to_s
 
-          raise Invalid, "a proof must carry a jti" if jti.empty?
+          raise Invalid, Masks::Client.saying("proof_no_jti") if jti.empty?
           return if @replay.nil? || first?("#{thumbprint}:#{jti}")
 
-          raise Invalid, "that proof has already been used"
+          raise Invalid, Masks::Client.saying("proof_replayed")
         end
 
         def first?(key)

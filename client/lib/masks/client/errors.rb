@@ -1,5 +1,19 @@
 module Masks
   module Client
+    def self.failure(key, *values)
+      code, template = FAILURES.fetch(key.to_sym)
+
+      [ code, format(template, *values) ]
+    end
+
+    def self.saying(key, *values)
+      failure(key, *values).last
+    end
+
+    def self.worded(code, description)
+      [ "masks", code, description ].reject { |part| part.to_s.empty? }.join(": ")
+    end
+
     class Error < StandardError; end
 
     class Unreachable < Error; end
@@ -14,7 +28,7 @@ module Masks
       attr_reader :code, :description, :status
 
       def initialize(code, description, status: nil)
-        super([ code, description ].compact.join(": "))
+        super(Masks::Client.worded(code, description))
 
         @code = code
         @description = description
@@ -36,7 +50,7 @@ module Masks
       attr_reader :code, :description, :status, :scope
 
       def initialize(code, description, status:, scope: nil, dpop: false)
-        super([ code, description ].compact.join(": "))
+        super(Masks::Client.worded(code, description))
 
         @code = code
         @description = description
@@ -51,7 +65,7 @@ module Masks
     end
 
     class Unauthenticated < Challenge
-      def initialize(description = "a bearer token is required", code: nil)
+      def initialize(description = Masks::Client.saying("no_token"), code: nil)
         super(code, description, status: 401)
       end
     end

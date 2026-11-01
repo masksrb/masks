@@ -26,7 +26,7 @@ class RackTest < ClientTest
     assert_includes headers["www-authenticate"], "resource_metadata="
     refute_includes headers["www-authenticate"], "error"
     assert_equal "no-store", headers["cache-control"]
-    assert_equal "a bearer token is required", JSON.parse(body.first)["error_description"]
+    assert_equal "the request carries no token", JSON.parse(body.first)["error_description"]
   end
 
   def test_an_insufficient_scope_is_403

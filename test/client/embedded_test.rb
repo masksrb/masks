@@ -77,7 +77,7 @@ class EmbeddedTest < ClientTest
   def test_an_app_that_raises_is_unreachable
     error = assert_raises(Masks::Client::Unreachable) { Masks::Client::HTTP.get("#{ISSUER}/missing") }
 
-    assert_match "inside this process", error.message
+    assert_match "could not be reached", error.message
   end
 
   def test_each_call_runs_on_a_thread_of_its_own

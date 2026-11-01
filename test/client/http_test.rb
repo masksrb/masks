@@ -65,7 +65,7 @@ class HttpTest < ClientTest
 
     error = assert_raises(Masks::Client::Rejected) { Masks::Client::HTTP.get("#{issuer.url}/list") }
 
-    assert_equal "invalid_response", error.code
+    assert_equal "server_error", error.code
     assert_match "not an object", error.message
   end
 
@@ -74,7 +74,7 @@ class HttpTest < ClientTest
 
     error = assert_raises(Masks::Client::Rejected) { Masks::Client::HTTP.get("#{issuer.url}/broken") }
 
-    assert_equal "http_502", error.code
+    assert_equal "server_error", error.code
   end
 
   def test_an_empty_answer_is_an_empty_object

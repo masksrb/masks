@@ -107,7 +107,7 @@ module Masks
         rescue Unavailable
           raise
         rescue StandardError => e
-          raise Unavailable, "the cache could not be reached (#{e.class})"
+          raise Unavailable, Masks::Client.saying("store_unreachable")
         end
 
         def forgotten

@@ -13,7 +13,7 @@ module Masks
         signed_in_at = claims["auth_time"]
         allowed = signed_in_at.is_a?(Numeric) && signed_in_at + max_age.to_i + AUTH_TIME_LEEWAY >= Time.now.to_i
 
-        raise InvalidToken, "the person signed in longer ago than max_age allows" unless allowed
+        raise InvalidToken, Masks::Client.saying("too_old") unless allowed
 
         claims
       end
@@ -41,15 +41,15 @@ module Masks
 
         claims
       rescue JWT::ExpiredSignature
-        raise InvalidToken, "that token has expired"
+        raise InvalidToken, Masks::Client.saying("expired")
       rescue JWT::InvalidIssuerError
-        raise InvalidToken, "that token was issued by another server"
+        raise InvalidToken, Masks::Client.saying("other_issuer")
       rescue JWT::InvalidAudError
-        raise InvalidToken, "that token was issued for another app"
+        raise InvalidToken, Masks::Client.saying("other_audience")
       rescue JWT::MissingRequiredClaim
-        raise InvalidToken, "that token is missing a claim it needs"
+        raise InvalidToken, Masks::Client.saying("missing_claims", "a claim it needs")
       rescue JWT::DecodeError
-        raise InvalidToken, "that token was not signed by #{issuer.url}"
+        raise InvalidToken, Masks::Client.saying("not_signed_by", issuer.url)
       end
 
       private
@@ -59,7 +59,7 @@ module Masks
 
           return if accepted.include?(named)
 
-          raise InvalidToken, "that token is typed #{held.inspect}, not #{accepted.compact.join(' or ')}"
+          raise InvalidToken, Masks::Client.saying("wrong_type", held, accepted.compact.join(" or "))
         end
 
         def keys

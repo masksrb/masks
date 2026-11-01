@@ -160,17 +160,16 @@ module Masks
         held = self.organization
 
         unless held.present?
-          raise Forbidden.new("insufficient_organization", "this token names no organization",
-                              scope: Session::ORGANIZATION)
+          raise Forbidden.new(*Masks::Client.failure("no_organization"), scope: Session::ORGANIZATION)
         end
 
         if organization && held.key != organization.to_s && held.id != organization.to_s
-          raise Forbidden.new("insufficient_organization", "this token was issued for #{held.key}, not #{organization}")
+          raise Forbidden.new(*Masks::Client.failure("other_organization", held.key, organization))
         end
 
         return held if roles.flatten.empty? || held.role?(*roles)
 
-        raise Forbidden.new("insufficient_role", "#{held.role} in #{held.key} is not #{roles.flatten.join(' or ')}")
+        raise Forbidden.new(*Masks::Client.failure("other_role", held.role, held.key, roles.flatten.join(" or ")))
       end
 
       def picture
@@ -188,11 +187,7 @@ module Masks
       def permit!(scope)
         return true if permits?(scope)
 
-        raise Forbidden.new(
-          "insufficient_scope",
-          "this token does not carry #{scope}",
-          scope: scope.to_s
-        )
+        raise Forbidden.new(*Masks::Client.failure("no_scope", scope), scope: scope.to_s)
       end
 
       def expires_at

@@ -77,7 +77,7 @@ module Masks
           read_timeout: READ_TIMEOUT
         ) { |http| limit ? limited(http, request, limit) : http.request(request) }
       rescue SystemCallError, SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
-        raise Unreachable, "#{uri.host} is unreachable (#{e.class})"
+        raise Unreachable, Masks::Client.saying("unreachable", uri.host)
       end
 
       def checked(uri)
@@ -85,11 +85,10 @@ module Masks
         return uri if uri.is_a?(URI::HTTP) && !uri.host.to_s.empty? && (Masks::Client.plain_http? || loopback?(uri.hostname))
 
         if uri.is_a?(URI::HTTP)
-          raise Insecure, "#{Nonces.origin(uri)} is plain http, which masks allows only for loopback hosts " \
-                          "unless Masks::Client.plain_http is set"
+          raise Insecure, Masks::Client.saying("plain_http", Nonces.origin(uri))
         end
 
-        raise Error, "#{uri} is not an http or https URL"
+        raise Error, Masks::Client.saying("not_http", uri)
       end
 
       def loopback?(host)
@@ -120,12 +119,9 @@ module Masks
 
         unless response.is_a?(Net::HTTPSuccess)
           refusal = Unregistered.raised_by?(body) ? Unregistered : Rejected
+          code, description = refused_with(body, response)
 
-          raise refusal.new(
-            body["error"] || "http_#{response.code}",
-            body["error_description"] || response.message,
-            status: response.code.to_i
-          )
+          raise refusal.new(code, description, status: response.code.to_i)
         end
 
         body
@@ -140,13 +136,17 @@ module Masks
         return held if held.is_a?(Hash)
         return {} unless response.is_a?(Net::HTTPSuccess)
 
-        raise Rejected.new("invalid_response", "#{origin(response)} answered with JSON that is not an object",
-                           status: response.code.to_i)
+        raise Rejected.new(*Masks::Client.failure("not_an_object", origin(response)), status: response.code.to_i)
       rescue JSON::ParserError
         return {} unless response.is_a?(Net::HTTPSuccess)
 
-        raise Rejected.new("invalid_response", "#{origin(response)} answered with something other than JSON",
-                           status: response.code.to_i)
+        raise Rejected.new(*Masks::Client.failure("not_json", origin(response)), status: response.code.to_i)
+      end
+
+      def refused_with(body, response)
+        return Masks::Client.failure("answered_status", origin(response), response.code.to_i) if body["error"].to_s.empty?
+
+        [ body["error"], body["error_description"] || response.message ]
       end
 
       def origin(response)

@@ -90,7 +90,7 @@ module Masks
           return if present?(held) && present?(returned) &&
                     OpenSSL.secure_compare(returned.to_s, held.to_s)
 
-          refuse("invalid_state", "the handshake did not match this browser")
+          refuse(*Masks::Client.failure("state_mismatch"))
         end
 
         def verify_issuer!(named)

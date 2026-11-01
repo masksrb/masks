@@ -152,7 +152,7 @@ module Masks
         interval = device.interval.positive? ? device.interval : pause
 
         loop do
-          raise Rejected.new("expired_token", "the code expired before anyone approved it") if device.expired?
+          raise Rejected.new(*Masks::Client.failure("code_expired")) if device.expired?
 
           sleep(interval)
 
@@ -240,7 +240,7 @@ module Masks
 
         def renew(held, scope:, resource:)
           if held&.refresh_token.to_s.empty?
-            raise Rejected.new("invalid_grant", "there is no refresh token to renew these tokens with")
+            raise Rejected.new(*Masks::Client.failure("no_refresh_token"))
           end
 
           renewed = refresh(held.refresh_token, scope: scope, resource: resource)
@@ -254,7 +254,7 @@ module Masks
           tokens = Tokens.granted(dpop ? proven(issuer.endpoint("token_endpoint"), form) : post("token_endpoint", form))
 
           if dpop && !tokens.bound?
-            raise Rejected.new("invalid_dpop_proof", "the token endpoint answered with a token that is not held to this key")
+            raise Rejected.new(*Masks::Client.failure("not_held_to_key"))
           end
 
           tokens

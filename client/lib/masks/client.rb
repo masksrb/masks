@@ -8,6 +8,7 @@ require "securerandom"
 require "uri"
 
 require_relative "version"
+require_relative "client/failures"
 require_relative "client/errors"
 require_relative "client/http"
 require_relative "client/embedded"

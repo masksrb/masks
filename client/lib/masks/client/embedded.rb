@@ -39,14 +39,14 @@ module Masks
 
           unless worker.join(HTTP::READ_TIMEOUT)
             worker.kill
-            raise Unreachable, "#{uri.host} did not answer within #{HTTP::READ_TIMEOUT} seconds"
+            raise Unreachable, Masks::Client.saying("unreachable", uri.host)
           end
 
           worker.value
         rescue Error
           raise
         rescue StandardError => e
-          raise Unreachable, "#{uri.host} failed inside this process (#{e.class})"
+          raise Unreachable, Masks::Client.saying("unreachable", uri.host)
         end
 
         def collected(status, headers, body, uri, limit)

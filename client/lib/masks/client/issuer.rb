@@ -37,10 +37,7 @@ module Masks
           named = self.class.normalize(document["issuer"])
 
           unless named == url
-            raise Rejected.new(
-              "invalid_issuer",
-              "#{url} publishes a document naming #{document['issuer'].inspect}"
-            )
+            raise Rejected.new(*Masks::Client.failure("names_another", url, document["issuer"]))
           end
 
           document
@@ -60,7 +57,7 @@ module Masks
       end
 
       def endpoint(name)
-        discovery.fetch(name) { raise Rejected.new("invalid_issuer", "#{url} publishes no #{name}") }
+        discovery.fetch(name) { raise Rejected.new(*Masks::Client.failure("publishes_nothing", url, name)) }
       end
 
       def backchannel_logout?
@@ -75,7 +72,7 @@ module Masks
         wanted = (style || Claims::Avatars::FALLBACK).to_s
 
         unless avatar_styles.include?(wanted)
-          raise Rejected.new("invalid_style", "#{url} does not serve #{wanted} avatars")
+          raise Rejected.new(*Masks::Client.failure("no_avatars", url, wanted))
         end
 
         query = size ? "?size=#{size.to_i}" : ""
