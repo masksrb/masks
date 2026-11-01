@@ -11,7 +11,7 @@
     "readability": "node bin/readability.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "reference": "node bin/reference.mjs src/content/docs/reference/javascript/client.mdx && node bin/parity.mjs"
+    "reference": "node bin/reference.mjs src/content/docs/reference/javascript/client.mdx && node bin/parity.mjs && node bin/errors.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.0",

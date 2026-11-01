@@ -18,6 +18,12 @@ generated from: the manage API's GraphQL descriptions and the documentation in
   then regenerate. Never edit those pages by hand.
 - `reference/environment` is written by hand. `./dev reference` fails when it
   leaves out a variable the code reads, or lists one that nothing reads.
+- `reference/errors` and each SDK's copy of the error table (`node/src/failures.ts`,
+  `web/src/failures.ts`, `python/src/masks/failures.py`, `go/failures.go`, and
+  `client/lib/masks/client/failures.rb`) are generated from
+  `test/contract/errors.json` by `./dev reference`. Change the table, then
+  regenerate. Every SDK raises the same kind, code, and description for a
+  failure the table names, and its contract test reads the table.
 - Use the words in the Words section of `docs/STYLE.md` for the things people see.
 - Check every claim against the code before writing it down.
 - The repo is public. Leave out real hostnames, addresses, and anything about

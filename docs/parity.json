@@ -481,6 +481,36 @@
           "test": "TestAStaleIssuerIsServedWhileOneRefreshRunsBehindIt"
         }
       }
+    },
+    {
+      "name": "Raising the same error for the same failure, worded from the shared table",
+      "link": "/reference/errors/",
+      "cells": {
+        "rails": {
+          "file": "test/client/contract_test.rb",
+          "test": "test_every_failure_in_the_contract_is_worded_the_same"
+        },
+        "client": {
+          "file": "test/client/contract_test.rb",
+          "test": "test_every_failure_in_the_contract_is_worded_the_same"
+        },
+        "web": {
+          "file": "web/test/errors.test.js",
+          "test": "every failure of those kinds is raised with its code and description"
+        },
+        "node": {
+          "file": "node/test/errors.test.js",
+          "test": "every failure in the contract is raised with its code and description"
+        },
+        "python": {
+          "file": "python/tests/test_errors.py",
+          "test": "test_every_failure_in_the_contract_is_raised_with_its_code_and_description"
+        },
+        "go": {
+          "file": "go/contract_test.go",
+          "test": "TestEveryFailureInTheContractIsRaisedWithItsCodeAndDescription"
+        }
+      }
     }
   ]
 }

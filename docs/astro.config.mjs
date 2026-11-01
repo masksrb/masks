@@ -123,6 +123,7 @@ export default defineConfig({
             items: [
               { label: "OpenID Connect and OAuth", slug: "reference/specs" },
               { label: "Environment variables", slug: "reference/environment" },
+              { label: "Errors", slug: "reference/errors" },
               { label: "Manage API", slug: "reference/manage" },
               {
                 label: "JavaScript",
