@@ -28,3 +28,10 @@ generated from: the manage API's GraphQL descriptions and the documentation in
 - A release that needs a step from the operator, such as a new variable or a
   migration that is run by hand, says so in its notes on GitHub with a line that
   starts with `Operator:`. The health panel reads that line.
+- Add first, remove later. A release may add tables, columns, indexes, enum
+  values, and settings. It removes or renames one of them only in the release
+  after the one that stopped reading it. xixo ships masks inside its image, and
+  xixo's updater rolls a server back to the build before, which then runs on
+  the database the newer build migrated.
+- A migration that moves data runs in the release that adds the new place. The
+  release after removes the old one.
