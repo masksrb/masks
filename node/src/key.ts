@@ -127,3 +127,15 @@ export function unbase64url(value: string): Uint8Array<ArrayBuffer> {
 
   return bytes;
 }
+
+export function constantEqual(left: string, right: string): boolean {
+  const a = new TextEncoder().encode(left);
+  const b = new TextEncoder().encode(right);
+  let differs = a.length ^ b.length;
+
+  for (let index = 0; index < Math.max(a.length, b.length); index++) {
+    differs |= (a[index] ?? 0) ^ (b[index] ?? 0);
+  }
+
+  return differs === 0 && left !== "";
+}

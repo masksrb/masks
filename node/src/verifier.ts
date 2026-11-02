@@ -9,7 +9,7 @@ import {
 import { DPOP, PROOF_TYPE, type ProofClaims, tokenHash } from "./dpop.js";
 import { Forbidden, failure, InvalidToken, Unavailable } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
-import { unverified } from "./jwt.js";
+import { issuedByNow, unverified } from "./jwt.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 import { untrailed } from "./slashes.js";
 
@@ -96,6 +96,8 @@ export class Verifier {
     } catch (error) {
       throw unverified(error, this.issuer, { token, typ: ACCESS_TOKEN_TYPE });
     }
+
+    issuedByNow(payload);
 
     return payload as Claims;
   }

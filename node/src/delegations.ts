@@ -1,7 +1,6 @@
 import {
   type AuthorizationStart,
   type Client,
-  constantEqual,
   UPSTREAM_ACCESS_TOKEN_TYPE,
 } from "./client.js";
 import {
@@ -10,6 +9,7 @@ import {
   InvalidToken,
   Refused,
 } from "./errors.js";
+import { constantEqual } from "./key.js";
 
 export { DelegationRefused, DelegationUnavailable } from "./errors.js";
 

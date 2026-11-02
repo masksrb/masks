@@ -50,7 +50,17 @@ export async function verifyIssued(
     );
   }
 
+  issuedByNow(verified.payload);
+
   return verified.payload;
+}
+
+export function issuedByNow(payload: JWTPayload): void {
+  const { iat } = payload;
+
+  if (typeof iat === "number" && iat > Date.now() / 1000 + LEEWAY) {
+    throw InvalidToken.of("issued_in_future");
+  }
 }
 
 export interface Expecting {

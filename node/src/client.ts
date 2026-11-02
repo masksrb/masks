@@ -9,13 +9,14 @@ import {
   refused,
 } from "./errors.js";
 import {
+  type Expecting,
   type IdTokenClaims,
   type LogoutToken,
   verifyIdToken,
   verifyLogoutToken,
 } from "./idtoken.js";
 import type { Issuer, Tenant } from "./issuer.js";
-import { base64url, type Key, random } from "./key.js";
+import { base64url, constantEqual, type Key, random } from "./key.js";
 import { untrailed } from "./slashes.js";
 
 export type AuthMethod =
@@ -39,7 +40,6 @@ export const UPSTREAM_ACCESS_TOKEN_TYPE =
 const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const ASSERTION_LIFETIME = 60;
 const EXPIRY_LEEWAY = 30;
-const AUTH_TIME_LEEWAY = 30;
 
 export const timing = { devicePause: 5000 };
 
@@ -180,13 +180,6 @@ export function bound(token: Token | undefined | null): boolean {
   return !!token && token.token_type?.toLowerCase() === DPOP.toLowerCase();
 }
 
-function recent(authTime: unknown, maxAge: number): boolean {
-  return (
-    typeof authTime === "number" &&
-    authTime + maxAge + AUTH_TIME_LEEWAY >= Date.now() / 1000
-  );
-}
-
 export function scopes(token: { scope?: string }): string[] {
   return (token.scope ?? "").split(/\s+/).filter(Boolean);
 }
@@ -320,21 +313,11 @@ export class Client {
       return { token };
     }
 
-    const claims = await this.identity(token.id_token);
-
-    if (
-      pending.nonce &&
-      !constantEqual(String(claims.nonce ?? ""), pending.nonce)
-    ) {
-      throw InvalidToken.of("id_token_other_sign_in");
-    }
-
-    if (
-      pending.maxAge !== undefined &&
-      !recent(claims.auth_time, pending.maxAge)
-    ) {
-      throw InvalidToken.of("too_old");
-    }
+    const claims = await this.identity(token.id_token, {
+      nonce: pending.nonce,
+      accessToken: token.access_token,
+      maxAge: pending.maxAge,
+    });
 
     return { token, claims };
   }
@@ -355,8 +338,8 @@ export class Client {
     return this.#token(form);
   }
 
-  identity(idToken: string): Promise<IdTokenClaims> {
-    return verifyIdToken(this.issuer, idToken, this.id);
+  identity(idToken: string, expecting: Expecting = {}): Promise<IdTokenClaims> {
+    return verifyIdToken(this.issuer, idToken, this.id, expecting);
   }
 
   logoutToken(token: string): Promise<LogoutToken> {
@@ -836,18 +819,6 @@ export async function challenge(verifier: string): Promise<string> {
   return base64url(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
   );
-}
-
-export function constantEqual(left: string, right: string): boolean {
-  const a = new TextEncoder().encode(left);
-  const b = new TextEncoder().encode(right);
-  let differs = a.length ^ b.length;
-
-  for (let index = 0; index < Math.max(a.length, b.length); index++) {
-    differs |= (a[index] ?? 0) ^ (b[index] ?? 0);
-  }
-
-  return differs === 0 && left !== "";
 }
 
 function formEscape(value: string): string {

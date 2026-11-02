@@ -137,7 +137,13 @@ test("a code is redeemed only with its verifier and redirect URI", async () => {
 test("an id token for another client is refused", async () => {
   const { fake, client } = await app();
   const now = Math.floor(Date.now() / 1000);
-  const good = { iss: fake.url, sub: "ada", aud: "app", exp: now + 60 };
+  const good = {
+    iss: fake.url,
+    sub: "ada",
+    aud: "app",
+    exp: now + 60,
+    iat: now,
+  };
 
   assert.equal(
     (await client.identity(await fake.issue(good, "JWT"))).sub,

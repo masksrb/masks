@@ -38,7 +38,7 @@ import { Sealer } from "./app/seal.js";
 import { claim, fresh, keep, now, pick } from "./app/session.js";
 import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
 import { avatarsOf, organizationKey } from "./claims.js";
-import { type Client, constantEqual, scopes as scopesOf } from "./client.js";
+import { type Client, scopes as scopesOf } from "./client.js";
 import {
   type Connection,
   DELEGATION_SCOPE,
@@ -57,7 +57,7 @@ import {
 import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
 import type { Issuer } from "./issuer.js";
-import { random } from "./key.js";
+import { constantEqual, random } from "./key.js";
 import { unslashed, untrailed } from "./slashes.js";
 
 type NextAuth = (

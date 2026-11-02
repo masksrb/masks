@@ -1,7 +1,7 @@
-import { constantEqual, type Token } from "../client.js";
+import type { Token } from "../client.js";
 import type { PendingDelegation } from "../delegations.js";
 import { failure, Unavailable } from "../errors.js";
-import { random } from "../key.js";
+import { constantEqual, random } from "../key.js";
 import {
   mergeCookies,
   parseCookies,

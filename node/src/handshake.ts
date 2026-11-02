@@ -1,7 +1,6 @@
-import { constantEqual } from "./client.js";
 import { Refused } from "./errors.js";
 import type { Issuer } from "./issuer.js";
-import { random } from "./key.js";
+import { constantEqual, random } from "./key.js";
 import type { Registration } from "./registration.js";
 import { untrailed } from "./slashes.js";
 

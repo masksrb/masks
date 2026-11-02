@@ -109,6 +109,7 @@ export {
 export type { Options } from "./http.js";
 export {
   BACKCHANNEL_LOGOUT_EVENT,
+  type Expecting,
   type IdTokenClaims,
   type LogoutToken,
 } from "./idtoken.js";
