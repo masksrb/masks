@@ -456,6 +456,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
             issuer,
             audience: clientId,
             nonce: waiting.nonce,
+            accessToken: tokens.access_token,
             keyFor,
           });
         } catch (failure) {
