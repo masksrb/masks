@@ -117,32 +117,34 @@ before(async () => {
 
 after(() => server.close());
 
-for (const held of contract.cases) {
-  test(held.name, async () => {
-    const names = {
-      issuer: server.url,
-      client_id: contract.client_id,
-      resource: contract.resource,
-    };
-    const token = await signed(held, names);
+test("every token in the contract ends as the contract says", async (t) => {
+  for (const held of contract.cases) {
+    await t.test(held.name, async () => {
+      const names = {
+        issuer: server.url,
+        client_id: contract.client_id,
+        resource: contract.resource,
+      };
+      const token = await signed(held, names);
 
-    if (held.outcome === "ok") {
-      await verify(held, token);
-      return;
-    }
+      if (held.outcome === "ok") {
+        await verify(held, token);
+        return;
+      }
 
-    const { code, description } = failure(
-      held.outcome.failure,
-      ...placed(held.outcome.values ?? [], names),
-    );
+      const { code, description } = failure(
+        held.outcome.failure,
+        ...placed(held.outcome.values ?? [], names),
+      );
 
-    await assert.rejects(verify(held, token), (error) => {
-      assert.ok(error instanceof InvalidToken, `${error}`);
-      assert.equal(error.name, "InvalidToken");
-      assert.equal(error.code, code);
-      assert.equal(error.description, description);
+      await assert.rejects(verify(held, token), (error) => {
+        assert.ok(error instanceof InvalidToken, `${error}`);
+        assert.equal(error.name, "InvalidToken");
+        assert.equal(error.code, code);
+        assert.equal(error.description, description);
 
-      return true;
+        return true;
+      });
     });
-  });
-}
+  }
+});

@@ -878,7 +878,7 @@ Defined in: [types.ts:67](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 ### Jwk
 
-Defined in: [jwt.ts:12](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L12)
+Defined in: [jwt.ts:24](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L24)
 
 #### Extends
 
@@ -888,7 +888,7 @@ Defined in: [jwt.ts:12](https://github.com/masksrb/masks/blob/main/web/src/jwt.t
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="kid"></a> `kid?` | `string` | [jwt.ts:13](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L13) |
+| <a id="kid"></a> `kid?` | `string` | [jwt.ts:25](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L25) |
 
 ***
 
@@ -1218,17 +1218,19 @@ Defined in: [types.ts:57](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 ### VerifyOptions
 
-Defined in: [jwt.ts:16](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L16)
+Defined in: [jwt.ts:28](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L28)
 
 #### Properties
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="audience"></a> `audience` | `string` | [jwt.ts:18](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L18) |
-| <a id="issuer-2"></a> `issuer` | `string` | [jwt.ts:17](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L17) |
-| <a id="keyfor"></a> `keyFor` | (`kid`) => `Promise`\<[`Jwk`](#jwk)\> | [jwt.ts:21](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L21) |
-| <a id="leeway"></a> `leeway?` | `number` | [jwt.ts:20](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L20) |
-| <a id="nonce"></a> `nonce` | `string` | [jwt.ts:19](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L19) |
+| <a id="accesstoken-1"></a> `accessToken?` | `string` | [jwt.ts:32](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L32) |
+| <a id="audience"></a> `audience` | `string` | [jwt.ts:30](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L30) |
+| <a id="issuer-2"></a> `issuer` | `string` | [jwt.ts:29](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L29) |
+| <a id="keyfor"></a> `keyFor` | (`kid`) => `Promise`\<[`Jwk`](#jwk)\> | [jwt.ts:35](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L35) |
+| <a id="leeway"></a> `leeway?` | `number` | [jwt.ts:34](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L34) |
+| <a id="maxage"></a> `maxAge?` | `number` | [jwt.ts:33](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L33) |
+| <a id="nonce"></a> `nonce` | `string` | [jwt.ts:31](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L31) |
 
 ## Type Aliases
 
@@ -1512,7 +1514,7 @@ Defined in: [errors.ts:25](https://github.com/masksrb/masks/blob/main/web/src/er
 function verifyIdToken(token, __namedParameters): Promise<Claims>;
 ```
 
-Defined in: [jwt.ts:52](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L52)
+Defined in: [jwt.ts:87](https://github.com/masksrb/masks/blob/main/web/src/jwt.ts#L87)
 
 #### Parameters
 

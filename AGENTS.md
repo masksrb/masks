@@ -24,6 +24,11 @@ generated from: the manage API's GraphQL descriptions and the documentation in
   `test/contract/errors.json` by `./dev reference`. Change the table, then
   regenerate. Every SDK raises the same kind, code, and description for a
   failure the table names, and its contract test reads the table.
+- `test/contract/tokens.json` holds the signing keys, the discovery document,
+  and the access, ID, and logout token cases every SDK verifies the same way.
+  Each case has one defect and names the failure it ends in. A new rule for a
+  token is a new case there first, and it lands when every SDK's token test
+  passes it.
 - Use the words in the Words section of `docs/STYLE.md` for the things people see.
 - Check every claim against the code before writing it down.
 - The repo is public. Leave out real hostnames, addresses, and anything about

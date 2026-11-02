@@ -4,7 +4,10 @@ import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const TABLE = "test/contract/errors.json";
+const TOKENS = "test/contract/tokens.json";
 const { message, kinds, codes, failures } = JSON.parse(readFileSync(join(ROOT, TABLE), "utf8"));
+const tokens = JSON.parse(readFileSync(join(ROOT, TOKENS), "utf8"));
+const TOKEN_KINDS = { access: "Access token", id: "ID token", logout: "Logout token" };
 
 const LANGUAGES = [
   { key: "ruby", label: "Ruby" },
@@ -95,6 +98,15 @@ function docs() {
     entries.map(([key, held]) => [`\`${key}\``, `\`${held.kind}\``, held.code ? `\`${held.code}\`` : "none", described(held.description)]),
   );
 
+  const checked = table(
+    ["Token", "Case", "Ends in"],
+    tokens.cases.map((held) => [
+      TOKEN_KINDS[held.token],
+      cell(held.name),
+      held.outcome === "ok" ? "accepted" : `\`${held.outcome.failure}\``,
+    ]),
+  );
+
   return `---
 title: Errors
 description: The errors every masks SDK raises, with the kind, the code, and the description each failure gets.
@@ -123,6 +135,17 @@ ${listed}
 ## Descriptions
 
 ${worded}
+
+## Token checks
+
+Every SDK verifies an access token, an ID token, and a logout token the same way. The cases below
+come from [\`${TOKENS}\`](https://github.com/masksrb/masks/blob/main/${TOKENS}), which holds the
+signing keys, the discovery document, and a base token of each kind with its times as offsets from
+now. Each case changes one thing about a base token and names the failure it ends in. Each SDK signs
+the cases when its tests run and checks that its verifier answers as the case says. The browser
+package checks the ID token cases, since it verifies nothing else.
+
+${checked}
 `;
 }
 

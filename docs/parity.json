@@ -511,6 +511,37 @@
           "test": "TestEveryFailureInTheContractIsRaisedWithItsCodeAndDescription"
         }
       }
+    },
+    {
+      "name": "Verifying an access, ID, or logout token the same way, from the shared token cases",
+      "link": "/reference/errors/#token-checks",
+      "cells": {
+        "rails": {
+          "file": "test/client/tokens_test.rb",
+          "test": "test_every_token_in_the_contract_ends_as_the_contract_says"
+        },
+        "client": {
+          "file": "test/client/tokens_test.rb",
+          "test": "test_every_token_in_the_contract_ends_as_the_contract_says"
+        },
+        "web": {
+          "file": "web/test/tokens.test.js",
+          "test": "every token in the contract ends as the contract says",
+          "note": "ID tokens only, as the browser verifies nothing else"
+        },
+        "node": {
+          "file": "node/test/tokens.test.js",
+          "test": "every token in the contract ends as the contract says"
+        },
+        "python": {
+          "file": "python/tests/test_tokens.py",
+          "test": "test_every_token_in_the_contract_ends_as_the_contract_says"
+        },
+        "go": {
+          "file": "go/tokens_test.go",
+          "test": "TestEveryTokenInTheContractEndsAsTheContractSays"
+        }
+      }
     }
   ]
 }

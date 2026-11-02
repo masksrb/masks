@@ -797,6 +797,24 @@ Inherits `Masks::Client::Error`.
 #url(state:)
 ```
 
+## Masks::Client::IdToken
+
+| Constant | Value |
+| --- | --- |
+| `REQUIRED` | `%w[iss sub aud exp iat].freeze` |
+
+### ::half_hash
+
+```ruby
+::half_hash(value)
+```
+
+### ::verify
+
+```ruby
+::verify(token, issuer:, client_id:, nonce: nil, access_token: nil, max_age: nil)
+```
+
 ## Masks::Client::Insecure
 
 Inherits `Masks::Client::Error`.
@@ -1077,6 +1095,7 @@ seconds to once a minute.
 | --- | --- |
 | `EVENT` | `"http://schemas.openid.net/event/backchannel-logout".freeze` |
 | `ALGORITHMS` | `Verifier::ALGORITHMS` |
+| `REQUIRED` | `%w[iss aud iat exp jti].freeze` |
 | `LEEWAY` | `60` |
 
 | Attribute | Access |
@@ -1417,7 +1436,7 @@ Inherits `Masks::Client::Error`.
 | --- | --- |
 | `PRESENTED` | `/\A(Bearer|DPoP)[ \t]+([^\s,]+)[ \t]*\z/i.freeze` |
 | `METADATA_PATH` | `"/.well-known/oauth-protected-resource".freeze` |
-| `REQUIRED` | `%w[iss sub exp].freeze` |
+| `REQUIRED` | `%w[iss sub exp jti].freeze` |
 
 | Attribute | Access |
 | --- | --- |
@@ -1540,13 +1559,15 @@ Inherits `Masks::Client::Error`.
 ### #identity
 
 ```ruby
-#identity(tokens, max_age: nil)
+#identity(tokens, nonce: nil, max_age: nil)
 ```
 
 The person the `tokens` belong to: the ID token's claims merged over userinfo.
-With `max_age`, the seconds the app asked for when it started the sign-in, an
-ID token whose `auth_time` is missing or older than that, plus 30 seconds of
-leeway, raises InvalidToken.
+With `nonce`, the one the sign-in started with, an ID token carrying another
+raises InvalidToken. With `max_age`, the seconds the app asked for when it
+started the sign-in, an ID token whose `auth_time` is missing or older than
+that, plus 30 seconds of leeway, raises InvalidToken. An `at_hash` that is not
+the access token's does too.
 
 ### #introspect
 
@@ -1918,12 +1939,19 @@ Inherits `Masks::Client::Refused`.
 | `ACCESS_TOKEN` | `"at+jwt".freeze` |
 | `LOGOUT_TOKEN` | `"logout+jwt".freeze` |
 | `ID_TOKEN` | `[ "jwt", nil ].freeze` |
+| `LEEWAY` | `30` |
 | `AUTH_TIME_LEEWAY` | `30` |
 
 | Attribute | Access |
 | --- | --- |
 | `audience` | R |
 | `issuer` | R |
+
+### ::header
+
+```ruby
+::header(token)
+```
 
 ### ::new
 

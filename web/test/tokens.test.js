@@ -109,26 +109,28 @@ function verify(held, token) {
   });
 }
 
-for (const held of contract.cases.filter((held) => held.token === "id")) {
-  test(held.name, async () => {
-    const token = signed(held);
+test("every token in the contract ends as the contract says", async (t) => {
+  for (const held of contract.cases.filter((held) => held.token === "id")) {
+    await t.test(held.name, async () => {
+      const token = signed(held);
 
-    if (held.outcome === "ok") {
-      assert.equal((await verify(held, token)).sub, "person-1");
-      return;
-    }
+      if (held.outcome === "ok") {
+        assert.equal((await verify(held, token)).sub, "person-1");
+        return;
+      }
 
-    const { code, description } = failure(
-      held.outcome.failure,
-      ...placed(held.outcome.values ?? []),
-    );
+      const { code, description } = failure(
+        held.outcome.failure,
+        ...placed(held.outcome.values ?? []),
+      );
 
-    await assert.rejects(verify(held, token), (error) => {
-      assert.ok(error instanceof InvalidToken, `${error}`);
-      assert.equal(error.code, code);
-      assert.equal(error.description, description);
+      await assert.rejects(verify(held, token), (error) => {
+        assert.ok(error instanceof InvalidToken, `${error}`);
+        assert.equal(error.code, code);
+        assert.equal(error.description, description);
 
-      return true;
+        return true;
+      });
     });
-  });
-}
+  }
+});

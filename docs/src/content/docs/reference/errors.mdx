@@ -155,3 +155,70 @@ Each kind spells its name the way its language does. A dash means the SDK has no
 | `nothing_connected` | `DelegationRefused` | `access_denied` | masks connected nothing for `{provider}` |
 | `no_refresh_for_connection` | `DelegationRefused` | `invalid_grant` | masks issued no refresh token to keep the connection with |
 | `delegation_not_answering` | `DelegationUnavailable` | `temporarily_unavailable` | masks is not answering |
+
+## Token checks
+
+Every SDK verifies an access token, an ID token, and a logout token the same way. The cases below
+come from [`test/contract/tokens.json`](https://github.com/masksrb/masks/blob/main/test/contract/tokens.json), which holds the
+signing keys, the discovery document, and a base token of each kind with its times as offsets from
+now. Each case changes one thing about a base token and names the failure it ends in. Each SDK signs
+the cases when its tests run and checks that its verifier answers as the case says. The browser
+package checks the ID token cases, since it verifies nothing else.
+
+| Token | Case | Ends in |
+| --- | --- | --- |
+| Access token | a fresh access token is accepted | accepted |
+| Access token | an access token signed with the issuer's EC key is accepted | accepted |
+| Access token | an access token that expired 15 seconds ago is still within the leeway | accepted |
+| Access token | an access token valid in 15 seconds is within the leeway | accepted |
+| Access token | an access token naming this resource among several audiences is accepted | accepted |
+| Access token | an expired access token is refused | `expired` |
+| Access token | an access token that is not valid yet is refused | `not_valid_yet` |
+| Access token | an access token issued in the future is refused | `issued_in_future` |
+| Access token | an access token from another issuer is refused | `other_issuer` |
+| Access token | an access token for another resource is refused | `other_audience` |
+| Access token | an access token without exp is refused | `missing_claims` |
+| Access token | an access token without jti is refused | `missing_claims` |
+| Access token | an ID token presented as an access token is refused | `wrong_type` |
+| Access token | an untyped token presented as an access token is refused | `wrong_type` |
+| Access token | an access token naming a key the issuer does not publish is refused | `no_key` |
+| Access token | an access token signed by another key under the published kid is refused | `not_signed_by` |
+| Access token | an access token signed with a shared secret is refused | `not_an_algorithm` |
+| Access token | an unsigned access token is refused | `not_an_algorithm` |
+| Access token | a string that is not a JWT is refused | `not_a_jwt` |
+| Access token | a token with two segments is refused | `not_a_jwt` |
+| ID token | a fresh ID token is accepted | accepted |
+| ID token | an untyped ID token is accepted | accepted |
+| ID token | an ID token signed with the issuer's EC key is accepted | accepted |
+| ID token | an ID token for several audiences that names this client as the authorized party is accepted | accepted |
+| ID token | an ID token without at_hash is accepted | accepted |
+| ID token | an ID token without auth_time is accepted when no max_age was asked for | accepted |
+| ID token | an access token presented as an ID token is refused | `wrong_type` |
+| ID token | an ID token for another client is refused | `other_audience` |
+| ID token | an ID token for several audiences without an authorized party is refused | `id_token_several_audiences` |
+| ID token | an ID token whose authorized party is another client is refused | `id_token_other_client` |
+| ID token | an ID token carrying another sign-in's nonce is refused | `id_token_other_sign_in` |
+| ID token | an ID token carrying no nonce is refused | `id_token_other_sign_in` |
+| ID token | an ID token hashing another access token is refused | `id_token_other_access_token` |
+| ID token | an ID token from a sign-in older than max_age is refused | `too_old` |
+| ID token | an ID token without auth_time is refused when max_age was asked for | `too_old` |
+| ID token | an ID token without sub is refused | `missing_claims` |
+| ID token | an ID token without iat is refused | `missing_claims` |
+| ID token | an expired ID token is refused | `expired` |
+| ID token | an ID token issued in the future is refused | `issued_in_future` |
+| ID token | an ID token from another issuer is refused | `other_issuer` |
+| ID token | an ID token signed by another key under the published kid is refused | `not_signed_by` |
+| Logout token | a fresh logout token is accepted | accepted |
+| Logout token | a logout token naming only a session is accepted | accepted |
+| Logout token | a logout token naming only a subject is accepted | accepted |
+| Logout token | a logout token naming nobody is refused | `logout_names_nobody` |
+| Logout token | a logout token carrying a nonce is refused | `logout_with_nonce` |
+| Logout token | a logout token without events is refused | `not_a_logout` |
+| Logout token | a logout token about another event is refused | `not_a_logout` |
+| Logout token | a logout token whose event is not an object is refused | `not_a_logout` |
+| Logout token | an ID token presented as a logout token is refused | `wrong_type` |
+| Logout token | a logout token without jti is refused | `missing_claims` |
+| Logout token | a logout token without iat is refused | `missing_claims` |
+| Logout token | a logout token issued in the future is refused | `issued_in_future` |
+| Logout token | an expired logout token is refused | `expired` |
+| Logout token | a logout token for another client is refused | `other_audience` |
