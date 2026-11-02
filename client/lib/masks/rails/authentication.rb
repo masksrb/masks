@@ -84,10 +84,10 @@ module Masks
         Masks::Client::Claims::ORGANIZATIONS
       ].freeze
 
-      def masks_identity_from(tokens)
+      def masks_identity_from(tokens, nonce: nil, max_age: nil)
         return nil if tokens.id_token.nil?
 
-        masks_session.identity(tokens)
+        masks_session.identity(tokens, nonce: nonce, max_age: max_age)
       end
 
       def masks_forget

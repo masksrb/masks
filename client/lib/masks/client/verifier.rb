@@ -5,6 +5,7 @@ module Masks
       ACCESS_TOKEN = "at+jwt".freeze
       LOGOUT_TOKEN = "logout+jwt".freeze
       ID_TOKEN = [ "jwt", nil ].freeze
+      LEEWAY = 30
       AUTH_TIME_LEEWAY = 30
 
       def self.recent!(claims, max_age)
@@ -13,9 +14,23 @@ module Masks
         signed_in_at = claims["auth_time"]
         allowed = signed_in_at.is_a?(Numeric) && signed_in_at + max_age.to_i + AUTH_TIME_LEEWAY >= Time.now.to_i
 
-        raise InvalidToken, Masks::Client.saying("too_old") unless allowed
+        raise InvalidToken.of("too_old") unless allowed
 
         claims
+      end
+
+      def self.header(token)
+        segments = token.to_s.split(".", -1)
+
+        raise InvalidToken.of("not_a_jwt") unless segments.size == 3
+
+        held = JSON.parse(Base64.urlsafe_decode64(segments.first))
+
+        raise InvalidToken.of("not_a_jwt") unless held.is_a?(Hash)
+
+        held
+      rescue ArgumentError, JSON::ParserError
+        raise InvalidToken.of("not_a_jwt")
       end
 
       attr_reader :issuer, :audience
@@ -27,29 +42,40 @@ module Masks
       end
 
       def verify(token, required: %w[iss sub exp], typ: ID_TOKEN)
-        claims, header = JWT.decode(
-          token, nil, true,
-          algorithms: @algorithms,
-          jwks: keys,
-          iss: issuer.url, verify_iss: true,
-          aud: audience, verify_aud: true,
-          verify_expiration: true,
-          required_claims: required
-        )
+        header = self.class.header(token)
+        algorithm = header["alg"].to_s
+
+        raise InvalidToken.of("not_an_algorithm", algorithm) unless @algorithms.include?(algorithm)
 
         typed!(header["typ"], Array(typ))
 
+        claims, = JWT.decode(
+          token, key_for(header["kid"]), true,
+          algorithms: [ algorithm ],
+          iss: issuer.url, verify_iss: true,
+          aud: audience, verify_aud: true,
+          verify_expiration: true, exp_leeway: LEEWAY,
+          verify_not_before: true, nbf_leeway: LEEWAY,
+          verify_iat: false
+        )
+
+        Array(required).each { |name| raise InvalidToken.of("missing_claims", name) unless claims.key?(name) }
+
+        issued = claims["iat"]
+
+        raise InvalidToken.of("issued_in_future") if issued.is_a?(Numeric) && issued > Time.now.to_i + LEEWAY
+
         claims
       rescue JWT::ExpiredSignature
-        raise InvalidToken, Masks::Client.saying("expired")
+        raise InvalidToken.of("expired")
+      rescue JWT::ImmatureSignature
+        raise InvalidToken.of("not_valid_yet")
       rescue JWT::InvalidIssuerError
-        raise InvalidToken, Masks::Client.saying("other_issuer")
+        raise InvalidToken.of("other_issuer")
       rescue JWT::InvalidAudError
-        raise InvalidToken, Masks::Client.saying("other_audience")
-      rescue JWT::MissingRequiredClaim
-        raise InvalidToken, Masks::Client.saying("missing_claims", "a claim it needs")
+        raise InvalidToken.of("other_audience")
       rescue JWT::DecodeError
-        raise InvalidToken, Masks::Client.saying("not_signed_by", issuer.url)
+        raise InvalidToken.of("not_signed_by", issuer.url)
       end
 
       private
@@ -59,11 +85,21 @@ module Masks
 
           return if accepted.include?(named)
 
-          raise InvalidToken, Masks::Client.saying("wrong_type", held, accepted.compact.join(" or "))
+          raise InvalidToken.of("wrong_type", held.to_s.empty? ? "nothing" : held, accepted.compact.join(" or "))
         end
 
-        def keys
-          ->(options) { options[:invalidate] ? issuer.keys! : issuer.jwks }
+        def key_for(kid)
+          found = published(issuer.jwks, kid) || published(issuer.keys!, kid)
+
+          raise InvalidToken.of("no_key", issuer.url, kid.to_s) if found.nil?
+
+          JWT::JWK.import(found).verify_key
+        end
+
+        def published(jwks, kid)
+          keys = jwks.is_a?(Hash) ? Array(jwks["keys"]) : []
+
+          keys.find { |key| key.is_a?(Hash) && key["kid"] == kid && key.fetch("use", "sig") == "sig" }
         end
     end
   end

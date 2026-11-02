@@ -3,13 +3,14 @@ module Masks
     class Logout
       EVENT = "http://schemas.openid.net/event/backchannel-logout".freeze
       ALGORITHMS = Verifier::ALGORITHMS
+      REQUIRED = %w[iss aud iat exp jti].freeze
       LEEWAY = 60
 
       class << self
         def verify(token, issuer:, audience:, algorithms: ALGORITHMS)
           held = Verifier
             .new(issuer, audience: audience, algorithms: algorithms)
-            .verify(token, required: %w[iss aud iat exp jti events], typ: Verifier::LOGOUT_TOKEN)
+            .verify(token, required: REQUIRED, typ: Verifier::LOGOUT_TOKEN)
 
           new(held).validate!
         end
@@ -42,23 +43,16 @@ module Masks
       end
 
       def validate!
-        refuse!("logout token carries a nonce, so it is an id token") if claims.key?("nonce")
-        refuse!("logout token names neither a subject nor a session") if subject.nil? && sid.nil?
-        refuse!("logout token was issued in the future") if issued_at > Time.now.utc + LEEWAY
+        raise InvalidToken.of("logout_with_nonce") if claims.key?("nonce")
+        raise InvalidToken.of("logout_names_nobody") if subject.to_s.empty? && sid.to_s.empty?
+        raise InvalidToken.of("issued_in_future") if issued_at > Time.now.utc + LEEWAY
 
         held = claims["events"]
 
-        refuse!("logout token has no events claim") unless held.is_a?(Hash)
-        refuse!("logout token is not about a logout") unless held[EVENT].is_a?(Hash)
+        raise InvalidToken.of("not_a_logout") unless held.is_a?(Hash) && held[EVENT].is_a?(Hash)
 
         self
       end
-
-      private
-
-        def refuse!(said)
-          raise InvalidToken, said
-        end
     end
   end
 end

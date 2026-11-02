@@ -3,7 +3,7 @@ module Masks
     class Resource
       PRESENTED = /\A(Bearer|DPoP)[ \t]+([^\s,]+)[ \t]*\z/i.freeze
       METADATA_PATH = "/.well-known/oauth-protected-resource".freeze
-      REQUIRED = %w[iss sub exp].freeze
+      REQUIRED = %w[iss sub exp jti].freeze
 
       attr_reader :issuer, :url, :scopes
 

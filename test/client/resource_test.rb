@@ -114,8 +114,7 @@ class ResourceTest < ClientTest
   def test_a_token_that_is_not_a_jwt_is_described_in_plain_words
     error = assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer not-a-token") }
 
-    assert_equal "that token was not signed by #{issuer.url}", error.description
-    assert_kind_of JWT::DecodeError, error.cause
+    assert_equal "that token is not a signed JWT", error.description
   end
 
   def test_a_token_signed_by_an_unpublished_key_is_refused

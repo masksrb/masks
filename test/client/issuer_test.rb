@@ -37,7 +37,7 @@ class IssuerTest < ClientTest
     token = issuer.sign(
       { "iss" => issuer.url, "sub" => "a", "aud" => "https://app.test/mcp",
         "exp" => Time.now.to_i + 60 },
-      kid: "unknown", key: stranger
+      kid: "unknown", key: stranger, typ: "at+jwt"
     )
 
     assert_raises(Masks::Client::InvalidToken) { resource.authenticate("Bearer #{token}") }

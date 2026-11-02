@@ -217,13 +217,19 @@ module Masks
       end
 
       # The person the +tokens+ belong to: the ID token's claims merged over
-      # userinfo. With +max_age+, the seconds the app asked for when it started
-      # the sign-in, an ID token whose +auth_time+ is missing or older than
-      # that, plus 30 seconds of leeway, raises InvalidToken.
-      def identity(tokens, max_age: nil)
+      # userinfo. With +nonce+, the one the sign-in started with, an ID token
+      # carrying another raises InvalidToken. With +max_age+, the seconds the
+      # app asked for when it started the sign-in, an ID token whose
+      # +auth_time+ is missing or older than that, plus 30 seconds of leeway,
+      # raises InvalidToken. An +at_hash+ that is not the access token's does
+      # too.
+      def identity(tokens, nonce: nil, max_age: nil)
         return nil if tokens.id_token.nil?
 
-        claims = Verifier.recent!(Verifier.new(issuer, audience: client_id).verify(tokens.id_token), max_age)
+        claims = IdToken.verify(
+          tokens.id_token, issuer: issuer, client_id: client_id,
+          nonce: nonce, access_token: tokens.access_token, max_age: max_age
+        )
 
         profile(tokens).merge(claims)
       end

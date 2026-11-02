@@ -61,18 +61,12 @@ module Masks
         )
 
         identity = begin
-          masks_identity_from(tokens)
-        rescue Masks::Client::InvalidToken
-          :unverified
+          masks_identity_from(tokens, nonce: pending[:nonce], max_age: pending[:max_age])
+        rescue Masks::Client::InvalidToken => e
+          return refuse(e.code, e.description, pending)
         end
 
-        unless nonce_matches?(identity, pending[:nonce])
-          return refuse("invalid_nonce", "the id token was issued for another request", pending)
-        end
-
-        unless recent?(identity, pending[:max_age])
-          return refuse("invalid_token", "the person signed in longer ago than max_age allows", pending)
-        end
+        return refuse(*Masks::Client.failure("no_id_token"), pending) if pending[:nonce].present? && identity.nil?
 
         renew_session
         masks_store(tokens, identity: identity)
@@ -159,22 +153,6 @@ module Masks
 
         def requested_return_to
           masks_local_path(params[:return_to])
-        end
-
-        def recent?(identity, max_age)
-          Masks::Client::Verifier.recent!(identity.is_a?(Hash) ? identity : {}, max_age)
-          true
-        rescue Masks::Client::InvalidToken
-          false
-        end
-
-        def nonce_matches?(identity, sent)
-          return false if identity == :unverified
-          return true if sent.blank?
-          return false unless identity.is_a?(Hash)
-
-          held = identity["nonce"].to_s
-          held.present? && ActiveSupport::SecurityUtils.secure_compare(held, sent)
         end
 
         def stale

@@ -57,7 +57,7 @@ class LogoutTest < Minitest::Test
   end
 
   def test_an_expired_token_is_refused
-    refused token("exp" => Time.now.to_i - 1)
+    refused token("exp" => Time.now.to_i - 90)
   end
 
   def test_a_token_names_when_it_expires
