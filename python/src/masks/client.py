@@ -412,8 +412,11 @@ class _Flows:
         )
         audience = claims["aud"]
 
-        if isinstance(audience, list) and len(audience) > 1 and claims.get("azp") != self.client_id:
+        if isinstance(audience, list) and len(audience) > 1 and "azp" not in claims:
             raise InvalidToken.of("id_token_several_audiences")
+
+        if "azp" in claims and claims["azp"] != self.client_id:
+            raise InvalidToken.of("id_token_other_client")
 
         if nonce and not same(claims.get("nonce"), nonce):
             raise InvalidToken.of("id_token_other_sign_in")
@@ -771,8 +774,10 @@ class Client(_Flows):
     def complete(self, started: AuthorizationRequest, params: Any) -> SignIn:
         return run(self._complete(started, params), self.http)
 
-    def verify_id_token(self, id_token: str, *, nonce: str = "", access_token: str = "") -> dict[str, Any]:
-        return run(self._id_token(id_token, nonce, access_token), self.http)
+    def verify_id_token(
+        self, id_token: str, *, nonce: str = "", access_token: str = "", max_age: int = 0
+    ) -> dict[str, Any]:
+        return run(self._id_token(id_token, nonce, access_token, max_age=max_age), self.http)
 
     def userinfo(self, token: Token | str) -> dict[str, Any]:
         return run(self._userinfo(token), self.http)
@@ -960,8 +965,10 @@ class AsyncClient(_Flows):
     async def complete(self, started: AuthorizationRequest, params: Any) -> SignIn:
         return await arun(self._complete(started, params), self.http)
 
-    async def verify_id_token(self, id_token: str, *, nonce: str = "", access_token: str = "") -> dict[str, Any]:
-        return await arun(self._id_token(id_token, nonce, access_token), self.http)
+    async def verify_id_token(
+        self, id_token: str, *, nonce: str = "", access_token: str = "", max_age: int = 0
+    ) -> dict[str, Any]:
+        return await arun(self._id_token(id_token, nonce, access_token, max_age=max_age), self.http)
 
     async def userinfo(self, token: Token | str) -> dict[str, Any]:
         return await arun(self._userinfo(token), self.http)

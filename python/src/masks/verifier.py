@@ -16,7 +16,7 @@ from .dpop import DPOP, PROOF_TYPE, tidied, token_hash
 from .errors import InvalidToken, Refused, Unavailable
 from .flows import Flow, arun, default_async_http, default_http, run
 from .keys import PRIVATE_MEMBERS, thumbprint
-from .keyset import KeySet, unverified, unverified_header
+from .keyset import KeySet, unverified, unverified_header, wrong_type
 from .keyset import typed as accepts
 from .models import Issuer, Tenant
 from .replay import AsyncReplayStore, MemoryReplayStore, ReplayStore
@@ -124,7 +124,7 @@ class _Verifying:
             raise InvalidToken.of("not_an_algorithm", algorithm)
 
         if not typed(header, ACCESS_TOKEN_TYPE):
-            raise InvalidToken.of("wrong_type", header.get("typ"), ACCESS_TOKEN_TYPE)
+            raise wrong_type(header, (ACCESS_TOKEN_TYPE,))
 
         jwk = yield from self.keys.key(str(header.get("kid") or ""))
 
@@ -140,7 +140,7 @@ class _Verifying:
                 options={"require": ["iss", "exp", "jti", "aud"]},
             )
         except jwt.PyJWTError as error:
-            raise unverified(error) from error
+            raise unverified(error, self.issuer.url) from error
 
         return Claims.from_dict(claims)
 

@@ -39,6 +39,8 @@ def typed(header: dict[str, Any], accepted: Sequence[str]) -> bool:
 def unverified(error: jwt.PyJWTError, issuer: str = "its issuer") -> InvalidToken:
     if isinstance(error, jwt.ExpiredSignatureError):
         return InvalidToken.of("expired")
+    if isinstance(error, jwt.ImmatureSignatureError) and "(iat)" in str(error):
+        return InvalidToken.of("issued_in_future")
     if isinstance(error, (jwt.ImmatureSignatureError, jwt.InvalidIssuedAtError)):
         return InvalidToken.of("not_valid_yet")
     if isinstance(error, jwt.InvalidIssuerError):
@@ -53,6 +55,10 @@ def unverified(error: jwt.PyJWTError, issuer: str = "its issuer") -> InvalidToke
         return InvalidToken.of("not_a_jwt")
 
     return InvalidToken.of("unverified")
+
+
+def wrong_type(header: dict[str, Any], accepted: Sequence[str]) -> InvalidToken:
+    return InvalidToken.of("wrong_type", header.get("typ") or "nothing", " or ".join(name for name in accepted if name))
 
 
 def unverified_header(token: str) -> dict[str, Any]:
@@ -166,7 +172,7 @@ class KeySet:
             raise InvalidToken.of("not_an_algorithm", algorithm)
 
         if not typed(header, accepted):
-            raise InvalidToken.of("wrong_type", header.get("typ"), " or ".join(accepted))
+            raise wrong_type(header, accepted)
 
         jwk = yield from self.key(str(header.get("kid") or ""))
 
