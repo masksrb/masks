@@ -58,6 +58,7 @@ services:
       ]
     volumes:
       - ./web:/masks/web
+      - ./test/contract:/masks/test/contract:ro
       - web-modules:/masks/web/node_modules
       - web-npm-cache:/root/.npm
 

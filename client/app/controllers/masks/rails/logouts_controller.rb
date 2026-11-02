@@ -18,12 +18,12 @@ module Masks
 
         head :ok
       rescue Masks::Client::InvalidToken, Masks::Rails::Configuration::Unconfigured => e
-        refuse("invalid_request", e.message)
-      rescue Masks::Client::Unreachable, Masks::Rails::Cache::Unavailable => e
-        refuse("temporarily_unavailable", e.message, status: :service_unavailable)
+        refuse("invalid_request", e.description)
       end
 
       private
+
+        def masks_wants_json? = true
 
         def refuse(code, description, status: :bad_request)
           response.headers["Cache-Control"] = "no-store"

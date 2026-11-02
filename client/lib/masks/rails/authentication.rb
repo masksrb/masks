@@ -329,7 +329,7 @@ module Masks
           response.headers["Retry-After"] = "5"
 
           if masks_wants_json?
-            render json: { "error" => "temporarily_unavailable", "error_description" => error.message },
+            render json: { "error" => "temporarily_unavailable", "error_description" => error.description },
                    status: :service_unavailable
           else
             render plain: "Signing in is unavailable right now. Try again in a moment.", status: :service_unavailable

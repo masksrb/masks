@@ -1,7 +1,11 @@
 module Masks
   module Rails
     class Configuration
-      class Unconfigured < Masks::Client::Error; end
+      class Unconfigured < Masks::Client::Error
+        def initialize(description)
+          super("not_configured", description)
+        end
+      end
 
       Privilege = Struct.new(:name, :scopes, :roles, :organization, keyword_init: true)
       PRIVILEGE_KEYS = %w[scope role organization].freeze

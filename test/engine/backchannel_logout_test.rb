@@ -50,6 +50,18 @@ class BackchannelLogoutTest < EngineIntegrationTest
     assert_empty @heard
   end
 
+  test "an app with no issuer configured refuses the token and says why" do
+    Masks::Rails.config.issuer = nil
+
+    post_logout token
+
+    assert_response :bad_request
+    body = JSON.parse(response.body)
+    assert_equal "invalid_request", body["error"]
+    assert_equal "Masks::Rails.config.issuer is not set", body["error_description"]
+    assert_empty @heard
+  end
+
   test "an id token in place of a logout token is refused" do
     post_logout token("nonce" => "n-1")
 
@@ -114,7 +126,10 @@ class BackchannelLogoutTest < EngineIntegrationTest
     post_logout held
 
     assert_response :service_unavailable
-    assert_equal "temporarily_unavailable", JSON.parse(response.body)["error"]
+    assert_equal "5", response.headers["Retry-After"]
+    body = JSON.parse(response.body)
+    assert_equal "temporarily_unavailable", body["error"]
+    assert_equal "the cache did not keep that logout", body["error_description"]
     assert_empty @heard
 
     failing.instance_variable_set(:@refusing, false)
