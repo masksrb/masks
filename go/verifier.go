@@ -113,34 +113,17 @@ func NewVerifier(issuer *Issuer, audience ...string) *Verifier {
 }
 
 func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
-	parsed, err := jwt.ParseSigned(token, tokenAlgorithms)
-	if err != nil {
-		return nil, &InvalidToken{Code: "invalid_token", Description: Saying("not_a_jwt"), cause: err}
-	}
+	claims := &Claims{}
 
-	if len(parsed.Headers) != 1 {
-		return nil, invalid("not_a_jwt")
-	}
-
-	header := parsed.Headers[0]
-
-	if !typed(header, accessTokenType) {
-		return nil, invalid("wrong_type", typeOf(header), accessTokenType)
-	}
-
-	key, err := v.Issuer.key(ctx, header.KeyID)
-	if err != nil {
+	if err := v.Issuer.verified(ctx, token, []string{accessTokenType}, claims); err != nil {
 		return nil, err
 	}
 
-	claims := &Claims{}
-
-	if err := parsed.Claims(key.Key, claims); err != nil {
-		return nil, invalid("not_signed_by", v.Issuer.URL)
-	}
-
-	if claims.ID == "" || claims.Expiry == nil {
-		return nil, invalid("missing_claims", "jti and exp")
+	switch {
+	case claims.ID == "":
+		return nil, invalid("missing_claims", "jti")
+	case claims.Expiry == nil:
+		return nil, invalid("missing_claims", "exp")
 	}
 
 	expected := jwt.Expected{Issuer: v.Issuer.URL, AnyAudience: jwt.Audience(v.Audience), Time: time.Now()}
@@ -229,7 +212,9 @@ func unverified(err error) error {
 	switch {
 	case errors.Is(err, jwt.ErrExpired):
 		description = Saying("expired")
-	case errors.Is(err, jwt.ErrNotValidYet), errors.Is(err, jwt.ErrIssuedInTheFuture):
+	case errors.Is(err, jwt.ErrIssuedInTheFuture):
+		description = Saying("issued_in_future")
+	case errors.Is(err, jwt.ErrNotValidYet):
 		description = Saying("not_valid_yet")
 	case errors.Is(err, jwt.ErrInvalidIssuer):
 		description = Saying("other_issuer")
@@ -362,6 +347,9 @@ func (v *Verifier) target(request *http.Request) *url.URL {
 
 func typeOf(header jose.Header) string {
 	held, _ := header.ExtraHeaders[jose.HeaderType].(string)
+	if held == "" {
+		return "nothing"
+	}
 
 	return held
 }

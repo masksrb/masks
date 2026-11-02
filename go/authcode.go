@@ -172,22 +172,13 @@ func (c *Client) Complete(ctx context.Context, returned url.Values, pending *Aut
 		return nil, invalid("no_id_token")
 	}
 
-	identity, err := c.VerifyIDToken(ctx, token.IDToken)
+	identity, err := c.VerifyIDToken(ctx, token.IDToken, Expectations{
+		Nonce:       pending.Nonce,
+		AccessToken: token.AccessToken,
+		MaxAge:      time.Duration(pending.MaxAge) * time.Second,
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	if !sameString(identity.Nonce, pending.Nonce) {
-		return nil, invalid("id_token_other_sign_in")
-	}
-
-	if identity.AccessTokenHash != "" && !sameString(identity.AccessTokenHash, accessTokenHash(token.AccessToken)) {
-		return nil, invalid("id_token_other_access_token")
-	}
-
-	if pending.MaxAge > 0 && (identity.AuthTime == 0 ||
-		time.Since(time.Unix(identity.AuthTime, 0)) > time.Duration(pending.MaxAge)*time.Second+verifyLeeway) {
-		return nil, invalid("too_old")
 	}
 
 	signed.Identity = identity

@@ -9,8 +9,10 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
 
@@ -126,31 +128,69 @@ func identityFrom(raw map[string]json.RawMessage) (*Identity, error) {
 	return held, json.Unmarshal(encoded, held)
 }
 
-func (c *Client) VerifyIDToken(ctx context.Context, raw string) (*Identity, error) {
+type Expectations struct {
+	Nonce       string
+	AccessToken string
+	MaxAge      time.Duration
+}
+
+func (c *Client) VerifyIDToken(ctx context.Context, raw string, expected Expectations) (*Identity, error) {
 	held := &Identity{}
 
 	if err := c.Issuer.verified(ctx, raw, []string{"jwt", ""}, held); err != nil {
 		return nil, err
 	}
 
-	if held.Subject == "" || held.Expiry == nil || held.IssuedAt == nil {
-		return nil, invalid("missing_claims", "sub, exp, and iat")
+	switch {
+	case held.Subject == "":
+		return nil, invalid("missing_claims", "sub")
+	case held.Expiry == nil:
+		return nil, invalid("missing_claims", "exp")
+	case held.IssuedAt == nil:
+		return nil, invalid("missing_claims", "iat")
 	}
 
-	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}
+	issued := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}
 
-	if err := held.ValidateWithLeeway(expected, verifyLeeway); err != nil {
+	if err := held.ValidateWithLeeway(issued, verifyLeeway); err != nil {
 		return nil, unverified(err)
 	}
 
-	if (len(held.Audience) > 1 || held.AuthorizedParty != "") && held.AuthorizedParty != c.ID {
+	switch {
+	case len(held.Audience) > 1 && held.AuthorizedParty == "":
+		return nil, invalid("id_token_several_audiences")
+	case held.AuthorizedParty != "" && held.AuthorizedParty != c.ID:
 		return nil, invalid("id_token_other_client")
+	case expected.Nonce != "" && !sameString(held.Nonce, expected.Nonce):
+		return nil, invalid("id_token_other_sign_in")
+	case expected.AccessToken != "" && held.AccessTokenHash != "" && !sameString(held.AccessTokenHash, accessTokenHash(expected.AccessToken)):
+		return nil, invalid("id_token_other_access_token")
+	case expected.MaxAge > 0 && (held.AuthTime == 0 || time.Since(time.Unix(held.AuthTime, 0)) > expected.MaxAge+verifyLeeway):
+		return nil, invalid("too_old")
 	}
 
 	return held, nil
 }
 
 func (i *Issuer) verified(ctx context.Context, raw string, types []string, into any) error {
+	segment, _, found := strings.Cut(raw, ".")
+	if !found {
+		return invalid("not_a_jwt")
+	}
+
+	decoded, err := base64.RawURLEncoding.DecodeString(segment)
+	peeked := struct {
+		Algorithm string `json:"alg"`
+	}{}
+
+	if err != nil || json.Unmarshal(decoded, &peeked) != nil {
+		return invalid("not_a_jwt")
+	}
+
+	if !slices.Contains(tokenAlgorithms, jose.SignatureAlgorithm(peeked.Algorithm)) {
+		return invalid("not_an_algorithm", peeked.Algorithm)
+	}
+
 	parsed, err := jwt.ParseSigned(raw, tokenAlgorithms)
 	if err != nil {
 		return &InvalidToken{Code: "invalid_token", Description: Saying("not_a_jwt"), cause: err}
@@ -249,8 +289,13 @@ func (c *Client) VerifyLogoutToken(ctx context.Context, raw string) (*LogoutToke
 		return nil, err
 	}
 
-	if held.ID == "" || held.IssuedAt == nil || held.Expiry == nil {
-		return nil, invalid("missing_claims", "jti, iat, and exp")
+	switch {
+	case held.ID == "":
+		return nil, invalid("missing_claims", "jti")
+	case held.IssuedAt == nil:
+		return nil, invalid("missing_claims", "iat")
+	case held.Expiry == nil:
+		return nil, invalid("missing_claims", "exp")
 	}
 
 	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}

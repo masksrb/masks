@@ -255,23 +255,23 @@ func TestAnIDTokenForAnotherClientIsRefused(t *testing.T) {
 		"exp": time.Now().Add(time.Minute).Unix(), "iat": time.Now().Unix(),
 	}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); !is[*InvalidToken](err) {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT"), Expectations{}); !is[*InvalidToken](err) {
 		t.Fatalf("expected ErrInvalidToken, got %v", err)
 	}
 
 	claims["aud"] = []string{client.ID, "someone-else"}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); !is[*InvalidToken](err) {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT"), Expectations{}); !is[*InvalidToken](err) {
 		t.Fatalf("a token with several audiences and no azp was accepted: %v", err)
 	}
 
 	claims["aud"] = client.ID
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, accessTokenType)); !is[*InvalidToken](err) {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, accessTokenType), Expectations{}); !is[*InvalidToken](err) {
 		t.Fatalf("an access token was accepted as an ID token: %v", err)
 	}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT")); err != nil {
+	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT"), Expectations{}); err != nil {
 		t.Fatalf("a good ID token was refused: %v", err)
 	}
 }

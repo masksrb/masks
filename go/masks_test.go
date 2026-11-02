@@ -556,7 +556,7 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 		"another audience": {held.issue(changed("aud", "https://other.example"), accessTokenType), "that token was issued for another app"},
 		"another issuer":   {held.issue(changed("iss", "https://other.example"), accessTokenType), "that token was issued by another server"},
 		"expired":          {held.issue(changed("exp", time.Now().Add(-time.Hour).Unix()), accessTokenType), "that token has expired"},
-		"no jti":           {held.issue(changed("jti", nil), accessTokenType), "that token is missing jti and exp"},
+		"no jti":           {held.issue(changed("jti", nil), accessTokenType), "that token is missing jti"},
 		"an ID token":      {held.issue(good, "JWT"), "that token is typed JWT, not at+jwt"},
 		"not a JWT":        {"nonsense", "that token is not a signed JWT"},
 	}
