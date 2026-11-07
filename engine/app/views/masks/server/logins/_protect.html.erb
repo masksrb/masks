@@ -1,18 +1,18 @@
-<% enrolment = login.as_json["enrolment"] %>
-<% otp = enrolment["otp"] %>
-<% issued = enrolment.dig("backupCodes", "issued") || [] %>
-<% remaining = enrolment.dig("backupCodes", "remaining").to_i %>
+<% protection = login.as_json["protection"] %>
+<% otp = protection["otp"] %>
+<% issued = protection.dig("backupCodes", "issued") || [] %>
+<% remaining = protection.dig("backupCodes", "remaining").to_i %>
 <% signing_up = login.signing_up %>
-<% offers = enrolment["offers"] %>
+<% offers = protection["offers"] %>
 
 <div class="flow<%= " setup" if signing_up %>">
   <% if signing_up %>
     <%= render "masks/server/logins/signup_head", login: login, at: 2 %>
 
-    <p class="aside"><%= enrolment["required"] ? t(".lede") : t(".lede_optional") %></p>
+    <p class="aside"><%= protection["required"] ? t(".lede") : t(".lede_optional") %></p>
   <% else %>
     <%= render "masks/server/logins/head", title: t(".title"),
-          lede: enrolment["required"] ? t(".lede") : t(".lede_optional") %>
+          lede: protection["required"] ? t(".lede") : t(".lede_optional") %>
 
     <%= render "masks/server/logins/identified", login: login %>
   <% end %>
@@ -25,20 +25,20 @@
       <% if otp["enabled"] %>
         <span class="ledger-value"><%= t(".otp_on") %></span>
       <% else %>
-        <div class="enrol">
-          <a class="enrol-qr" href="<%= otp["uri"] %>" aria-label="<%= t(".open") %>"><%= otp["qr"].html_safe %></a>
-          <div class="enrol-key">
+        <div class="protect">
+          <a class="protect-qr" href="<%= otp["uri"] %>" aria-label="<%= t(".open") %>"><%= otp["qr"].html_safe %></a>
+          <div class="protect-key">
             <span class="field-hint"><%= t(".scan_hint") %></span>
-            <span class="aside-mono enrol-secret"><%= otp["secret"] %></span>
+            <span class="aside-mono protect-secret"><%= otp["secret"] %></span>
           </div>
         </div>
 
-        <%= render "masks/server/logins/enrol_code_form", login: login, event: "enrol:otp", id: "enrol-otp" %>
+        <%= render "masks/server/logins/protect_code_form", login: login, event: "protect:otp", id: "protect-otp" %>
       <% end %>
     </div>
     <% end %>
 
-    <% (enrolment["codes"] || {}).each do |factor, row| %>
+    <% (protection["codes"] || {}).each do |factor, row| %>
     <div class="ledger-row ledger-step<%= " ledger-step-done" if row["enabled"] %>">
       <span class="ledger-label"><%= t(".codes_#{factor}") %></span>
 
@@ -47,13 +47,13 @@
       <% elsif row["sent"] %>
         <span class="field-hint"><%= t(".sent_to", to: row["to"]) %></span>
 
-        <%= render "masks/server/logins/enrol_code_form", login: login, event: "enrol:code", id: "enrol-#{factor}-code" %>
+        <%= render "masks/server/logins/protect_code_form", login: login, event: "protect:code", id: "protect-#{factor}-code" %>
       <% else %>
         <span class="field-hint"><%= t(".codes_#{factor}_hint", to: row["to"]) %></span>
 
-        <%= form_with url: login_path, method: :post, id: "enrol-send-#{factor}-code", class: "flow-tight" do |form| %>
+        <%= form_with url: login_path, method: :post, id: "protect-send-#{factor}-code", class: "flow-tight" do |form| %>
           <%= hidden_field_tag :rid, login.rid %>
-          <%= form.hidden_field :event, value: "enrol:code-send" %>
+          <%= form.hidden_field :event, value: "protect:code-send" %>
           <%= form.hidden_field :factor, value: factor %>
           <button type="submit" class="action action-quiet"><%= t(".send_code") %></button>
         <% end %>
@@ -85,9 +85,9 @@
     <% end %>
   </div>
 
-  <%= form_with url: login_path, method: :post, id: "enrol-done", class: "flow" do |form| %>
+  <%= form_with url: login_path, method: :post, id: "protect-done", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
-    <%= form.hidden_field :event, value: "enrol:done" %>
+    <%= form.hidden_field :event, value: "protect:done" %>
 
     <% if issued.any? %>
       <label class="check">
@@ -97,7 +97,7 @@
     <% end %>
 
     <button type="submit" class="action">
-      <%= otp["enabled"] || enrolment.dig("passkeys", "count").to_i.positive? || enrolment["required"] ? t(".done") : t(".skip") %>
+      <%= otp["enabled"] || protection.dig("passkeys", "count").to_i.positive? || protection["required"] ? t(".done") : t(".skip") %>
     </button>
   <% end %>
 </div>

@@ -133,7 +133,7 @@ module Masks
         sign_in_as(@mallory)
         post "/account/passkeys/challenge"
         post "/account/passkeys",
-             params: { credential: JSON.generate(authenticator.enrol(JSON.parse(response.body))) }
+             params: { credential: JSON.generate(authenticator.register(JSON.parse(response.body))) }
 
         reset!
         host! host_for(@tenant)

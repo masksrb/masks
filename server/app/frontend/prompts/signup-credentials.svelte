@@ -2,7 +2,7 @@
 import Action from "../shared/Action.svelte";
 import Hint from "../shared/Hint.svelte";
 import SignupHead from "../shared/SignupHead.svelte";
-import { available, enrol, refused } from "../lib/passkey.js";
+import { available, register, refused } from "../lib/passkey.js";
 
 let { login } = $props();
 
@@ -59,7 +59,7 @@ async function createPasskey() {
       return;
     }
 
-    await login.submit("signup:passkey", { passkey: await enrol(options) });
+    await login.submit("signup:passkey", { passkey: await register(options) });
   } catch (error) {
     if (!refused(error)) {
       unusable = login.t("passkey_unusable");

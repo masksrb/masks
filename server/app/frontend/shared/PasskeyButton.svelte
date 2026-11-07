@@ -1,6 +1,6 @@
 <script>
 import Action from "./Action.svelte";
-import { assert, available, enrol, refused } from "../lib/passkey.js";
+import { assert, available, register, refused } from "../lib/passkey.js";
 
 let { login, enrolling = false, label = null, params = {} } = $props();
 
@@ -18,8 +18,8 @@ async function start() {
   let asked = null;
 
   try {
-    const offer = await login.submit(enrolling ? "enrol:passkey-challenge" : "passkey:challenge", {});
-    const options = enrolling ? offer.enrolment?.passkeys?.options : offer.passkey?.options;
+    const offer = await login.submit(enrolling ? "protect:passkey-challenge" : "passkey:challenge", {});
+    const options = enrolling ? offer.protection?.passkeys?.options : offer.passkey?.options;
 
     if (!options) {
       unusable = login.t("passkey_unoffered");
@@ -28,9 +28,9 @@ async function start() {
 
     asked = performance.now();
 
-    const credential = enrolling ? await enrol(options) : await assert(options);
+    const credential = enrolling ? await register(options) : await assert(options);
 
-    await login.submit(enrolling ? "enrol:passkey" : "passkey:verify", { ...params, passkey: credential });
+    await login.submit(enrolling ? "protect:passkey" : "passkey:verify", { ...params, passkey: credential });
   } catch (error) {
     if (!refused(error) || (asked !== null && performance.now() - asked < DELIBERATE)) {
       unusable = login.t("passkey_unusable");

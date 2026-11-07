@@ -5,7 +5,7 @@ import Action from "./shared/Action.svelte";
 import Head from "./shared/Head.svelte";
 import Warnings from "./shared/Warnings.svelte";
 import AcceptInvitation from "./prompts/accept-invitation.svelte";
-import Enrol from "./prompts/enrol.svelte";
+import Protect from "./prompts/protect.svelte";
 import BackupCode from "./prompts/backup-code.svelte";
 import ChooseOrganization from "./prompts/choose-organization.svelte";
 import Consent from "./prompts/consent.svelte";
@@ -36,7 +36,7 @@ const prompts = {
   "email-code": EmailCode,
   "second-factor": SecondFactor,
   "backup-code": BackupCode,
-  enrol: Enrol,
+  protect: Protect,
   "confirm-email": ConfirmEmail,
   "confirm-phone": ConfirmPhone,
   "add-phone": AddPhone,

@@ -130,15 +130,15 @@ class FirstSignIn
 
     body = post("signup", token: token, nickname: "owner", email: "owner@example.invalid",
                           password: FIRST_SIGN_IN_PASSWORD, password_confirmation: FIRST_SIGN_IN_PASSWORD)
-    refuse("the first account was not created", body) unless body["prompt"] == "enrol"
+    refuse("the first account was not created", body) unless body["prompt"] == "protect"
 
-    secret = body.dig("enrolment", "otp", "secret").to_s.delete(" ")
+    secret = body.dig("protection", "otp", "secret").to_s.delete(" ")
     refuse("no authenticator secret was offered", body) if secret.empty?
 
-    body = post("enrol:otp", code: totp(secret))
+    body = post("protect:otp", code: totp(secret))
     refuse("the authenticator code was not accepted", body) if body["warnings"].to_a.any?
 
-    body = post("enrol:done", kept: "1")
+    body = post("protect:done", kept: "1")
     refuse("the second factor was not finished", body) unless body["prompt"] == "setup-configure"
 
     body = post("setup-configure", called: "Acme")

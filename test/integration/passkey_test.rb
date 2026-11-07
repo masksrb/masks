@@ -14,13 +14,13 @@ module Masks
         @device = FakeAuthenticator.new(origin_for(@tenant))
       end
 
-      def enrol(user_verified: true, name: "This laptop")
+      def add_passkey(user_verified: true, name: "This laptop")
         sign_in_as(@actor)
 
         post "/account/passkeys/challenge"
         options = JSON.parse(response.body)
 
-        credential = @device.enrol(options, user_verified: user_verified)
+        credential = @device.register(options, user_verified: user_verified)
 
         post "/account/passkeys",
              params: { credential: JSON.generate(credential), name: name }
@@ -166,7 +166,7 @@ module Masks
       end
 
       test "a passkey with no user verification is a first factor only" do
-        enrol(user_verified: false)
+        add_passkey(user_verified: false)
         enable_otp(@actor, @tenant)
         reset!
         host! host_for(@tenant)
@@ -231,7 +231,7 @@ module Masks
       end
 
       test "a passkey is labelled by its authenticator, and named by its owner when they say" do
-        passkey = enrol(name: nil)
+        passkey = add_passkey(name: nil)
 
         assert_equal "Passkey", passkey.label
 

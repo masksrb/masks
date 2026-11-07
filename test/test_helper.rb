@@ -113,11 +113,11 @@ module Masks
         JSON.parse(response.body)
       end
 
-      def enrol_otp!(body)
-        secret = body.dig("enrolment", "otp", "secret").to_s.delete(" ")
+      def add_otp!(body)
+        secret = body.dig("protection", "otp", "secret").to_s.delete(" ")
 
-        post "/login", params: { event: "enrol:otp", code: ROTP::TOTP.new(secret).now }, as: :json
-        post "/login", params: { event: "enrol:done", kept: "1" }, as: :json
+        post "/login", params: { event: "protect:otp", code: ROTP::TOTP.new(secret).now }, as: :json
+        post "/login", params: { event: "protect:done", kept: "1" }, as: :json
 
         JSON.parse(response.body)
       end
@@ -149,7 +149,7 @@ module Masks
                                  password_confirmation: "a-long-enough-password" }.merge(params.except(:called)),
              as: :json
 
-        enrol_otp!(JSON.parse(response.body))
+        add_otp!(JSON.parse(response.body))
 
         post "/login", params: { event: "setup-configure", called: params.fetch(:called, "Demo") }, as: :json
 
@@ -249,7 +249,7 @@ module Masks
       end
 
       def awaiting_login?
-        !response.redirect? && %w[signup identify first-factor second-factor backup-code enrol].include?(auth_data&.dig("prompt"))
+        !response.redirect? && %w[signup identify first-factor second-factor backup-code protect].include?(auth_data&.dig("prompt"))
       end
 
       def authorized_code(actor:, registration:, resource: nil, scope: "openid profile email offline_access")

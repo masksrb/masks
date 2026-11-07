@@ -50,7 +50,7 @@ module Masks
         authorize(client_id: @registration["client_id"], acr_values: MFA)
 
         assert awaiting_login?
-        assert_equal "enrol", auth_data["prompt"]
+        assert_equal "protect", auth_data["prompt"]
       end
 
       test "a request that does not ask for a second factor is not asked for one" do
@@ -71,7 +71,7 @@ module Masks
                   claims: { id_token: { acr: { essential: true, values: [ MFA ] } } }.to_json)
 
         assert awaiting_login?
-        assert_equal "enrol", auth_data["prompt"]
+        assert_equal "protect", auth_data["prompt"]
       end
 
       test "a policy that asks at every app sign-in steps up a session that used only a password" do
@@ -144,7 +144,7 @@ module Masks
         authorize(client_id: @registration["client_id"], acr_values: "urn:example:acr:gold #{MFA}")
 
         assert awaiting_login?
-        assert_equal "enrol", auth_data["prompt"]
+        assert_equal "protect", auth_data["prompt"]
       end
 
       test "an unrelated acr value asks for nothing more" do

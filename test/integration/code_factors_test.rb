@@ -252,25 +252,25 @@ module Masks
         assert to_second_factor["settled"]
       end
 
-      test "a policy requiring a second factor is satisfied by a text message code turned on at enrolment" do
+      test "a policy requiring a second factor is satisfied by a text message code turned on while protecting the account" do
         policy!(key: "strict", name: "Strict", second_factor_required: true)
 
         body = to_second_factor
 
-        assert_equal "enrol", body["prompt"]
-        assert body.dig("enrolment", "offers", "sms")
-        assert_equal "+15551234567", body.dig("enrolment", "codes", "sms", "to")
+        assert_equal "protect", body["prompt"]
+        assert body.dig("protection", "offers", "sms")
+        assert_equal "+15551234567", body.dig("protection", "codes", "sms", "to")
 
-        body = event("enrol:code-send", factor: "sms")
+        body = event("protect:code-send", factor: "sms")
 
-        assert body.dig("enrolment", "codes", "sms", "sent")
+        assert body.dig("protection", "codes", "sms", "sent")
 
-        body = event("enrol:code", code: texted_code)
+        body = event("protect:code", code: texted_code)
 
-        assert body.dig("enrolment", "codes", "sms", "enabled")
-        refute body.dig("enrolment", "required")
+        assert body.dig("protection", "codes", "sms", "enabled")
+        refute body.dig("protection", "required")
 
-        event("enrol:done", kept: "1")
+        event("protect:done", kept: "1")
 
         within(@tenant) { assert @actor.reload.phone_factor? }
       end
@@ -282,14 +282,14 @@ module Masks
 
         event("identify", identifier: "boss")
         event("password", password: "password")
-        event("enrol:code-send", factor: "sms")
+        event("protect:code-send", factor: "sms")
 
-        body = event("enrol:code", code: texted_code)
+        body = event("protect:code", code: texted_code)
 
-        assert body.dig("enrolment", "codes", "sms", "enabled")
-        assert body.dig("enrolment", "required")
+        assert body.dig("protection", "codes", "sms", "enabled")
+        assert body.dig("protection", "required")
 
-        body = event("enrol:done", kept: "1")
+        body = event("protect:done", kept: "1")
 
         assert_includes body["warnings"], "second-factor-required"
         assert_nil within(@tenant) { Session.live.find_by(actor_id: manager.id) }

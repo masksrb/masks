@@ -102,7 +102,7 @@ fr:
       approval_again: "Afficher un nouveau code"
       approval_checked: "Je l’ai approuvée"
 
-    enrol:
+    protect:
       title: "Protégez votre compte"
       lede: "Choisissez une façon de confirmer que c'est vous à la connexion. Vous pourrez en ajouter d'autres plus tard."
       lede_optional: "Choisissez une façon de confirmer que c'est vous à la connexion, ou passez pour l'instant."

@@ -102,7 +102,7 @@ es:
       approval_again: "Mostrar un código nuevo"
       approval_checked: "Ya lo aprobé"
 
-    enrol:
+    protect:
       title: "Protege tu cuenta"
       lede: "Elige una forma de confirmar que eres tú al iniciar sesión. Puedes añadir más después."
       lede_optional: "Elige una forma de confirmar que eres tú al iniciar sesión, o sáltalo por ahora."

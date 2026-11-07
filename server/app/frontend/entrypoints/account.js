@@ -1,4 +1,4 @@
-import { available, enrol, refused } from "../lib/passkey.js";
+import { available, register, refused } from "../lib/passkey.js";
 
 const csrf = () =>
   document.querySelector('meta[name="csrf-token"]')?.content ?? "";
@@ -23,7 +23,7 @@ async function options() {
   }
 
   if (!response.ok)
-    throw new Error(`could not start enrolment: ${response.status}`);
+    throw new Error(`could not start protection: ${response.status}`);
 
   return response.json();
 }
@@ -35,7 +35,7 @@ async function add(event) {
   unusable.hidden = true;
 
   try {
-    field.value = await enrol(await options());
+    field.value = await register(await options());
     form.submit();
   } catch (error) {
     if (!refused(error)) {

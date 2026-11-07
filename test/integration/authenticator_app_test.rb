@@ -21,7 +21,7 @@ module Masks
       def shown_secret
         get "/"
 
-        response.body[%r{<code class="enrol-secret">([^<]+)</code>}, 1].to_s.delete(" ")
+        response.body[%r{<code class="protect-secret">([^<]+)</code>}, 1].to_s.delete(" ")
       end
 
       def shown_codes
@@ -92,7 +92,7 @@ module Masks
 
         get "/"
 
-        assert_no_match "enrol-secret", response.body
+        assert_no_match "protect-secret", response.body
 
         post "/account/authenticator", params: { code: "123456" }
 

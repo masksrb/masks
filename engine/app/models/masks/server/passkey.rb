@@ -22,7 +22,11 @@ module Masks
       scope :newest_first, -> { order(created_at: :desc) }
       scope :discoverable, -> { where(discoverable: true) }
 
-      def self.enrol!(actor:, credential:, name:)
+      def self.crowded?(actor)
+        where(actor_id: actor.id).count >= MAX_PER_ACTOR
+      end
+
+      def self.register!(actor:, credential:, name: nil)
         create!(
           actor: actor,
           name: name,
@@ -32,15 +36,7 @@ module Masks
           aaguid: aaguid_of(credential),
           discoverable: !!credential.response&.authenticator_data&.user_verified?,
           user_verified: !!credential.response&.authenticator_data&.user_verified?
-        )
-      end
-
-      def self.crowded?(actor)
-        where(actor_id: actor.id).count >= MAX_PER_ACTOR
-      end
-
-      def self.register!(actor:, credential:, name: nil)
-        enrol!(actor: actor, credential: credential, name: name).tap do |passkey|
+        ).tap do |passkey|
           Event.record!(Event::PASSKEY_ADDED, actor: actor, passkey: passkey.name)
         end
       end

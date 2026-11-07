@@ -3,7 +3,7 @@ module Masks
     require "test_helper"
     require_relative "../support/fake_authenticator"
 
-    class EnrolmentTest < ActionDispatch::IntegrationTest
+    class ProtectionTest < ActionDispatch::IntegrationTest
       setup do
         host! host_for(@tenant)
 
@@ -17,10 +17,10 @@ module Masks
       end
 
       def add_passkey(user_verified: true)
-        offer = event("enrol:passkey-challenge")
-        credential = @device.enrol(offer.dig("enrolment", "passkeys", "options"), user_verified: user_verified)
+        offer = event("protect:passkey-challenge")
+        credential = @device.register(offer.dig("protection", "passkeys", "options"), user_verified: user_verified)
 
-        event("enrol:passkey", passkey: JSON.generate(credential))
+        event("protect:passkey", passkey: JSON.generate(credential))
       end
 
       def factored
@@ -30,12 +30,12 @@ module Masks
       test "a manager with no second factor is stopped at sign-in until one is added" do
         body = sign_in_as(@manager)
 
-        assert_equal "enrol", body["prompt"]
-        assert body.dig("enrolment", "required")
+        assert_equal "protect", body["prompt"]
+        assert body.dig("protection", "required")
 
-        body = event("enrol:done", kept: "1")
+        body = event("protect:done", kept: "1")
 
-        assert_equal "enrol", body["prompt"]
+        assert_equal "protect", body["prompt"]
         assert_includes body["warnings"], "second-factor-required"
         assert_nil within(@tenant) { Session.live.find_by(actor_id: @manager.id) }
       end
@@ -49,7 +49,7 @@ module Masks
       test "a wrong code turns nothing on" do
         sign_in_as(@manager)
 
-        body = event("enrol:otp", code: "000000")
+        body = event("protect:otp", code: "000000")
 
         assert_includes body["warnings"], "invalid-code"
         refute within { factored.otp? }
@@ -57,19 +57,19 @@ module Masks
 
       test "an authenticator app, then backup codes that must be kept, then signed in" do
         body = sign_in_as(@manager)
-        secret = body.dig("enrolment", "otp", "secret").delete(" ")
+        secret = body.dig("protection", "otp", "secret").delete(" ")
 
-        body = event("enrol:otp", code: ROTP::TOTP.new(secret).now)
+        body = event("protect:otp", code: ROTP::TOTP.new(secret).now)
 
         assert within { factored.otp? }
-        assert_equal "enrol", body["prompt"], "the screen stays open for more factors"
-        assert_equal Actor::BACKUP_CODES, body.dig("enrolment", "backupCodes", "issued").length
+        assert_equal "protect", body["prompt"], "the screen stays open for more factors"
+        assert_equal Actor::BACKUP_CODES, body.dig("protection", "backupCodes", "issued").length
 
-        body = event("enrol:done")
+        body = event("protect:done")
 
         assert_includes body["warnings"], "backup-codes-unkept"
 
-        body = event("enrol:done", kept: "1")
+        body = event("protect:done", kept: "1")
 
         assert body["settled"]
         assert_includes within(@tenant) { Session.live.find_by(actor_id: @manager.id).amr }, "mfa"
@@ -77,8 +77,8 @@ module Masks
 
       test "issued backup codes can be downloaded as a file, without a request of their own" do
         body = sign_in_as(@manager)
-        secret = body.dig("enrolment", "otp", "secret").delete(" ")
-        issued = event("enrol:otp", code: ROTP::TOTP.new(secret).now).dig("enrolment", "backupCodes", "issued")
+        secret = body.dig("protection", "otp", "secret").delete(" ")
+        issued = event("protect:otp", code: ROTP::TOTP.new(secret).now).dig("protection", "backupCodes", "issued")
 
         get "/login"
 
@@ -90,13 +90,13 @@ module Masks
         end
       end
 
-      test "an authenticator already on cannot be replaced through enrolment" do
+      test "an authenticator already on cannot be replaced from the protect screen" do
         body = sign_in_as(@manager)
-        secret = body.dig("enrolment", "otp", "secret").delete(" ")
-        event("enrol:otp", code: ROTP::TOTP.new(secret).now)
+        secret = body.dig("protection", "otp", "secret").delete(" ")
+        event("protect:otp", code: ROTP::TOTP.new(secret).now)
         held = within { factored.otp_secret }
 
-        event("enrol:otp", code: ROTP::TOTP.new(ROTP::Base32.random).now)
+        event("protect:otp", code: ROTP::TOTP.new(ROTP::Base32.random).now)
 
         assert_equal held, within { factored.otp_secret }
       end
@@ -107,13 +107,13 @@ module Masks
         body = add_passkey
 
         assert within(@tenant) { factored.verified_passkeys? }
-        refute body.dig("enrolment", "required")
-        assert_equal Actor::BACKUP_CODES, body.dig("enrolment", "backupCodes", "issued").length
+        refute body.dig("protection", "required")
+        assert_equal Actor::BACKUP_CODES, body.dig("protection", "backupCodes", "issued").length
 
         add_passkey
 
         assert_equal 2, within(@tenant) { factored.passkeys.count }
-        assert event("enrol:done", kept: "1")["settled"]
+        assert event("protect:done", kept: "1")["settled"]
       end
 
       test "first-run setup can ask for a passkey without the session cookie overflowing" do
@@ -125,12 +125,12 @@ module Masks
                                  password: "a-long-enough-password", password_confirmation: "a-long-enough-password" },
              as: :json
 
-        assert_equal "enrol", JSON.parse(response.body)["prompt"]
+        assert_equal "protect", JSON.parse(response.body)["prompt"]
 
-        offer = event("enrol:passkey-challenge")
+        offer = event("protect:passkey-challenge")
 
         assert_response :success
-        assert offer.dig("enrolment", "passkeys", "options", "challenge")
+        assert offer.dig("protection", "passkeys", "options", "challenge")
         assert_operator cookies.to_hash.values.sum(&:bytesize), :<, 3500
       end
 
@@ -146,7 +146,7 @@ module Masks
       test "a manager with only a passkey is asked for it after a password" do
         sign_in_as(@manager)
         add_passkey
-        event("enrol:done", kept: "1")
+        event("protect:done", kept: "1")
         reset!
         host! host_for(@tenant)
 

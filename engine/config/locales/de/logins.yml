@@ -102,7 +102,7 @@ de:
       approval_again: "Neuen Code anzeigen"
       approval_checked: "Ich habe genehmigt"
 
-    enrol:
+    protect:
       title: "Konto schützen"
       lede: "Wählen Sie einen Weg, mit dem Sie bei der Anmeldung bestätigen, dass Sie es sind. Weitere können Sie später hinzufügen."
       lede_optional: "Wählen Sie einen Weg, mit dem Sie bei der Anmeldung bestätigen, dass Sie es sind, oder überspringen Sie das vorerst."

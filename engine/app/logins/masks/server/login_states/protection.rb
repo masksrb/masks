@@ -1,38 +1,38 @@
 module Masks
   module Server
     module LoginStates
-      class Enrolment < LoginState
-        HELD = "enrolment".freeze
-        OFFERED = "enrolment_offered".freeze
+      class Protection < LoginState
+        HELD = "protection".freeze
+        OFFERED = "protection_offered".freeze
         WINDOW = 15.minutes
 
         accepts :code, :passkey, :kept, :factor
 
-        handles "enrol:otp", limit: :verifying do
-          enrol_otp
+        handles "protect:otp", limit: :verifying do
+          add_otp
         end
 
-        handles "enrol:passkey-challenge" do
+        handles "protect:passkey-challenge" do
           offer_passkey
         end
 
-        handles "enrol:passkey", limit: :verifying do
-          enrol_passkey
+        handles "protect:passkey", limit: :verifying do
+          add_passkey
         end
 
-        handles "enrol:code-send", limit: :sending do
+        handles "protect:code-send", limit: :sending do
           send_code
         end
 
-        handles "enrol:code", limit: :verifying do
-          enrol_code
+        handles "protect:code", limit: :verifying do
+          add_code
         end
 
-        handles "enrol:done" do
+        handles "protect:done" do
           finish
         end
 
-        prompts "enrol" do
+        prompts "protect" do
           open! if required? || offered_at_signup?
           open?
         end
@@ -43,7 +43,7 @@ module Masks
 
         def as_json
           {
-            "enrolment" => {
+            "protection" => {
               "required" => required?,
               "offers" => offers,
               "otp" => otp_json,
@@ -141,18 +141,18 @@ module Masks
               ROTP::Base32.random
           end
 
-          def enrol_otp
+          def add_otp
             return unless open? && !actor.otp? && offers["otp"]
 
             unless actor.adopt_otp!(otp_secret, update(:code))
-              refused! "enrol_otp"
+              refused! "protect_otp"
               return warn!("invalid-code")
             end
 
             Event.record!(Event::AUTHENTICATOR_ENABLED, actor: actor)
 
             hold(otp_secret: nil)
-            enrolled! "otp", "mfa"
+            factor_added! "otp", "mfa"
           end
 
           def offer_passkey
@@ -164,7 +164,7 @@ module Masks
             hold(passkey: { "challenge" => options.challenge })
           end
 
-          def enrol_passkey
+          def add_passkey
             return unless open? && offers["passkey"]
 
             challenge = held.dig("passkey", "challenge")
@@ -176,15 +176,15 @@ module Masks
             credential = relying_party.verify_registration(JSON.parse(update(:passkey).to_s), challenge)
 
             unless credential.response.authenticator_data.user_verified?
-              refused! "enrol_passkey"
+              refused! "protect_passkey"
               return warn!("passkey-unverified")
             end
 
             Masks::Server::Passkey.register!(actor: actor, credential: credential)
 
-            enrolled! "swk", "user", "mfa"
+            factor_added! "swk", "user", "mfa"
           rescue WebAuthn::Error, JSON::ParserError, ActiveRecord::RecordInvalid
-            refused! "enrol_passkey"
+            refused! "protect_passkey"
             warn! "passkey-unusable"
           end
 
@@ -213,7 +213,7 @@ module Masks
             hold(code: { "factor" => factor, "token_id" => sent.id })
           end
 
-          def enrol_code
+          def add_code
             factor = held.dig("code", "factor")
             return unless open? && offers[factor]
 
@@ -221,14 +221,14 @@ module Masks
             return warn!("confirmation-expired") if token.nil?
 
             unless token.verify(update(:code))
-              refused! "enrol_#{factor}_code"
+              refused! "protect_#{factor}_code"
               return warn!("invalid-code")
             end
 
             hold(code: nil)
             CodeFactors.enable!(actor, factor)
 
-            enrolled! CodeFactors.amr(factor), "mfa"
+            factor_added! CodeFactors.amr(factor), "mfa"
           end
 
           def issue_backup_codes
@@ -241,7 +241,7 @@ module Masks
             hold(codes: codes)
           end
 
-          def enrolled!(*methods)
+          def factor_added!(*methods)
             issue_backup_codes
 
             second_factored!(*methods)

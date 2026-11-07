@@ -21,7 +21,7 @@ module Masks
         LoginStates::CodeFactor,
         LoginStates::TrustedDevice,
         LoginStates::SecondFactor,
-        LoginStates::Enrolment,
+        LoginStates::Protection,
         LoginStates::Confirmation,
         LoginStates::Configure,
         LoginStates::Delegation,

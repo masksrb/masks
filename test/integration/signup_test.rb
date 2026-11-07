@@ -133,14 +133,14 @@ module Masks
         assert_select ".note-bad", false
       end
 
-      test "a policy that requires a second factor stops a new account at enrolment" do
+      test "a policy that requires a second factor stops a new account until it is protected" do
         policy!(second_factors: %w[otp backup_codes], second_factor_required: true)
 
         body = sign_up
 
-        assert_equal "enrol", body["prompt"]
-        assert body.dig("enrolment", "required")
-        refute body.dig("enrolment", "offers", "passkey")
+        assert_equal "protect", body["prompt"]
+        assert body.dig("protection", "required")
+        refute body.dig("protection", "offers", "passkey")
       end
 
       test "a policy that offers second factors offers them once, and they can be skipped" do
@@ -148,10 +148,10 @@ module Masks
 
         body = sign_up
 
-        assert_equal "enrol", body["prompt"]
-        refute body.dig("enrolment", "required")
+        assert_equal "protect", body["prompt"]
+        refute body.dig("protection", "required")
 
-        assert event("enrol:done")["settled"]
+        assert event("protect:done")["settled"]
       end
 
       test "a policy asking for a phone collects it, and refuses one that is not international" do

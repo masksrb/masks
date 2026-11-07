@@ -8,15 +8,15 @@ import { available } from "../lib/passkey.js";
 
 let { login } = $props();
 
-const enrolment = $derived(login.auth.enrolment ?? {});
-const otp = $derived(enrolment.otp ?? {});
-const passkeys = $derived(enrolment.passkeys ?? { count: 0 });
-const codes = $derived(enrolment.backupCodes ?? {});
+const protection = $derived(login.auth.protection ?? {});
+const otp = $derived(protection.otp ?? {});
+const passkeys = $derived(protection.passkeys ?? { count: 0 });
+const codes = $derived(protection.backupCodes ?? {});
 const signingUp = $derived(Boolean(login.auth.signingUp));
-const offers = $derived(enrolment.offers ?? { otp: true, passkey: true, backupCodes: true });
-const secured = $derived(!enrolment.required);
+const offers = $derived(protection.offers ?? { otp: true, passkey: true, backupCodes: true });
+const secured = $derived(!protection.required);
 const issued = $derived(codes.issued ?? []);
-const sendable = $derived(Object.entries(enrolment.codes ?? {}));
+const sendable = $derived(Object.entries(protection.codes ?? {}));
 const passkeyable = $derived(offers.passkey && available());
 
 const ways = $derived(
@@ -38,7 +38,7 @@ const on = $derived(
 );
 
 let picked = $state(null);
-let entered = $state({ "enrol:otp": "", "enrol:code": "" });
+let entered = $state({ "protect:otp": "", "protect:code": "" });
 let kept = $state(false);
 let copied = $state(false);
 
@@ -48,7 +48,7 @@ const sentFactor = $derived(sendable.find(([, row]) => row.sent)?.[0] ?? null);
 const showing = $derived(choosing ? (sentFactor ?? null) : picked);
 const ready = $derived(secured && (issued.length === 0 || kept));
 const title = $derived(anything ? login.t("on_title") : login.t("title"));
-const lede = $derived(anything ? login.t("on_lede") : enrolment.required ? login.t("lede") : login.t("lede_optional"));
+const lede = $derived(anything ? login.t("on_lede") : protection.required ? login.t("lede") : login.t("lede_optional"));
 
 const complete = (name) => entered[name].replace(/\D/g, "").length === 6;
 
@@ -92,7 +92,7 @@ async function copy() {
 function done(event) {
   event.preventDefault();
 
-  if (ready && !login.loading) login.submit("enrol:done", { kept });
+  if (ready && !login.loading) login.submit("protect:done", { kept });
 }
 </script>
 
@@ -188,15 +188,15 @@ function done(event) {
     <div class="slab">
       <div class="ledger-row">
         <span class="ledger-label">{login.t("otp")}</span>
-        <div class="enrol">
-          <a class="enrol-qr" href={otp.uri} aria-label={login.t("open")}>{@html otp.qr}</a>
-          <div class="enrol-key">
+        <div class="protect">
+          <a class="protect-qr" href={otp.uri} aria-label={login.t("open")}>{@html otp.qr}</a>
+          <div class="protect-key">
             <span class="field-hint">{login.t("scan_hint")}</span>
-            <span class="enrol-secret">{otp.secret}</span>
+            <span class="protect-secret">{otp.secret}</span>
           </div>
         </div>
 
-        {@render codeForm("enrol:otp")}
+        {@render codeForm("protect:otp")}
       </div>
 
       <div class="ledger-row">{@render otherWay()}</div>
@@ -217,7 +217,7 @@ function done(event) {
       <div class="ledger-row">{@render otherWay()}</div>
     </div>
   {:else}
-    {@const row = enrolment.codes?.[showing] ?? {}}
+    {@const row = protection.codes?.[showing] ?? {}}
     <div class="slab">
       <div class="ledger-row">
         <span class="ledger-label">{login.t(`codes_${showing}`)}</span>
@@ -225,7 +225,7 @@ function done(event) {
         {#if row.sent}
           <span class="field-hint">{login.t("sent_to", { to: row.to })}</span>
 
-          {@render codeForm("enrol:code")}
+          {@render codeForm("protect:code")}
         {:else}
           <span class="field-hint">{login.t(`codes_${showing}_about`, { to: row.to })}</span>
 
@@ -233,7 +233,7 @@ function done(event) {
             {login}
             quiet
             label={login.t("send_code")}
-            onclick={() => login.submit("enrol:code-send", { factor: showing })}
+            onclick={() => login.submit("protect:code-send", { factor: showing })}
           />
         {/if}
       </div>
@@ -250,13 +250,13 @@ function done(event) {
       </label>
     {/if}
 
-    {#if anything || !enrolment.required}
+    {#if anything || !protection.required}
       <Action
         {login}
         type="submit"
         {ready}
         busy={login.loading}
-        label={anything || enrolment.required ? login.t("done") : login.t("skip")}
+        label={anything || protection.required ? login.t("done") : login.t("skip")}
         working={login.t("working")}
       />
     {/if}

@@ -22,7 +22,7 @@ export function settle() {
   pending = null;
 }
 
-export async function enrol(options) {
+export async function register(options) {
   const credential = await create(
     parseCreationOptionsFromJSON({ publicKey: options }),
   );

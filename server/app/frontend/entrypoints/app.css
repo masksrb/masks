@@ -1648,14 +1648,14 @@
     border-color: color-mix(in oklab, var(--step) 45%, var(--line));
   }
 
-  .enrol {
+  .protect {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 1rem;
   }
 
-  .enrol-qr {
+  .protect-qr {
     flex: none;
     width: 10rem;
     max-width: 100%;
@@ -1666,13 +1666,13 @@
     background: #fff;
   }
 
-  .enrol-qr svg {
+  .protect-qr svg {
     display: block;
     width: 100%;
     height: 100%;
   }
 
-  .enrol-key {
+  .protect-key {
     display: flex;
     flex: 1 1 10rem;
     flex-direction: column;
@@ -1680,7 +1680,7 @@
     min-width: 0;
   }
 
-  .enrol-secret {
+  .protect-secret {
     font-family: var(--font-mono);
     overflow-wrap: anywhere;
     letter-spacing: 0.06em;

@@ -102,7 +102,7 @@ en:
       approval_again: "Show a new code"
       approval_checked: "I approved it"
 
-    enrol:
+    protect:
       title: "Protect your account"
       lede: "Pick one way to confirm it's you when you sign in. You can add more later."
       lede_optional: "Pick a way to confirm it's you when you sign in, or skip this for now."

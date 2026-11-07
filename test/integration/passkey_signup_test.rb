@@ -31,7 +31,7 @@ module Masks
 
       def create_passkey(user_verified: true)
         options = event("signup:passkey-challenge").dig("signup", "passkeyOptions")
-        credential = @device.enrol(options, user_verified: user_verified)
+        credential = @device.register(options, user_verified: user_verified)
 
         event("signup:passkey", passkey: JSON.generate(credential))
       end
@@ -132,7 +132,7 @@ module Masks
         detailed
 
         options = event("signup:passkey-challenge").dig("signup", "passkeyOptions")
-        credential = JSON.generate(@device.enrol(options))
+        credential = JSON.generate(@device.register(options))
 
         assert event("signup:passkey", passkey: credential)["settled"]
 
@@ -185,7 +185,7 @@ module Masks
 
         body = event("signup", password: "a-long-enough-password", password_confirmation: "a-long-enough-password")
 
-        assert_equal "enrol", body["prompt"]
+        assert_equal "protect", body["prompt"]
         assert created.password?
       end
 
@@ -196,7 +196,7 @@ module Masks
         options = event("signup:passkey-challenge").dig("signup", "passkeyOptions")
         within(@tenant) { policy.update!(password_required: true) }
 
-        body = event("signup:passkey", passkey: JSON.generate(@device.enrol(options)))
+        body = event("signup:passkey", passkey: JSON.generate(@device.register(options)))
 
         assert_includes body["warnings"], "factor-not-offered"
         assert_nil created
@@ -217,7 +217,7 @@ module Masks
 
         event("signup", token: other_tenant.setup_token!, nickname: "first", email: "first@example.com")
         options = event("signup:passkey-challenge").dig("signup", "passkeyOptions")
-        body = event("signup:passkey", passkey: JSON.generate(device.enrol(options)))
+        body = event("signup:passkey", passkey: JSON.generate(device.register(options)))
 
         assert_equal "setup-configure", body["prompt"]
 

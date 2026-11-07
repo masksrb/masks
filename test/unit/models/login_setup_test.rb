@@ -27,11 +27,11 @@ module Masks
         step(event: "signup", password: password, password_confirmation: confirmation)
       end
 
-      def enrol
-        secret = within { Login.new(store: @store).update.as_json }.dig("enrolment", "otp", "secret").delete(" ")
+      def protect
+        secret = within { Login.new(store: @store).update.as_json }.dig("protection", "otp", "secret").delete(" ")
 
-        step(event: "enrol:otp", code: ROTP::TOTP.new(secret).now)
-        step(event: "enrol:done", kept: "1")
+        step(event: "protect:otp", code: ROTP::TOTP.new(secret).now)
+        step(event: "protect:done", kept: "1")
       end
 
       def configure(called: "Demo", **updates)
@@ -41,7 +41,7 @@ module Masks
       def set_up(**updates)
         identify(**updates)
         credit
-        enrol
+        protect
         configure
       end
 
@@ -94,8 +94,8 @@ module Masks
         identify
         login = credit
 
-        assert_equal "enrol", login.prompt
-        assert_equal "setup-configure", enrol.prompt
+        assert_equal "protect", login.prompt
+        assert_equal "setup-configure", protect.prompt
         assert_equal "owner", login.actor.nickname
         assert_equal "owner", login.identifier
       end
@@ -103,7 +103,7 @@ module Masks
       test "configuring settles the login and signs the manager in" do
         identify
         credit
-        enrol
+        protect
         login = configure(called: "Payroll")
 
         assert_equal "settled", login.prompt
@@ -114,7 +114,7 @@ module Masks
       test "configuring names the installation" do
         identify
         credit
-        enrol
+        protect
 
         login = configure(called: "  Payroll  ")
 
@@ -125,7 +125,7 @@ module Masks
       test "a name left as it was settles all the same" do
         identify
         credit
-        enrol
+        protect
         login = configure(called: "")
 
         assert login.settled?
@@ -135,7 +135,7 @@ module Masks
       test "the configuration screen offers the name the tenant already holds" do
         identify
         credit
-        enrol
+        protect
 
         login = step
         published = within { login.as_json["configure"] }
@@ -148,7 +148,7 @@ module Masks
                      password: PASSWORD, password_confirmation: PASSWORD,
                      called: "Payroll")
 
-        assert_equal "enrol", login.prompt
+        assert_equal "protect", login.prompt
         assert_equal "owner", login.actor.nickname
         assert_equal "Demo", @tenant.reload.name
       end
@@ -157,14 +157,14 @@ module Masks
         identify
         credit
 
-        login = step(event: "enrol:done", kept: "1")
+        login = step(event: "protect:done", kept: "1")
 
-        assert_equal "enrol", login.prompt
+        assert_equal "protect", login.prompt
         assert_includes login.warnings, "second-factor-required"
 
         login = configure(called: "Payroll")
 
-        assert_equal "enrol", login.prompt
+        assert_equal "protect", login.prompt
         assert_equal "Demo", @tenant.reload.name
       end
 

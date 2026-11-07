@@ -10,7 +10,7 @@ module Masks
         @client = WebAuthn::FakeClient.new(origin, encoding: :base64url)
       end
 
-      def enrol(options, user_verified: true)
+      def register(options, user_verified: true)
         client.create(challenge: options["challenge"], user_verified: user_verified)
       end
 

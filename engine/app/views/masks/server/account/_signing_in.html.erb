@@ -237,12 +237,12 @@
             <% uri = Masks::Server::AuthenticatorApp.uri(authenticator_secret, actor: actor) %>
             <p class="aside"><%= account_text("authenticator.scan") %></p>
 
-            <div class="enrol">
-              <a class="enrol-qr" href="<%= uri %>"><%= Masks::Server::AuthenticatorApp.qr(uri).html_safe %></a>
+            <div class="protect">
+              <a class="protect-qr" href="<%= uri %>"><%= Masks::Server::AuthenticatorApp.qr(uri).html_safe %></a>
 
-              <div class="enrol-key">
+              <div class="protect-key">
                 <span class="field-label"><%= account_text("authenticator.key") %></span>
-                <code class="enrol-secret"><%= Masks::Server::AuthenticatorApp.grouped(authenticator_secret) %></code>
+                <code class="protect-secret"><%= Masks::Server::AuthenticatorApp.grouped(authenticator_secret) %></code>
               </div>
             </div>
 

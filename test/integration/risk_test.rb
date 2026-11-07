@@ -63,7 +63,7 @@ module Masks
         policy(risk_step_up_at: 50)
         seen_before
 
-        assert_equal "enrol", password_step["prompt"]
+        assert_equal "protect", password_step["prompt"]
       end
 
       test "a sign-in scoring past the refusal line is refused and the person is told" do

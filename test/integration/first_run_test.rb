@@ -73,7 +73,7 @@ module Masks
         post "/login", params: { event: "identify", identifier: "owner" }, as: :json
         post "/login", params: { event: "password", password: PASSWORD }, as: :json
 
-        assert_equal "enrol", JSON.parse(response.body)["prompt"], "half way through, with a first factor held"
+        assert_equal "protect", JSON.parse(response.body)["prompt"], "half way through, with a first factor held"
 
         within(@tenant) { Actor.delete_all }
 
@@ -126,8 +126,8 @@ module Masks
                                  password_confirmation: PASSWORD }, as: :json
         body = JSON.parse(response.body)
 
-        assert_equal "enrol", body["prompt"]
-        assert body.dig("enrolment", "required")
+        assert_equal "protect", body["prompt"]
+        assert body.dig("protection", "required")
         assert_equal "owner", within(@tenant) { Actor.sole.nickname }
 
         get "/login"
@@ -135,7 +135,7 @@ module Masks
         assert_match "Authenticator app", response.body
         assert_match "Backup codes", response.body
 
-        body = enrol_otp!(body)
+        body = add_otp!(body)
 
         assert_equal "setup-configure", body["prompt"]
 
@@ -207,10 +207,10 @@ module Masks
         assert_redirected_to login_path
 
         follow_redirect!
-        secret = response.body[/class="aside-mono enrol-secret">([^<]+)</, 1].delete(" ")
+        secret = response.body[/class="aside-mono protect-secret">([^<]+)</, 1].delete(" ")
 
-        post "/login", params: { event: "enrol:otp", code: ROTP::TOTP.new(secret).now }
-        post "/login", params: { event: "enrol:done", kept: "1" }
+        post "/login", params: { event: "protect:otp", code: ROTP::TOTP.new(secret).now }
+        post "/login", params: { event: "protect:done", kept: "1" }
         post "/login", params: { event: "setup-configure", called: "Demo" }
 
         assert_redirected_to root_path
