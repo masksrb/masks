@@ -38,29 +38,43 @@ To run a query, send it to your own server's `/manage/graphql`.
 | `actors`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`recoveryRequested: Boolean`<br />`suspended: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Actor!]!`](#actor) |  |
 | `actorCount`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`recoveryRequested: Boolean`<br />`suspended: Boolean` | `Int!` |  |
 | `actor`<br />`uuid: ID!` | [`Actor`](#actor) |  |
-| `clients`<br />`search: String`<br />`archived: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Client!]!`](#client) |  |
-| `clientCount`<br />`search: String`<br />`archived: Boolean` | `Int!` |  |
-| `client`<br />`clientId: ID!` | [`Client`](#client) |  |
 | `sessions`<br />`actor: ID`<br />`limit: Int` | [`[Session!]!`](#session) |  |
 | `devices`<br />`actor: ID`<br />`blocked: Boolean`<br />`unattached: Boolean`<br />`agent: String`<br />`limit: Int` | [`[Device!]!`](#device) |  |
 | `device`<br />`id: ID!` | [`Device`](#device) |  |
+| `minimumPassword` | `Int!` |  |
+| `clients`<br />`search: String`<br />`archived: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Client!]!`](#client) |  |
+| `clientCount`<br />`search: String`<br />`archived: Boolean` | `Int!` |  |
+| `client`<br />`clientId: ID!` | [`Client`](#client) |  |
 | `tokens`<br />`actor: ID`<br />`client: ID`<br />`kind: String`<br />`live: Boolean`<br />`limit: Int` | [`[Token!]!`](#token) |  |
-| `connections`<br />`actor: ID`<br />`provider: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Connection!]!`](#connection) |  |
 | `consents`<br />`actor: ID`<br />`client: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Consent!]!`](#consent) |  |
 | `namespaces` | [`[Namespace!]!`](#namespace) |  |
-| `providers`<br />`archived: Boolean` | [`[Provider!]!`](#provider) |  |
-| `provider`<br />`key: ID!` | [`Provider`](#provider) |  |
-| `providerPresets` | [`[ProviderPreset!]!`](#providerpreset) |  |
-| `senders`<br />`kind: String`<br />`archived: Boolean` | [`[Sender!]!`](#sender) |  |
-| `senderServices` | [`[SenderService!]!`](#senderservice) |  |
-| `domainClaims` | [`[DomainClaim!]!`](#domainclaim) |  |
-| `organizations`<br />`archived: Boolean`<br />`limit: Int` | [`[Organization!]!`](#organization) |  |
-| `organization`<br />`key: ID!` | [`Organization`](#organization) |  |
-| `eventStreams`<br />`archived: Boolean` | [`[EventStream!]!`](#eventstream) |  |
+| `scopesSupported` | `[String!]!` |  |
+| `appPresets` | [`[AppPreset!]!`](#apppreset) |  |
 | `signInPolicies`<br />`archived: Boolean` | [`[SignInPolicy!]!`](#signinpolicy) |  |
 | `signInPolicy`<br />`key: ID!` | [`SignInPolicy`](#signinpolicy) |  |
 | `defaultSignInPolicy` | [`SignInPolicy!`](#signinpolicy) |  |
-| `scopesSupported` | `[String!]!` |  |
+| `samlMetadataUrl` | `String!` |  |
+| `providers`<br />`archived: Boolean` | [`[Provider!]!`](#provider) |  |
+| `provider`<br />`key: ID!` | [`Provider`](#provider) |  |
+| `providerPresets` | [`[ProviderPreset!]!`](#providerpreset) |  |
+| `connections`<br />`actor: ID`<br />`provider: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Connection!]!`](#connection) |  |
+| `domainClaims` | [`[DomainClaim!]!`](#domainclaim) |  |
+| `organizations`<br />`archived: Boolean`<br />`limit: Int` | [`[Organization!]!`](#organization) |  |
+| `organization`<br />`key: ID!` | [`Organization`](#organization) |  |
+| `groups` | [`[Group!]!`](#group) |  |
+| `group`<br />`key: String!` | [`Group`](#group) |  |
+| `senders`<br />`kind: String`<br />`archived: Boolean` | [`[Sender!]!`](#sender) |  |
+| `senderServices` | [`[SenderService!]!`](#senderservice) |  |
+| `mailPreviews`<br />`client: ID` | [`[MailPreview!]!`](#mailpreview) |  |
+| `mailTemplates` | [`[MailTemplate!]!`](#mailtemplate) | One entry for each email the tenant can reword, and the signature. |
+| `tally` | [`Tally!`](#tally) |  |
+| `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |  |
+| `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`since: ISO8601DateTime`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
+| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`since: ISO8601DateTime` | `Int!` |  |
+| `eventActions` | [`[EventAction!]!`](#eventaction) |  |
+| `eventStreams`<br />`archived: Boolean` | [`[EventStream!]!`](#eventstream) |  |
+| `health` | [`[HealthCheck!]!`](#healthcheck) | The latest result of each health check for this tenant and the server it runs on. Empty until the first scheduled run. |
+| `release` | [`Release`](#release) | The newest release when it is newer than this server. Null while the server is current, or while MASKS_RELEASE_CHECK is off. |
 | `provisioningTokens` | [`[ProvisioningToken!]!`](#provisioningtoken) |  |
 | `scimBaseUrl` | `String!` |  |
 | `ldapCredentials` | [`[LdapCredential!]!`](#ldapcredential) |  |
@@ -68,20 +82,6 @@ To run a query, send it to your own server's `/manage/graphql`.
 | `ldapPort` | `Int!` | The port masks serves LDAP on. |
 | `ldapTls` | `Boolean!` | Whether that port speaks LDAPS. |
 | `ldapLocalOnly` | `Boolean!` | Whether the directory answers only on the server's own machine, since it has no certificate and MASKS_LDAP_PLAINTEXT is not set. |
-| `samlMetadataUrl` | `String!` |  |
-| `minimumPassword` | `Int!` |  |
-| `mailPreviews`<br />`client: ID` | [`[MailPreview!]!`](#mailpreview) |  |
-| `mailTemplates` | [`[MailTemplate!]!`](#mailtemplate) | One entry for each email the tenant can reword, and the signature. |
-| `tally` | [`Tally!`](#tally) |  |
-| `groups` | [`[Group!]!`](#group) |  |
-| `appPresets` | [`[AppPreset!]!`](#apppreset) |  |
-| `group`<br />`key: String!` | [`Group`](#group) |  |
-| `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |  |
-| `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`since: ISO8601DateTime`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
-| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`since: ISO8601DateTime` | `Int!` |  |
-| `eventActions` | [`[EventAction!]!`](#eventaction) |  |
-| `health` | [`[HealthCheck!]!`](#healthcheck) | The latest result of each health check for this tenant and the server it runs on. Empty until the first scheduled run. |
-| `release` | [`Release`](#release) | The newest release when it is newer than this server. Null while the server is current, or while MASKS_RELEASE_CHECK is off. |
 
 ## Mutations
 
