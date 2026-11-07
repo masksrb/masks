@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/node-v0.3.3...node-v0.4.0) (2026-11-02)
+
+
+### Features
+
+* **node:** @masks/server checks every token against the shared contract, and an ID token's nonce, authorized party, at_hash, and max_age are checked where it is verified ([0b6c1d2](https://github.com/masksrb/masks/commit/0b6c1d2a602e2f04962faf49e5cafd17236047f6))
+* **node:** @masks/server raises Refused, InvalidToken, Forbidden, Unavailable, Insecure, and Foreign from the shared error table ([042cff8](https://github.com/masksrb/masks/commit/042cff8b8b7a69581c0625bdf2aa2d11e99d8b7d))
+
+
+### Documentation
+
+* the Errors page lists the shared token checks, and the parity grid proves every SDK passes them ([b4dc3ad](https://github.com/masksrb/masks/commit/b4dc3ad1285464a1a54d4281b2b9ae4af05820e1))
+
 ## [0.3.3](https://github.com/masksrb/masks/compare/node-v0.3.2...node-v0.3.3) (2026-10-22)
 
 

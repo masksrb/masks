@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/python-v0.3.3...python-v0.4.0) (2026-11-02)
+
+
+### Features
+
+* **python:** masks-client checks every token against the shared contract, and verify_id_token takes the max_age the sign-in asked for ([fc639eb](https://github.com/masksrb/masks/commit/fc639eba4c5e07d75a61ab7d74020357262fcdcb))
+* **python:** masks-client raises Refused, InvalidToken, Forbidden, Unavailable, Insecure, and Foreign from the shared error table ([70c43ae](https://github.com/masksrb/masks/commit/70c43ae01d97c65d7283caea7c3fd3c502b04013))
+
 ## [0.3.3](https://github.com/masksrb/masks/compare/python-v0.3.2...python-v0.3.3) (2026-10-22)
 
 

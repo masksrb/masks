@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/go/v0.3.2...go/v0.4.0) (2026-11-02)
+
+
+### Features
+
+* **go:** the Go SDK checks every token against the shared contract, and VerifyIDToken takes the nonce, access token, and max_age the sign-in expects ([4e647dd](https://github.com/masksrb/masks/commit/4e647dd2e450f4185b5b9aec77b467a07658c262))
+* **go:** the Go SDK returns Refused, InvalidToken, Forbidden, Unavailable, Insecure, and Foreign from the shared error table, and HasCode reads any of them ([7b7b52b](https://github.com/masksrb/masks/commit/7b7b52b2a55d4cd91450176909b96beafff09a6b))
+
 ## [0.3.2](https://github.com/masksrb/masks/compare/go/v0.3.1...go/v0.3.2) (2026-10-22)
 
 
