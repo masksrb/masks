@@ -542,6 +542,34 @@
           "test": "TestEveryTokenInTheContractEndsAsTheContractSays"
         }
       }
+    },
+    {
+      "name": "Testing an app against the fake masks the SDK ships",
+      "link": "#testing-your-app",
+      "cells": {
+        "rails": {
+          "file": "test/client/fake_test.rb",
+          "test": "test_a_sign_in_completes_against_the_fake",
+          "note": "Through `Masks::Client::Fake`, which the gem ships for both Ruby SDKs"
+        },
+        "client": {
+          "file": "test/client/fake_test.rb",
+          "test": "test_a_sign_in_completes_against_the_fake"
+        },
+        "web": "no",
+        "node": {
+          "file": "node/test/testing.test.js",
+          "test": "a sign-in completes against the fake"
+        },
+        "python": {
+          "file": "python/tests/test_testing.py",
+          "test": "test_a_sign_in_completes_against_the_fake"
+        },
+        "go": {
+          "file": "go/masktest_test.go",
+          "test": "TestASignInCompletesAgainstTheFake"
+        }
+      }
     }
   ]
 }
