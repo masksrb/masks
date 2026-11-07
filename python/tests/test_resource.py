@@ -11,8 +11,7 @@ import pytest
 
 import masks
 from masks.asgi import CLAIMS, Middleware
-
-from .fake import AUDIENCE, ISSUER, Fake, FakeClient
+from masks.testing import AUDIENCE, ISSUER, Fake, FakeClient
 
 TARGET = f"{AUDIENCE}/files"
 

@@ -12,10 +12,10 @@ from flask import Flask, jsonify, request
 
 import masks
 from masks.flask import Masks, masked
+from masks.testing import Fake
 from masks.web import Config, ServerSessions
 
 from . import scenarios
-from .fake import Fake
 from .scenarios import APP, Answered
 
 

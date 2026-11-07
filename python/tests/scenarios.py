@@ -13,9 +13,8 @@ import httpx
 import pytest
 
 import masks
+from masks.testing import ISSUER, Fake, FakeClient
 from masks.web import Config, MemoryCredentials, MemorySessionStore, ServerSessions
-
-from .fake import ISSUER, Fake, FakeClient
 
 APP = "https://app.example"
 SECRET = "s" * 32

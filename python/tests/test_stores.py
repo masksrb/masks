@@ -12,12 +12,12 @@ from flask import Flask
 
 import masks
 from masks.flask import Masks
+from masks.testing import Fake
 from masks.web import AsyncRedisStore, MemoryStore, RedisStore
 from masks.web.core import LOGOUT_LEEWAY, LOGOUT_MEMORY, logout_memory
 from masks.web.stores import asynchronous
 
 from . import scenarios
-from .fake import Fake
 from .scenarios import APP, HTML
 from .test_fastapi import application
 from .test_flask import FlaskBrowser

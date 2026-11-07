@@ -12,10 +12,10 @@ from fastapi.testclient import TestClient
 
 import masks
 from masks.fastapi import Masks
+from masks.testing import AUDIENCE, ISSUER, Fake, FakeClient
 from masks.web import Actor, Config, MemoryCredentials, MemorySessionStore, ServerSessions
 
 from . import scenarios
-from .fake import AUDIENCE, ISSUER, Fake, FakeClient
 from .scenarios import Answered
 
 APP = "https://app.example"

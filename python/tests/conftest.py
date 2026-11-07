@@ -4,8 +4,7 @@ import pytest
 
 import masks
 from masks import client as client_module
-
-from .fake import ISSUER, Fake, FakeClient
+from masks.testing import ISSUER, Fake, FakeClient
 
 
 @pytest.fixture

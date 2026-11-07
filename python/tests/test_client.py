@@ -7,8 +7,7 @@ import httpx
 import pytest
 
 import masks
-
-from .fake import AUDIENCE, ISSUER, Fake, FakeClient
+from masks.testing import AUDIENCE, ISSUER, Fake, FakeClient
 
 
 def test_discovery_refuses_a_document_naming_another_issuer(fake: Fake) -> None:

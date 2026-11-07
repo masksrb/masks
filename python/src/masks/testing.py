@@ -14,10 +14,10 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.algorithms import RSAAlgorithm
 
-from masks.client import ASSERTION_TYPE
-from masks.dpop import PROOF_TYPE
-from masks.keys import encode, thumbprint
-from masks.models import (
+from .client import ASSERTION_TYPE
+from .dpop import PROOF_TYPE
+from .keys import encode, thumbprint
+from .models import (
     ACCESS_TOKEN_TYPE,
     GRANT_CLIENT_CREDENTIALS,
     GRANT_DEVICE_CODE,
@@ -25,7 +25,9 @@ from masks.models import (
     GRANT_TOKEN_EXCHANGE,
     UPSTREAM_ACCESS_TOKEN_TYPE,
 )
-from masks.verifier import PROOF_ALGORITHMS, typed
+from .verifier import PROOF_ALGORITHMS, typed
+
+__all__ = ["AUDIENCE", "ISSUER", "PEOPLE", "Fake", "FakeClient"]
 
 ISSUER = "https://id.example"
 AUDIENCE = "https://files.example"

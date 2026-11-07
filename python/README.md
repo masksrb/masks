@@ -49,6 +49,31 @@ To connect the app to masks:
 2. Start the app.
 3. Open `/auth/handshake` and approve the app in masks.
 
+## Testing your app
+
+`masks.testing` is a fake masks server. It answers discovery, signs people in,
+refreshes and revokes tokens, and mints logout tokens, all inside the process
+through an `httpx` transport, so a test needs no network and no running masks.
+The package's own tests run against it.
+
+```python
+import masks
+from masks.testing import Fake, FakeClient
+
+fake = Fake()
+fake.add("app", FakeClient(method="client_secret_basic", secret="secret"))
+
+http = fake.http()
+issuer = masks.discover(fake.issuer, http=http)
+client = masks.Client(issuer, "app", secret="secret", http=http)
+
+started = client.start("https://app.example/auth/callback")
+redirected = fake.authorize(started.url, subject="ada")
+```
+
+`redirected` is the URL masks would send the browser back to. Pass its query
+to `client.complete` and the sign-in finishes with a verified ID token.
+
 ## Documentation
 
 - [Python apps](https://masks.pages.dev/reference/python/) explains the

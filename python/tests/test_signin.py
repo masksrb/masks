@@ -8,8 +8,7 @@ import httpx
 import pytest
 
 import masks
-
-from .fake import ISSUER, Fake, FakeClient
+from masks.testing import ISSUER, Fake, FakeClient
 
 APP = "https://app.example"
 CALLBACK = f"{APP}/auth/callback"

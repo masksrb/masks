@@ -12,10 +12,10 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import Client
 
 from masks.django import engine
+from masks.testing import ISSUER, Fake
 from masks.web import Config, ServerSessions
 
 from . import scenarios
-from .fake import ISSUER, Fake
 from .scenarios import Answered
 
 if not settings.configured:
