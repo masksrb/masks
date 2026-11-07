@@ -1,4 +1,4 @@
-import { available, register, refused } from "../lib/passkey.js";
+import { available, refused, register } from "../lib/passkey.js";
 
 const csrf = () =>
   document.querySelector('meta[name="csrf-token"]')?.content ?? "";
