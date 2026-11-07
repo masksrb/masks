@@ -31,6 +31,13 @@ The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 
 Each check mark is a link to the test that proves it. A number points to a note under the table. `./dev reference` builds the grid from `docs/parity.json`, and CI fails when a test it names is gone.
 
+CI also runs the Ruby, JavaScript, Python, and Go SDKs against a real masks, booted from the image
+that run just built: the handshake, a sign-in, a refresh, a step-up, a back-channel logout, and a
+DPoP-bound machine sign-in. Each CI run's summary shows that grid, one row per SDK and one column
+per scenario, and
+[`test/live/README.md`](https://github.com/masksrb/masks/blob/main/test/live/README.md) says how
+the run works.
+
 {/* parity:start */}
 
 <table class="parity">

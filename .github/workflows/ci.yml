@@ -314,3 +314,17 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Seconds from a fresh image to a signed-in account
         run: ./dev first-sign-in masks:ci
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.13"
+      - name: The SDKs the live run drives
+        run: |
+          (cd node && npm ci && npm run build)
+          (cd python && uv sync --frozen)
+          (cd test/live/go && go mod download)
+      - name: Each SDK against a real masks
+        run: ./dev live masks:ci

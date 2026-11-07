@@ -26,6 +26,7 @@ USAGE = <<~TEXT
     test [suite]   unit, integration, provider, engine, client, web, conformance
     image [build]  run the production image the way it deploys, and check it
     first-sign-in [image]  time a fresh image to its first signed-in account
+    live [image] [--only ruby,go]  run every SDK against a real masks from the image
     conformance    up | run | logs | down | plans
     reference      regenerate the reference pages from the code
     fmt [--check]  format everything, or check it
@@ -471,6 +472,7 @@ when "psql" then run!(*compose("exec", "postgres", "psql", "-U", "postgres", mul
 when "console" then run!(*compose("exec", "masks", "bin/rails", "console", multi: multi))
 when "image" then image(ARGV)
 when "first-sign-in" then first_sign_in(ARGV)
+when "live" then exec("ruby", File.join(ROOT, "test", "live", "run.rb"), *ARGV)
 when "test" then test(ARGV)
 when "conformance" then conformance(ARGV) || exit(1)
 when "reference" then reference

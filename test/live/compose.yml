@@ -1,0 +1,28 @@
+name: masks-live
+
+services:
+  masks:
+    image: ${MASKS_IMAGE:-masks:live}
+    environment:
+      MASKS_SETUP_TOKEN: ${MASKS_LIVE_TOKEN:-live-run-setup-token-not-for-real-use}
+      MASKS_OUTBOUND_ALLOWED: 127.0.0.0/8
+      MASKS_ATTEMPT_LIMIT: "100000"
+      MASKS_ACCOUNT_ATTEMPT_LIMIT: "100000"
+      MASKS_REGISTRATION_LIMIT: "100000"
+    ports:
+      - "${MASKS_LIVE_PORT:-5558}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  relay:
+    image: alpine/socat:1.8.0.0
+    network_mode: "service:masks"
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        for port in ${MASKS_LIVE_APP_PORTS:-4411 4412 4413 4414}; do
+          socat TCP-LISTEN:$$port,fork,reuseaddr,bind=127.0.0.1 TCP:host.docker.internal:$$port &
+        done
+        wait
+    depends_on:
+      - masks

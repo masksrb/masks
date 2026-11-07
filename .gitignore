@@ -28,3 +28,4 @@ engine/*.gem
 server/themes
 node/node_modules/
 node/dist/
+test/live/.state.json
