@@ -35,11 +35,6 @@ SIGN_IN_SCOPE = %w[openid profile email offline_access].freeze
 
 class Failed < StandardError; end
 
-PROTECTION_NAMES = {
-  "protect" => { json: "protection", otp: "protect:otp", done: "protect:done" },
-  "enrol" => { json: "enrolment", otp: "enrol:otp", done: "enrol:done" }
-}.freeze
-
 class Browser
   attr_reader :secret
 
@@ -56,16 +51,15 @@ class Browser
 
     body = event("signup", token: token, nickname: "owner", email: "owner@example.invalid",
                            password: PASSWORD, password_confirmation: PASSWORD)
-    names = PROTECTION_NAMES[body["prompt"]]
-    fail!("the first account was not created", body) if names.nil?
+    fail!("the first account was not created", body) unless body["prompt"] == "protect"
 
-    @secret = body.dig(names[:json], "otp", "secret").to_s.delete(" ")
+    @secret = body.dig("protection", "otp", "secret").to_s.delete(" ")
     fail!("no authenticator secret was offered", body) if @secret.empty?
 
-    body = event(names[:otp], code: fresh_totp)
+    body = event("protect:otp", code: fresh_totp)
     fail!("the authenticator code was not accepted", body) if body["warnings"].to_a.any?
 
-    body = event(names[:done], kept: "1")
+    body = event("protect:done", kept: "1")
     fail!("the second factor was not finished", body) unless body["prompt"] == "setup-configure"
 
     body = event("setup-configure", called: "Live")
