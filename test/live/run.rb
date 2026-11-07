@@ -32,6 +32,7 @@ SDKS = {
 
 SCENARIOS = %w[handshake sign-in refresh step-up logout machine].freeze
 SIGN_IN_SCOPE = %w[openid profile email offline_access].freeze
+BIND = ENV.fetch("MASKS_LIVE_BIND", ENV["CI"] ? "0.0.0.0" : "127.0.0.1")
 
 class Failed < StandardError; end
 
@@ -73,6 +74,10 @@ class Browser
   def sign_in!
     get("/login")
     settle(event("identify", identifier: "owner"))
+  end
+
+  def signed_in!
+    sign_in! if get("/").code.start_with?("3")
   end
 
   def sign_out!
@@ -248,7 +253,7 @@ class App
   end
 
   def start
-    @stdin, @stdout, @wait = Open3.popen2(@env, *@command, "--port", port.to_s, chdir: ROOT)
+    @stdin, @stdout, @wait = Open3.popen2(@env, *@command, "--port", port.to_s, "--bind", BIND, chdir: ROOT)
     ready = ask_raw
     raise Failed, "#{key} did not report ready: #{ready.inspect}" unless ready["ready"]
   end
@@ -359,7 +364,8 @@ class Run
       raise Failed, "the logout token names no session" if received["sid"].to_s.empty?
 
       @finished = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      @browser.sign_in!
+    ensure
+      @browser.signed_in!
     end
 
     def machine
@@ -460,6 +466,7 @@ begin
     app = App.new(key, **SDKS[key].slice(:port, :command, :env))
 
     begin
+      browser.signed_in!
       app.start
       run = Run.new(browser, app)
       run.perform

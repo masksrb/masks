@@ -16,6 +16,8 @@ them through `relay`, a socat sidecar in the masks container's network namespace
 app's port to `host.docker.internal`. `MASKS_OUTBOUND_ALLOWED` lets masks call loopback for that.
 Every app URL uses `127.0.0.1`, since `localhost` also resolves to `::1`, which the allowlist does
 not cover.
+On Linux the gateway is a bridge address, so the apps bind every interface when `CI` is set
+(`MASKS_LIVE_BIND`); on a Mac they stay on loopback.
 
 Options:
 

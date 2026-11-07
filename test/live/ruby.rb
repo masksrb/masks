@@ -5,10 +5,10 @@ require "socket"
 require "masks/client"
 
 class LiveApp
-  def initialize(port)
+  def initialize(port, bind)
     @port = port
     @logouts = Queue.new
-    @server = TCPServer.new("127.0.0.1", port)
+    @server = TCPServer.new(bind, port)
     @thread = Thread.new { serve }
   end
 
@@ -155,5 +155,6 @@ class LiveApp
 end
 
 port = ARGV[ARGV.index("--port") + 1].to_i if ARGV.include?("--port")
+bind = ARGV[ARGV.index("--bind") + 1] if ARGV.include?("--bind")
 
-LiveApp.new(port || 4411).run
+LiveApp.new(port || 4411, bind || "127.0.0.1").run

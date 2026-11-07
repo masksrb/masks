@@ -300,6 +300,7 @@ credentials in code. See [Python apps](/reference/python/) and [Go apps](/refere
 | `MASKS_FIRST_SIGN_IN_TOKEN` | a fixed value | The setup token `./dev first-sign-in` gives its throwaway stack. |
 | `MASKS_LIVE_PORT` | `5558` | The host port of the throwaway stack that `./dev live` runs every SDK against. |
 | `MASKS_LIVE_TOKEN` | a fixed value | The setup token `./dev live` gives its throwaway stack. |
+| `MASKS_LIVE_BIND` | `127.0.0.1`, or `0.0.0.0` when `CI` is set | The address the live apps listen on. On Linux, masks in its container reaches the host through the bridge gateway, so the apps bind every interface there. |
 | `GITHUB_STEP_SUMMARY` | none | Set by GitHub Actions. When present, `./dev first-sign-in`, `./dev live`, the conformance summary, and the readability report append their tables to the file it names. |
 | `CHECK_LINKS` | unset | When set, the docs build checks every internal link and fails on a broken one. The Docs workflow sets it. |
 | `MASKS_POSTGRES_PORT` | `5435` | The host port of PostgreSQL. |

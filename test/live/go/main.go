@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"time"
 
 	masks "github.com/masksrb/masks/go"
@@ -32,11 +33,12 @@ type app struct {
 
 func main() {
 	port := flag.Int("port", 4414, "")
+	bind := flag.String("bind", "127.0.0.1", "")
 	flag.Parse()
 
 	held := &app{logouts: make(chan *masks.LogoutToken, 8)}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
+	listener, err := net.Listen("tcp", net.JoinHostPort(*bind, strconv.Itoa(*port)))
 	if err != nil {
 		fail(err)
 	}

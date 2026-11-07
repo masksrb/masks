@@ -13,8 +13,9 @@ import masks
 
 
 class LiveApp:
-    def __init__(self, port: int) -> None:
+    def __init__(self, port: int, bind: str) -> None:
         self.port = port
+        self.bind = bind
         self.logouts: queue.Queue[masks.Logout] = queue.Queue()
         self.issuer: masks.Issuer | None = None
         self.pairing: masks.Handshake | None = None
@@ -59,7 +60,7 @@ class LiveApp:
             def log_message(self, format: str, *args: Any) -> None:
                 return
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        self.server = ThreadingHTTPServer((self.bind, port), Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
 
     def run(self) -> None:
@@ -211,7 +212,10 @@ def query(url: str) -> dict[str, str]:
 
 def main() -> None:
     port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 4413
-    LiveApp(port).run()
+    bind = (
+        sys.argv[sys.argv.index("--bind") + 1] if "--bind" in sys.argv else "127.0.0.1"
+    )
+    LiveApp(port, bind).run()
 
 
 if __name__ == "__main__":

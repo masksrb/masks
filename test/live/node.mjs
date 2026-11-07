@@ -9,6 +9,9 @@ import {
 } from "../../node/dist/index.js";
 
 const port = Number(process.argv[process.argv.indexOf("--port") + 1] || 4412);
+const bind = process.argv.includes("--bind")
+  ? process.argv[process.argv.indexOf("--bind") + 1]
+  : "127.0.0.1";
 
 const held = {
   issuer: undefined,
@@ -173,7 +176,7 @@ const steps = {
   },
 };
 
-server.listen(port, "127.0.0.1", () => {
+server.listen(port, bind, () => {
   reply({ ready: true });
 
   const lines = createInterface({ input: process.stdin });
