@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/masksrb/masks/go/masktest"
 )
 
 var unfollowed = &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
@@ -33,7 +35,7 @@ func visit(t *testing.T, target string) url.Values {
 	return location.Query()
 }
 
-func shookHands(t *testing.T, held *fake) *Client {
+func shookHands(t *testing.T, held *masktest.Fake) *Client {
 	t.Helper()
 
 	issuer := discovered(t, held)
@@ -66,10 +68,10 @@ func shookHands(t *testing.T, held *fake) *Client {
 }
 
 func TestAHandshakeRegistersTheAppWithASecret(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
-	asked := held.handshake
+	asked := held.Handshake
 	if asked.Get("resource") != "https://app.example" || asked["redirect_uris"][0] != "https://app.example/auth/callback" ||
 		asked.Get("token_endpoint_auth_method") != "client_secret_basic" || !strings.Contains(asked.Get("scope"), "organization") ||
 		asked.Get("post_logout_redirect_uri") != "https://app.example/auth/logout/return" || asked.Has("backchannel_logout_uri") {
@@ -82,7 +84,7 @@ func TestAHandshakeRegistersTheAppWithASecret(t *testing.T) {
 }
 
 func TestAHandshakeRefusesWhatItDidNotStart(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	issuer := discovered(t, held)
 	handshake := &Handshake{
 		Issuer: issuer, Name: "Catalog", Resource: "https://app.example", Scope: []string{"openid"},
@@ -118,7 +120,7 @@ func TestAHandshakeRefusesWhatItDidNotStart(t *testing.T) {
 		})
 	}
 
-	held.declined = true
+	held.Declined = true
 	target, state, _ = handshake.Start()
 
 	if _, err := handshake.Complete(context.Background(), visit(t, target), state); !HasCode(err, "access_denied") {
@@ -147,7 +149,7 @@ func TestAHandshakeRefusesWhatItDidNotStart(t *testing.T) {
 }
 
 func TestSigningInWithTheCodeFlow(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	started, err := client.AuthCodeURL(AuthRequest{
@@ -161,8 +163,8 @@ func TestSigningInWithTheCodeFlow(t *testing.T) {
 
 	returned := visit(t, started.URL)
 
-	if held.asked.Get("organization") != "acme" || held.asked.Get("nonce") != started.Nonce || held.asked.Get("resource") != "https://app.example" {
-		t.Fatalf("unexpected authorization request %v", held.asked)
+	if held.Asked.Get("organization") != "acme" || held.Asked.Get("nonce") != started.Nonce || held.Asked.Get("resource") != "https://app.example" {
+		t.Fatalf("unexpected authorization request %v", held.Asked)
 	}
 
 	signed, err := client.Complete(context.Background(), returned, started)
@@ -175,7 +177,7 @@ func TestSigningInWithTheCodeFlow(t *testing.T) {
 		t.Fatalf("unexpected identity %+v", identity)
 	}
 
-	if identity.Photo() != held.url()+"/avatars/ada/identicon" {
+	if identity.Photo() != held.URL()+"/avatars/ada/identicon" {
 		t.Fatalf("unexpected photo %q", identity.Photo())
 	}
 
@@ -209,7 +211,7 @@ func TestSigningInWithTheCodeFlow(t *testing.T) {
 }
 
 func TestACallbackIsCheckedBeforeTheCodeIsSpent(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	cases := map[string]func(url.Values, *Authorization){
@@ -238,7 +240,7 @@ func TestACallbackIsCheckedBeforeTheCodeIsSpent(t *testing.T) {
 		})
 	}
 
-	held.declined = true
+	held.Declined = true
 	started, _ := client.AuthCodeURL(AuthRequest{})
 
 	if _, err := client.Complete(context.Background(), visit(t, started.URL), started); !HasCode(err, "access_denied") {
@@ -247,37 +249,37 @@ func TestACallbackIsCheckedBeforeTheCodeIsSpent(t *testing.T) {
 }
 
 func TestAnIDTokenForAnotherClientIsRefused(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	claims := map[string]any{
-		"iss": held.url(), "sub": "ada", "aud": "someone-else",
+		"iss": held.URL(), "sub": "ada", "aud": "someone-else",
 		"exp": time.Now().Add(time.Minute).Unix(), "iat": time.Now().Unix(),
 	}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT"), Expectations{}); !is[*InvalidToken](err) {
+	if _, err := client.VerifyIDToken(context.Background(), held.Issue(claims, "JWT"), Expectations{}); !is[*InvalidToken](err) {
 		t.Fatalf("expected ErrInvalidToken, got %v", err)
 	}
 
 	claims["aud"] = []string{client.ID, "someone-else"}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT"), Expectations{}); !is[*InvalidToken](err) {
+	if _, err := client.VerifyIDToken(context.Background(), held.Issue(claims, "JWT"), Expectations{}); !is[*InvalidToken](err) {
 		t.Fatalf("a token with several audiences and no azp was accepted: %v", err)
 	}
 
 	claims["aud"] = client.ID
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, accessTokenType), Expectations{}); !is[*InvalidToken](err) {
+	if _, err := client.VerifyIDToken(context.Background(), held.Issue(claims, accessTokenType), Expectations{}); !is[*InvalidToken](err) {
 		t.Fatalf("an access token was accepted as an ID token: %v", err)
 	}
 
-	if _, err := client.VerifyIDToken(context.Background(), held.issue(claims, "JWT"), Expectations{}); err != nil {
+	if _, err := client.VerifyIDToken(context.Background(), held.Issue(claims, "JWT"), Expectations{}); err != nil {
 		t.Fatalf("a good ID token was refused: %v", err)
 	}
 }
 
 func TestEndingTheSessionAtTheIssuer(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	target, err := client.EndSessionURL(EndSession{PostLogoutRedirectURI: "https://app.example/auth/logout/return", State: "bye"})
@@ -287,21 +289,21 @@ func TestEndingTheSessionAtTheIssuer(t *testing.T) {
 
 	returned := visit(t, target)
 
-	if returned.Get("state") != "bye" || held.ended.Get("client_id") != client.ID {
-		t.Fatalf("unexpected %v %v", returned, held.ended)
+	if returned.Get("state") != "bye" || held.Ended.Get("client_id") != client.ID {
+		t.Fatalf("unexpected %v %v", returned, held.Ended)
 	}
 }
 
 func TestALogoutTokenNamesTheSession(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	good := map[string]any{
-		"iss": held.url(), "aud": client.ID, "iat": time.Now().Unix(), "exp": time.Now().Add(2 * time.Minute).Unix(),
+		"iss": held.URL(), "aud": client.ID, "iat": time.Now().Unix(), "exp": time.Now().Add(2 * time.Minute).Unix(),
 		"jti": "logout-1", "sid": "sid-ada", "events": map[string]any{BackchannelLogoutEvent: map[string]any{}},
 	}
 
-	logout, err := client.VerifyLogoutToken(context.Background(), held.issue(good, "logout+jwt"))
+	logout, err := client.VerifyLogoutToken(context.Background(), held.Issue(good, "logout+jwt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,15 +328,15 @@ func TestALogoutTokenNamesTheSession(t *testing.T) {
 	}
 
 	cases := map[string]string{
-		"an ID token":     held.issue(good, "JWT"),
-		"a nonce":         held.issue(changed("nonce", "n"), "logout+jwt"),
-		"no event":        held.issue(changed("events", map[string]any{}), "logout+jwt"),
-		"nobody":          held.issue(changed("sid", nil), "logout+jwt"),
-		"another client":  held.issue(changed("aud", "other"), "logout+jwt"),
-		"no jti":          held.issue(changed("jti", nil), "logout+jwt"),
-		"no exp":          held.issue(changed("exp", nil), "logout+jwt"),
-		"expired":         held.issue(changed("exp", time.Now().Add(-2*time.Minute).Unix()), "logout+jwt"),
-		"from the future": held.issue(changed("iat", time.Now().Add(time.Hour).Unix()), "logout+jwt"),
+		"an ID token":     held.Issue(good, "JWT"),
+		"a nonce":         held.Issue(changed("nonce", "n"), "logout+jwt"),
+		"no event":        held.Issue(changed("events", map[string]any{}), "logout+jwt"),
+		"nobody":          held.Issue(changed("sid", nil), "logout+jwt"),
+		"another client":  held.Issue(changed("aud", "other"), "logout+jwt"),
+		"no jti":          held.Issue(changed("jti", nil), "logout+jwt"),
+		"no exp":          held.Issue(changed("exp", nil), "logout+jwt"),
+		"expired":         held.Issue(changed("exp", time.Now().Add(-2*time.Minute).Unix()), "logout+jwt"),
+		"from the future": held.Issue(changed("iat", time.Now().Add(time.Hour).Unix()), "logout+jwt"),
 	}
 
 	for name, token := range cases {
@@ -347,7 +349,7 @@ func TestALogoutTokenNamesTheSession(t *testing.T) {
 }
 
 func TestADelegationConnectsAnAccountAndReleasesItsToken(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	started, err := client.StartDelegation("google", AuthRequest{Prompt: "login"})
@@ -355,14 +357,14 @@ func TestADelegationConnectsAnAccountAndReleasesItsToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if held.asked != nil {
+	if held.Asked != nil {
 		t.Fatal("the delegation was started before the browser went")
 	}
 
 	returned := visit(t, started.URL)
 
-	if held.asked.Get("scope") != "openid offline_access masks:delegate:google" || held.asked.Get("prompt") != "login" {
-		t.Fatalf("unexpected %v", held.asked)
+	if held.Asked.Get("scope") != "openid offline_access masks:delegate:google" || held.Asked.Get("prompt") != "login" {
+		t.Fatalf("unexpected %v", held.Asked)
 	}
 
 	connected, err := client.FinishDelegation(context.Background(), returned, started)
@@ -390,7 +392,7 @@ func TestADelegationConnectsAnAccountAndReleasesItsToken(t *testing.T) {
 		t.Fatalf("expected the spent secret to be refused, got %v", err)
 	}
 
-	held.upstreamDown = true
+	held.UpstreamDown = true
 
 	_, err = client.UpstreamToken(context.Background(), upstream.Secret, connected.Connection)
 	var busy *DelegationUnavailable
@@ -400,7 +402,7 @@ func TestADelegationConnectsAnAccountAndReleasesItsToken(t *testing.T) {
 }
 
 func TestMaxAgeRefusesASignInThatIsTooOld(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := shookHands(t, held)
 
 	for _, check := range []struct {
@@ -413,9 +415,9 @@ func TestMaxAgeRefusesASignInThatIsTooOld(t *testing.T) {
 		{"never said", 0, false},
 	} {
 		t.Run(check.name, func(t *testing.T) {
-			held.lock.Lock()
-			held.authTime = check.authTime
-			held.lock.Unlock()
+			held.Lock()
+			held.AuthTime = check.authTime
+			held.Unlock()
 
 			started, err := client.AuthCodeURL(AuthRequest{MaxAge: 5 * time.Minute})
 			if err != nil {

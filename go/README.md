@@ -30,6 +30,37 @@ mux.Handle("/settings", app.Require()(settings))
 `SESSION_SECRET` is at least 32 random bytes. Open `/auth/handshake` once to connect the app to
 masks. Inside a handler, `web.ActorFrom(r.Context())` returns the person signed in.
 
+## Testing your app
+
+`github.com/masksrb/masks/go/masktest` is a fake masks server for tests. It serves discovery and
+keys, registers clients, signs a person in through the code flow, rotates refresh tokens, and mints
+access and logout tokens the SDK verifies. The same fake runs this package's own tests.
+
+```go
+func TestSigningIn(t *testing.T) {
+	fake := masktest.New(t)
+	fake.Add("app", &masktest.Client{Secret: "secret", Method: masktest.ClientSecretBasic})
+
+	issuer, err := masks.Discover(context.Background(), fake.URL())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := &masks.Client{Issuer: issuer, ID: "app", Secret: "secret"}
+	logout, err := client.VerifyLogoutToken(context.Background(), fake.LogoutToken(map[string]any{"aud": "app", "sid": "sid-ada"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if logout.SessionID != "sid-ada" {
+		t.Fatal(logout)
+	}
+}
+```
+
+`fake.Actor` is the person who signs in, `fake.Declined` turns the next sign-in away, and
+`fake.Seen` holds the last form sent to each endpoint.
+
 ## Documentation
 
 [Go apps](https://masks.pages.dev/reference/go/) covers sessions, organizations, privileges,

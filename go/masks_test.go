@@ -14,12 +14,14 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4/jwt"
+
+	"github.com/masksrb/masks/go/masktest"
 )
 
-func discovered(t *testing.T, held *fake) *Issuer {
+func discovered(t *testing.T, held *masktest.Fake) *Issuer {
 	t.Helper()
 
-	issuer, err := Discover(context.Background(), held.url(), quick)
+	issuer, err := Discover(context.Background(), held.URL(), quick)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,17 +33,17 @@ func quick(held *settings) {
 	held.pause = 10 * time.Millisecond
 }
 
-func secretClient(t *testing.T, held *fake, scope string) *Client {
+func secretClient(t *testing.T, held *masktest.Fake, scope string) *Client {
 	t.Helper()
 
-	held.add("app", &fakeClient{secret: "secret", method: ClientSecretBasic, scope: scope})
+	held.Add("app", &masktest.Client{Secret: "secret", Method: masktest.ClientSecretBasic, Scope: scope})
 
 	return &Client{Issuer: discovered(t, held), ID: "app", Secret: "secret"}
 }
 
 func TestDiscoveryRefusesADocumentNamingAnotherIssuer(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
-		writeJSON(response, http.StatusOK, map[string]string{"issuer": "https://elsewhere.example"})
+		masktest.WriteJSON(response, http.StatusOK, map[string]string{"issuer": "https://elsewhere.example"})
 	}))
 	defer server.Close()
 
@@ -77,8 +79,8 @@ func TestPlainHTTPIsAllowedOnlyOnThisMachine(t *testing.T) {
 func TestClientCredentialsWithASecret(t *testing.T) {
 	for _, method := range []AuthMethod{ClientSecretBasic, ClientSecretPost} {
 		t.Run(string(method), func(t *testing.T) {
-			held := newFake(t)
-			held.add("machine", &fakeClient{secret: "s3cr:et/+", method: method, scope: "files:read"})
+			held := masktest.New(t)
+			held.Add("machine", &masktest.Client{Secret: "s3cr:et/+", Method: string(method), Scope: "files:read"})
 
 			client := &Client{Issuer: discovered(t, held), ID: "machine", Secret: "s3cr:et/+", Method: method}
 
@@ -95,8 +97,8 @@ func TestClientCredentialsWithASecret(t *testing.T) {
 }
 
 func TestAWrongSecretIsAnInvalidClient(t *testing.T) {
-	held := newFake(t)
-	held.add("machine", &fakeClient{secret: "right", method: ClientSecretBasic})
+	held := masktest.New(t)
+	held.Add("machine", &masktest.Client{Secret: "right", Method: masktest.ClientSecretBasic})
 
 	client := &Client{Issuer: discovered(t, held), ID: "machine", Secret: "wrong"}
 
@@ -108,7 +110,7 @@ func TestAWrongSecretIsAnInvalidClient(t *testing.T) {
 	}
 }
 
-func signedClient(t *testing.T, held *fake) *Client {
+func signedClient(t *testing.T, held *masktest.Fake) *Client {
 	t.Helper()
 
 	key, err := GenerateKey()
@@ -121,22 +123,22 @@ func signedClient(t *testing.T, held *fake) *Client {
 		t.Fatal(err)
 	}
 
-	jwks := fakeClient{method: PrivateKeyJWT, scope: "files:read"}
-	if err := json.Unmarshal(key.JWKS(), &jwks.jwks); err != nil {
+	jwks := masktest.Client{Method: masktest.PrivateKeyJWT, Scope: "files:read"}
+	if err := json.Unmarshal(key.JWKS(), &jwks.JWKS); err != nil {
 		t.Fatal(err)
 	}
 
-	held.add("signed", &jwks)
+	held.Add("signed", &jwks)
 
 	return &Client{Issuer: discovered(t, held), ID: "signed", Key: key, DPoP: dpop}
 }
 
 func TestAPrivateKeyJWTClientGetsATokenHeldToItsKey(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 	dpop := client.DPoP
 
-	token, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read"}, Resource: []string{held.audience}})
+	token, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read"}, Resource: []string{held.Audience}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +147,7 @@ func TestAPrivateKeyJWTClientGetsATokenHeldToItsKey(t *testing.T) {
 		t.Fatalf("expected a DPoP token, got %q", token.TokenType)
 	}
 
-	claims, err := NewVerifier(client.Issuer, held.audience).Verify(context.Background(), token.AccessToken)
+	claims, err := NewVerifier(client.Issuer, held.Audience).Verify(context.Background(), token.AccessToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +158,7 @@ func TestAPrivateKeyJWTClientGetsATokenHeldToItsKey(t *testing.T) {
 }
 
 func TestEachAssertionIsUsedOnce(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 
 	for range 3 {
@@ -167,8 +169,8 @@ func TestEachAssertionIsUsedOnce(t *testing.T) {
 }
 
 func TestATokenEndpointNonceIsAnsweredOnce(t *testing.T) {
-	held := newFake(t)
-	held.nonce = "fresh-nonce"
+	held := masktest.New(t)
+	held.Nonce = "fresh-nonce"
 	client := signedClient(t, held)
 
 	if _, err := client.ClientCredentials(context.Background(), TokenRequest{}); err != nil {
@@ -183,9 +185,9 @@ func TestABearerAnswerToADPoPClientIsRefused(t *testing.T) {
 	server.Config.Handler = http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case discoveryPath:
-			writeJSON(response, http.StatusOK, map[string]string{"issuer": server.URL, "token_endpoint": server.URL + "/token"})
+			masktest.WriteJSON(response, http.StatusOK, map[string]string{"issuer": server.URL, "token_endpoint": server.URL + "/token"})
 		default:
-			writeJSON(response, http.StatusOK, map[string]any{"access_token": "plain", "token_type": "Bearer", "expires_in": 60})
+			masktest.WriteJSON(response, http.StatusOK, map[string]any{"access_token": "plain", "token_type": "Bearer", "expires_in": 60})
 		}
 	})
 
@@ -203,9 +205,9 @@ func TestABearerAnswerToADPoPClientIsRefused(t *testing.T) {
 }
 
 func TestTheDeviceFlowWaitsForApproval(t *testing.T) {
-	held := newFake(t)
-	held.pending = 3
-	held.add("tv", &fakeClient{method: NoAuth, scope: "openid"})
+	held := masktest.New(t)
+	held.Pending = 3
+	held.Add("tv", &masktest.Client{Method: masktest.NoAuth, Scope: "openid"})
 
 	client := &Client{Issuer: discovered(t, held), ID: "tv"}
 
@@ -223,15 +225,15 @@ func TestTheDeviceFlowWaitsForApproval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if token.AccessToken == "" || held.pending != 0 {
-		t.Fatalf("expected a token after every pending answer, got %+v with %d left", token, held.pending)
+	if token.AccessToken == "" || held.Pending != 0 {
+		t.Fatalf("expected a token after every pending answer, got %+v with %d left", token, held.Pending)
 	}
 }
 
 func TestTheDeviceFlowStopsWithItsContext(t *testing.T) {
-	held := newFake(t)
-	held.pending = 1000
-	held.add("tv", &fakeClient{method: NoAuth})
+	held := masktest.New(t)
+	held.Pending = 1000
+	held.Add("tv", &masktest.Client{Method: masktest.NoAuth})
 
 	client := &Client{Issuer: discovered(t, held), ID: "tv"}
 
@@ -249,7 +251,7 @@ func TestTheDeviceFlowStopsWithItsContext(t *testing.T) {
 }
 
 func TestARefreshSourceKeepsEachRotatedToken(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := secretClient(t, held, "")
 
 	first, err := client.ClientCredentials(context.Background(), TokenRequest{})
@@ -285,21 +287,21 @@ func TestARefreshSourceKeepsEachRotatedToken(t *testing.T) {
 }
 
 func TestRevocationSendsTheToken(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := secretClient(t, held, "")
 
 	if err := client.Revoke(context.Background(), "a-token", "refresh_token"); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(held.revoked) != 1 || held.revoked[0] != "a-token" {
-		t.Fatalf("revoked %v", held.revoked)
+	if len(held.Revoked) != 1 || held.Revoked[0] != "a-token" {
+		t.Fatalf("revoked %v", held.Revoked)
 	}
 }
 
 func TestRegistrationWithAnInitialAccessToken(t *testing.T) {
-	held := newFake(t)
-	held.initial["one-time"] = "enrolled"
+	held := masktest.New(t)
+	held.Initial["one-time"] = "enrolled"
 
 	issuer := discovered(t, held)
 	key, _ := GenerateKey()
@@ -352,9 +354,9 @@ func TestRegistrationWithAnInitialAccessToken(t *testing.T) {
 }
 
 func TestARegistrationURIOnAnotherOriginNeverSeesTheToken(t *testing.T) {
-	held := newFake(t)
-	held.initial["one-time"] = "enrolled"
-	held.foreignURI = true
+	held := masktest.New(t)
+	held.Initial["one-time"] = "enrolled"
+	held.ForeignURI = true
 
 	if _, err := discovered(t, held).Register(context.Background(), ClientMetadata{}, "one-time"); !is[*Foreign](err) {
 		t.Fatalf("expected ErrForeign, got %v", err)
@@ -417,11 +419,11 @@ func newResource(t *testing.T, issuer *Issuer, audience string) *resourceServer 
 }
 
 func TestATransportSignsEachRequestForItsResource(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
-	resource := newResource(t, client.Issuer, held.audience)
+	resource := newResource(t, client.Issuer, held.Audience)
 
-	http := client.HTTPClient(client.CredentialsSource(TokenRequest{Resource: []string{held.audience}}), resource.URL)
+	http := client.HTTPClient(client.CredentialsSource(TokenRequest{Resource: []string{held.Audience}}), resource.URL)
 
 	for _, body := range []string{"one", "two"} {
 		response, err := http.Post(resource.URL+"/files?path=x", "text/plain", strings.NewReader(body))
@@ -443,12 +445,12 @@ func TestATransportSignsEachRequestForItsResource(t *testing.T) {
 }
 
 func TestATransportRefusesAnOriginItWasNotGiven(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 
 	http := client.HTTPClient(client.CredentialsSource(TokenRequest{}), "https://files.example")
 
-	if _, err := http.Get(held.url() + "/elsewhere"); !is[*Foreign](err) {
+	if _, err := http.Get(held.URL() + "/elsewhere"); !is[*Foreign](err) {
 		t.Fatalf("expected ErrForeign, got %v", err)
 	}
 }
@@ -474,10 +476,10 @@ func boundRequest(t *testing.T, client *Client, dpop *Key, method, target string
 }
 
 func TestAVerifierRefusesMisusedProofs(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 	dpop := client.DPoP
-	verifier := NewVerifier(client.Issuer, held.audience)
+	verifier := NewVerifier(client.Issuer, held.Audience)
 	target := "http://files.example/files"
 
 	request, token := boundRequest(t, client, dpop, http.MethodGet, target)
@@ -527,16 +529,16 @@ func TestAVerifierRefusesMisusedProofs(t *testing.T) {
 }
 
 func TestAVerifierChecksTheTokenItself(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	issuer := discovered(t, held)
-	verifier := NewVerifier(issuer, held.audience)
+	verifier := NewVerifier(issuer, held.Audience)
 
 	good := map[string]any{
-		"iss": held.url(), "sub": "ada", "aud": held.audience, "jti": "1",
+		"iss": held.URL(), "sub": "ada", "aud": held.Audience, "jti": "1",
 		"exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Unix(),
 	}
 
-	if _, err := verifier.Verify(context.Background(), held.issue(good, accessTokenType)); err != nil {
+	if _, err := verifier.Verify(context.Background(), held.Issue(good, accessTokenType)); err != nil {
 		t.Fatalf("a good token was refused: %v", err)
 	}
 
@@ -553,11 +555,11 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 	}
 
 	cases := map[string][2]string{
-		"another audience": {held.issue(changed("aud", "https://other.example"), accessTokenType), "that token was issued for another app"},
-		"another issuer":   {held.issue(changed("iss", "https://other.example"), accessTokenType), "that token was issued by another server"},
-		"expired":          {held.issue(changed("exp", time.Now().Add(-time.Hour).Unix()), accessTokenType), "that token has expired"},
-		"no jti":           {held.issue(changed("jti", nil), accessTokenType), "that token is missing jti"},
-		"an ID token":      {held.issue(good, "JWT"), "that token is typed JWT, not at+jwt"},
+		"another audience": {held.Issue(changed("aud", "https://other.example"), accessTokenType), "that token was issued for another app"},
+		"another issuer":   {held.Issue(changed("iss", "https://other.example"), accessTokenType), "that token was issued by another server"},
+		"expired":          {held.Issue(changed("exp", time.Now().Add(-time.Hour).Unix()), accessTokenType), "that token has expired"},
+		"no jti":           {held.Issue(changed("jti", nil), accessTokenType), "that token is missing jti"},
+		"an ID token":      {held.Issue(good, "JWT"), "that token is typed JWT, not at+jwt"},
 		"not a JWT":        {"nonsense", "that token is not a signed JWT"},
 	}
 
@@ -572,14 +574,14 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 		})
 	}
 
-	if _, err := verifier.Verify(context.Background(), newFake(t).issue(good, accessTokenType)); err == nil {
+	if _, err := verifier.Verify(context.Background(), masktest.New(t).Issue(good, accessTokenType)); err == nil {
 		t.Fatal("a token signed by another key was accepted")
 	}
 }
 
 func TestTheMiddlewareChallengesWithoutAToken(t *testing.T) {
-	held := newFake(t)
-	resource := newResource(t, discovered(t, held), held.audience)
+	held := masktest.New(t)
+	resource := newResource(t, discovered(t, held), held.Audience)
 
 	response, err := http.Get(resource.URL)
 	if err != nil {
@@ -596,8 +598,8 @@ func TestTheMiddlewareChallengesWithoutAToken(t *testing.T) {
 }
 
 func TestTheMiddlewareNamesTheErrorForATokenItRefuses(t *testing.T) {
-	held := newFake(t)
-	resource := newResource(t, discovered(t, held), held.audience)
+	held := masktest.New(t)
+	resource := newResource(t, discovered(t, held), held.Audience)
 
 	request, _ := http.NewRequest(http.MethodGet, resource.URL, nil)
 	request.Header.Set("Authorization", "Bearer nonsense")
@@ -623,7 +625,7 @@ func TestResourceDiscoveryFindsTheIssuer(t *testing.T) {
 			return
 		}
 
-		writeJSON(response, http.StatusOK, ResourceMetadata{Resource: server.URL, AuthorizationServers: []string{"https://id.example"}})
+		masktest.WriteJSON(response, http.StatusOK, ResourceMetadata{Resource: server.URL, AuthorizationServers: []string{"https://id.example"}})
 	})
 
 	found, err := DiscoverResource(context.Background(), server.URL)
@@ -637,9 +639,9 @@ func TestResourceDiscoveryFindsTheIssuer(t *testing.T) {
 }
 
 func TestATransportSendsABearerTokenWhenTheTokenIsNotHeld(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := secretClient(t, held, "files:read files:write")
-	resource := newResource(t, client.Issuer, held.audience)
+	resource := newResource(t, client.Issuer, held.Audience)
 
 	response, err := client.HTTPClient(client.CredentialsSource(TokenRequest{}), resource.URL).Get(resource.URL)
 	if err != nil {
@@ -653,7 +655,7 @@ func TestATransportSendsABearerTokenWhenTheTokenIsNotHeld(t *testing.T) {
 }
 
 func TestATransportAnswersAResourceNonceAndReplaysTheBody(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 
 	var nonces []string
@@ -705,7 +707,7 @@ func TestATransportAnswersAResourceNonceAndReplaysTheBody(t *testing.T) {
 }
 
 func TestAnAppEnrollsAMachineAndUnenrollsIt(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	app := secretClient(t, held, "")
 
 	enrollment, err := app.Enroll(context.Background(), EnrollmentRequest{Scope: []string{"xixo:agent"}, Name: "nas", Lifetime: 15 * time.Minute})
@@ -713,7 +715,7 @@ func TestAnAppEnrollsAMachineAndUnenrollsIt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sent := held.seen["/enrollments"]
+	sent := held.Seen["/enrollments"]
 	if sent.Get("scope") != "xixo:agent" || sent.Get("client_name") != "nas" || sent.Get("expires_in") != "900" {
 		t.Fatalf("unexpected form %v", sent)
 	}
@@ -755,10 +757,10 @@ func TestAnAppEnrollsAMachineAndUnenrollsIt(t *testing.T) {
 }
 
 func TestAnAppUnenrollsOnlyItsOwnMachines(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	app := signedClient(t, held)
-	held.add("other", &fakeClient{secret: "secret", method: ClientSecretPost})
-	held.enrolledBy["theirs"] = "other"
+	held.Add("other", &masktest.Client{Secret: "secret", Method: masktest.ClientSecretPost})
+	held.EnrolledBy["theirs"] = "other"
 
 	err := app.Unenroll(context.Background(), "theirs")
 
@@ -772,17 +774,17 @@ func TestAnAppUnenrollsOnlyItsOwnMachines(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	held.lock.Lock()
+	held.Lock()
 	var mine string
-	for machine, by := range held.enrolledBy {
+	for machine, by := range held.EnrolledBy {
 		if by == "signed" {
 			mine = machine
 		}
 	}
-	held.lock.Unlock()
+	held.Unlock()
 
-	if enrollment.InitialAccessToken == "" || held.seen["/enrollments"].Has("expires_in") || held.seen["/enrollments"].Has("client_name") {
-		t.Fatalf("unexpected enrollment %+v %v", enrollment, held.seen["/enrollments"])
+	if enrollment.InitialAccessToken == "" || held.Seen["/enrollments"].Has("expires_in") || held.Seen["/enrollments"].Has("client_name") {
+		t.Fatalf("unexpected enrollment %+v %v", enrollment, held.Seen["/enrollments"])
 	}
 
 	if err := app.Unenroll(context.Background(), mine); err != nil {
@@ -797,7 +799,7 @@ func TestAnAppUnenrollsOnlyItsOwnMachines(t *testing.T) {
 }
 
 func TestAnEnrollmentWithoutAScopeIsRefused(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	app := secretClient(t, held, "")
 
 	if _, err := app.Enroll(context.Background(), EnrollmentRequest{}); !HasCode(err, "invalid_request") {
@@ -806,7 +808,7 @@ func TestAnEnrollmentWithoutAScopeIsRefused(t *testing.T) {
 }
 
 func TestIntrospectionDescribesALiveToken(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 
 	token, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read"}})
@@ -819,8 +821,8 @@ func TestIntrospectionDescribesALiveToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if held.seen["/introspect"].Get("token_type_hint") != "access_token" {
-		t.Fatalf("the hint was not sent: %v", held.seen["/introspect"])
+	if held.Seen["/introspect"].Get("token_type_hint") != "access_token" {
+		t.Fatalf("the hint was not sent: %v", held.Seen["/introspect"])
 	}
 
 	if !introspected.Active || !introspected.HasScope("files:read") || introspected.HasScope("files:write") || introspected.ClientID != "signed" {
@@ -831,13 +833,13 @@ func TestIntrospectionDescribesALiveToken(t *testing.T) {
 		t.Fatalf("expected the token to be held to the client's key, got %+v", introspected.Confirmation)
 	}
 
-	if !introspected.Organization.HasRole("owner", "admin") || introspected.Audience[0] != held.audience {
+	if !introspected.Organization.HasRole("owner", "admin") || introspected.Audience[0] != held.Audience {
 		t.Fatalf("unexpected organization or audience %+v", introspected)
 	}
 }
 
 func TestIntrospectionCallsAnUnknownOrStaleTokenInactive(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := secretClient(t, held, "files:read")
 
 	unknown, err := client.Introspect(context.Background(), "nonsense", "")
@@ -854,7 +856,7 @@ func TestIntrospectionCallsAnUnknownOrStaleTokenInactive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	held.staleActive = true
+	held.StaleActive = true
 
 	stale, err := client.Introspect(context.Background(), token.AccessToken, "")
 	if err != nil {
@@ -867,8 +869,8 @@ func TestIntrospectionCallsAnUnknownOrStaleTokenInactive(t *testing.T) {
 }
 
 func TestATokenExchangeKeepsTheKey(t *testing.T) {
-	held := newFake(t)
-	held.nonce = "fresh-nonce"
+	held := masktest.New(t)
+	held.Nonce = "fresh-nonce"
 	client := signedClient(t, held)
 
 	subject, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read files:write"}})
@@ -881,14 +883,14 @@ func TestATokenExchangeKeepsTheKey(t *testing.T) {
 		ActorToken:   "actor",
 		Audience:     []string{"files"},
 		Scope:        []string{"files:read"},
-		Resource:     []string{held.audience},
+		Resource:     []string{held.Audience},
 		Lifetime:     5 * time.Minute,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sent := held.seen["/token"]
+	sent := held.Seen["/token"]
 	want := map[string]string{
 		"grant_type":         GrantTokenExchange,
 		"subject_token_type": TokenTypeAccessToken,
@@ -896,7 +898,7 @@ func TestATokenExchangeKeepsTheKey(t *testing.T) {
 		"actor_token_type":   TokenTypeAccessToken,
 		"audience":           "files",
 		"scope":              "files:read",
-		"resource":           held.audience,
+		"resource":           held.Audience,
 		"requested_lifetime": "300",
 	}
 
@@ -914,7 +916,7 @@ func TestATokenExchangeKeepsTheKey(t *testing.T) {
 		t.Fatalf("unexpected %+v", exchanged)
 	}
 
-	claims, err := NewVerifier(client.Issuer, held.audience).Verify(context.Background(), exchanged.AccessToken)
+	claims, err := NewVerifier(client.Issuer, held.Audience).Verify(context.Background(), exchanged.AccessToken)
 	if err != nil || claims.Confirmation.Thumbprint != client.DPoP.Thumbprint() {
 		t.Fatalf("the exchanged token is not held to the client's key: %v", err)
 	}
@@ -929,7 +931,7 @@ func TestATokenExchangeKeepsTheKey(t *testing.T) {
 }
 
 func TestATokenExchangeForAnUpstreamTokenIsBearer(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 
 	subject, err := client.ClientCredentials(context.Background(), TokenRequest{})
@@ -952,8 +954,8 @@ func TestATokenExchangeForAnUpstreamTokenIsBearer(t *testing.T) {
 }
 
 func TestATokenExchangeRefusesAnotherIssuedType(t *testing.T) {
-	held := newFake(t)
-	held.issuedAs = TokenTypeIDToken
+	held := masktest.New(t)
+	held.IssuedAs = TokenTypeIDToken
 	client := secretClient(t, held, "")
 
 	subject, err := client.ClientCredentials(context.Background(), TokenRequest{})
@@ -971,7 +973,7 @@ func TestATokenExchangeRefusesAnotherIssuedType(t *testing.T) {
 }
 
 func TestVerifiersSharingAReplayStoreRefuseAProofSeenByEither(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
 	target := "http://files.example/files"
 
@@ -987,9 +989,9 @@ func TestVerifiersSharingAReplayStoreRefuseAProofSeenByEither(t *testing.T) {
 		return shared.First(ctx, key, expiresIn)
 	})
 
-	one := NewVerifier(client.Issuer, held.audience)
+	one := NewVerifier(client.Issuer, held.Audience)
 	one.Replay = store
-	two := NewVerifier(client.Issuer, held.audience)
+	two := NewVerifier(client.Issuer, held.Audience)
 	two.Replay = store
 
 	request, _ := boundRequest(t, client, client.DPoP, http.MethodGet, target)
@@ -1008,9 +1010,9 @@ func TestVerifiersSharingAReplayStoreRefuseAProofSeenByEither(t *testing.T) {
 }
 
 func TestAReplayStoreThatFailsRefusesTheRequest(t *testing.T) {
-	held := newFake(t)
+	held := masktest.New(t)
 	client := signedClient(t, held)
-	resource := newResource(t, client.Issuer, held.audience)
+	resource := newResource(t, client.Issuer, held.Audience)
 	resource.verifier.Replay = ReplayStoreFunc(func(context.Context, string, time.Duration) (bool, error) {
 		return true, errors.New("redis is down")
 	})

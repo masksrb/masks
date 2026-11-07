@@ -14,6 +14,8 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+
+	"github.com/masksrb/masks/go/masktest"
 )
 
 type tokenContract struct {
@@ -196,7 +198,7 @@ func contractIssuer(t *testing.T, contract tokenContract) *Issuer {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /.well-known/openid-configuration", func(response http.ResponseWriter, _ *http.Request) {
-		writeJSON(response, http.StatusOK, placed(contract.Discovery, map[string]string{"issuer": server.URL}))
+		masktest.WriteJSON(response, http.StatusOK, placed(contract.Discovery, map[string]string{"issuer": server.URL}))
 	})
 	mux.HandleFunc("GET /.well-known/jwks.json", func(response http.ResponseWriter, _ *http.Request) {
 		response.Header().Set("Content-Type", "application/json")
