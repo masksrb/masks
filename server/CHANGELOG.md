@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.1](https://github.com/masksrb/masks/compare/server-v0.15.0...server-v0.15.1) (2026-11-07)
+
+
+### Fixes
+
+* **server:** rails 8.1.4.1, rails-html-sanitizer 1.7.2, loofah 2.25.3, and nokogiri 1.19.7 close the advisories bundler-audit stops CI on ([b2c4be1](https://github.com/masksrb/masks/commit/b2c4be179b47c5c780900da5ce78f3bb8253e720))
+
+
+### Refactoring
+
+* **engine:** Tenancy holds the Postgres isolation, Client splits into concerns, and subsystems leave app/models ([00aebb8](https://github.com/masksrb/masks/commit/00aebb86cd7e9ba52d1db25391be489921e44858))
+* **engine:** the login state that adds a second factor is Protection, and only machines are enrolled ([72b09c2](https://github.com/masksrb/masks/commit/72b09c2cb9387b7bd85f173d6113811b2e9b372e))
+
 ## [0.15.0](https://github.com/masksrb/masks/compare/server-v0.14.1...server-v0.15.0) (2026-11-02)
 
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.15.1](https://github.com/masksrb/masks/compare/masks-server-v0.15.0...masks-server-v0.15.1) (2026-11-07)
+
+
+### Refactoring
+
+* **engine:** Actor splits into concerns for passwords, second factors, suspension, notices, and claims ([93e40e9](https://github.com/masksrb/masks/commit/93e40e91f51e8fc2478d641307d8716d16087c9e))
+* **engine:** Tenancy holds the Postgres isolation, Client splits into concerns, and subsystems leave app/models ([00aebb8](https://github.com/masksrb/masks/commit/00aebb86cd7e9ba52d1db25391be489921e44858))
+* **engine:** the login state that adds a second factor is Protection, and only machines are enrolled ([72b09c2](https://github.com/masksrb/masks/commit/72b09c2cb9387b7bd85f173d6113811b2e9b372e))
+* **engine:** the manage query type groups its root fields by area ([fed7962](https://github.com/masksrb/masks/commit/fed7962a2802e8d9e43ae22dce38f6fbb3b4c281))
+
 ## [0.15.0](https://github.com/masksrb/masks/compare/masks-server-v0.14.1...masks-server-v0.15.0) (2026-11-02)
 
 

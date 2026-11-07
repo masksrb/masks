@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/masksrb/masks/compare/go/v0.4.0...go/v0.5.0) (2026-11-07)
+
+
+### Features
+
+* **go:** masks/masktest exports the fake masks the SDK's tests run against ([a54c0ab](https://github.com/masksrb/masks/commit/a54c0ab5408ee31f6d2673d9c9de3bb48364dfeb))
+
 ## [0.4.0](https://github.com/masksrb/masks/compare/go/v0.3.2...go/v0.4.0) (2026-11-02)
 
 
