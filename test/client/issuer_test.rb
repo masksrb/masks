@@ -100,7 +100,7 @@ class IssuerTest < ClientTest
     resource.authenticate(header)
     issuer.stop
 
-    assert_equal "actor-1", resource.authenticate(header)["sub"]
+    assert_equal "ada", resource.authenticate(header)["sub"]
 
     stranger = OpenSSL::PKey::RSA.generate(2048)
     token = issuer.sign(

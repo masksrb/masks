@@ -282,7 +282,7 @@ class MachineTest < ClientTest
   end
 
   def test_userinfo_presents_a_bearer_token_or_a_bare_string_as_a_bearer
-    issuer.override("/userinfo", { "sub" => "actor-1" })
+    issuer.override("/userinfo", { "sub" => "ada" })
 
     machine.userinfo(Masks::Client::Tokens.new(bound.merge("token_type" => "Bearer")))
 

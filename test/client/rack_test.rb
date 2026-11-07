@@ -15,7 +15,7 @@ class RackTest < ClientTest
     status, _, body = app.call(env(authorization: "Bearer #{issuer.access_token}"))
 
     assert_equal 200, status
-    assert_equal [ "actor-1" ], body
+    assert_equal [ "ada" ], body
   end
 
   def test_a_missing_token_is_401_with_a_challenge

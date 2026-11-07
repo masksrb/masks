@@ -20,7 +20,7 @@ class LogoutTest < Minitest::Test
       "iat" => Time.now.to_i,
       "exp" => Time.now.to_i + 120,
       "jti" => SecureRandom.uuid,
-      "sub" => "actor-1",
+      "sub" => "ada",
       "sid" => "session-1",
       "events" => { EVENT => {} }
     }.merge(overrides)
@@ -39,7 +39,7 @@ class LogoutTest < Minitest::Test
   def test_a_token_the_issuer_signed_for_this_client_names_who_signed_out
     logout = verify(token)
 
-    assert_equal "actor-1", logout.subject
+    assert_equal "ada", logout.subject
     assert_equal "session-1", logout.sid
     assert logout.jti
   end
@@ -49,7 +49,7 @@ class LogoutTest < Minitest::Test
   end
 
   def test_a_subject_alone_is_enough_too
-    assert_equal "actor-1", verify(token("sid" => nil)).subject
+    assert_equal "ada", verify(token("sid" => nil)).subject
   end
 
   def test_a_token_without_an_expiry_is_refused
@@ -103,7 +103,7 @@ class LogoutTest < Minitest::Test
     begin
       refused(other.sign({
         "iss" => other.url, "aud" => CLIENT_ID, "iat" => Time.now.to_i,
-        "jti" => SecureRandom.uuid, "sub" => "actor-1",
+        "jti" => SecureRandom.uuid, "sub" => "ada",
         "events" => { EVENT => {} }
       }))
     ensure
@@ -114,7 +114,7 @@ class LogoutTest < Minitest::Test
   def test_a_token_nobody_signed_is_refused
     refused(JWT.encode(
       { "iss" => @issuer.url, "aud" => CLIENT_ID, "iat" => Time.now.to_i,
-        "jti" => SecureRandom.uuid, "sub" => "actor-1", "events" => { EVENT => {} } },
+        "jti" => SecureRandom.uuid, "sub" => "ada", "events" => { EVENT => {} } },
       nil, "none"
     ))
   end
@@ -128,6 +128,6 @@ class LogoutTest < Minitest::Test
       issuer: @issuer.url, client_id: CLIENT_ID, redirect_uri: "https://app.test/callback"
     )
 
-    assert_equal "actor-1", session.logout_token(token).subject
+    assert_equal "ada", session.logout_token(token).subject
   end
 end

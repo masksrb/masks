@@ -4,7 +4,7 @@ class ResourceTest < ClientTest
   def test_a_valid_token_becomes_claims
     claims = resource.authenticate("Bearer #{issuer.access_token}")
 
-    assert_equal "actor-1", claims.subject
+    assert_equal "ada", claims.subject
     assert_equal issuer.url, claims.issuer
     assert_equal %w[xixo:catalog:read xixo:catalog:write], claims.scopes
     assert_equal [ "https://app.test/mcp" ], claims.audience

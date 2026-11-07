@@ -9,7 +9,7 @@ class DelegationsTest < ClientTest
   def granted(provider: "google")
     { "access_token" => "masks-access", "token_type" => "Bearer", "expires_in" => 3600, "refresh_token" => "masks-refresh",
       "delegations" => [ { "connection" => "c-1", "provider" => provider, "provider_name" => "Google",
-                           "label" => "grace@example.com", "subject" => "actor-1" } ] }
+                           "label" => "grace@example.com", "subject" => "ada" } ] }
   end
 
   def test_connecting_asks_for_the_delegation_scope_with_pkce
@@ -31,7 +31,7 @@ class DelegationsTest < ClientTest
 
     assert_equal "c-1", held.connection
     assert_equal "google", held.provider
-    assert_equal "actor-1", held.subject
+    assert_equal "ada", held.subject
     assert_equal "masks-refresh", held.secret
 
     sent = issuer.last("/token")[:body]

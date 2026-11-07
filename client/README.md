@@ -62,6 +62,35 @@ Keep `started[:state]`, `started[:nonce]`, and `started[:verifier]` in the sessi
 browser to `started[:url]`. When it comes back, check `state` and `identity["nonce"]` against the
 values you kept.
 
+## Testing your app
+
+The gem ships a fake masks for an app's own tests. It listens on a local port, signs people in
+through the code flow, rotates refresh tokens, and mints access and logout tokens with its own key.
+The gem's own tests run against it.
+
+```ruby
+require "masks/client/fake"
+
+fake = Masks::Client::Fake.start
+fake.add("app", method: "client_secret_basic", secret: "s3cret")
+
+session = Masks::Client::Session.new(
+  issuer: fake.url, client_id: "app", client_secret: "s3cret",
+  redirect_uri: "https://app.test/callback"
+)
+
+started = session.start
+returned = URI.decode_www_form(URI.parse(fake.authorize(started[:url])).query).to_h
+tokens = session.complete(code: returned["code"], verifier: started[:verifier])
+
+fake.stop
+```
+
+`fake.authorize` signs in as `ada` and returns the URL masks sends the browser back to. Pass
+`subject: "bob"` to sign in as somebody else, or `error: "access_denied"` to decline.
+`fake.logout_token("app", subject: "ada")` mints a back-channel logout token, and
+`fake.last("/token")` is the last request the token endpoint received.
+
 ## Documentation
 
 - [Rails apps](https://masks.pages.dev/reference/ruby/) covers the handshake, privileges,

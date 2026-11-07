@@ -198,7 +198,7 @@ class SessionTest < ClientTest
 
   def test_introspection_answers_a_claims_object_rather_than_a_hash
     issuer.override("/introspect", {
-                      "active" => true, "scope" => "xixo:catalog:read", "sub" => "actor-1",
+                      "active" => true, "scope" => "xixo:catalog:read", "sub" => "ada",
                       "client_id" => "app", "username" => "owner", "token_type" => "Bearer",
                       "exp" => Time.now.to_i + 60, "aud" => [ "https://app.test/mcp" ]
                     })
@@ -206,7 +206,7 @@ class SessionTest < ClientTest
     found = session.introspect("some-token", hint: "access_token")
 
     assert found.active?
-    assert_equal "actor-1", found.subject
+    assert_equal "ada", found.subject
     assert_equal "owner", found.nickname
     assert_equal "Bearer", found.token_type
     assert_equal [ "xixo:catalog:read" ], found.scopes
@@ -217,7 +217,7 @@ class SessionTest < ClientTest
   def test_introspection_answers_the_organization_and_refuses_it_once_inactive
     organization = { "id" => "o-1", "key" => "acme", "name" => "Acme", "role" => "owner" }
 
-    issuer.override("/introspect", { "active" => true, "sub" => "actor-1", "org" => organization })
+    issuer.override("/introspect", { "active" => true, "sub" => "ada", "org" => organization })
 
     assert_equal "acme", session.introspect("live").member!("owner").key
 

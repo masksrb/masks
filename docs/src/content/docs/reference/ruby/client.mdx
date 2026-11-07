@@ -572,6 +572,152 @@ Inherits `StandardError`.
 ::new(code, description = nil, status: nil, uri: nil)
 ```
 
+## Masks::Client::Fake
+
+| Constant | Value |
+| --- | --- |
+| `ALGORITHM` | `"RS256".freeze` |
+| `UPSTREAM` | `"urn:masks:params:oauth:token-type:upstream_access_token".freeze` |
+| `TENANT` | `{ "uuid" => "t-1", "subdomain" => "demo", "name" => "Demo" }.freeze` |
+| `SCOPE` | `"openid profile email".freeze` |
+| `AUDIENCE` | `"https://app.test/mcp".freeze` |
+| `PNG` | `"\x89PNG fake photo".b.freeze` |
+| `REASONS` | `{ 200 => "OK", 201 => "Created", 204 => "No Content", 302 => "Found", 400 => "Bad Request", 401 => "Unauthorized", 404 => "Not Found", 503 => "Service Unavailable" }.freeze` |
+| `PEOPLE` | `{ "ada" => { "name" => "Ada Lovelace", "preferred_username" => "ada", "email" => "ada@example.com", "email_verified" => true, "orgs" => [ { "id" => "o-1", "key" => "acme", "name" => "Acme", "role" => "owner" }, { "id" => "o-2", "key" => "globex", "name" => "Globex", "role" => "member" } ] }, "bob" => { "name" => "Bob", "preferred_username" => "bob", "email" => "bob@example.com", "email_verified" => false, "orgs" => [ { "id" => "o-1", "key" => "acme", "name" => "Acme", "role" => "member" } ] } }.freeze` |
+| `Registered` | `Struct.new(:method, :secret, :jwks, :scope, :metadata, keyword_init: true)` |
+
+| Attribute | Access |
+| --- | --- |
+| `audience` | RW |
+| `auth_time` | RW |
+| `authorized` | R |
+| `backchannel` | RW |
+| `clients` | R |
+| `codes` | R |
+| `enrolled` | R |
+| `exchanges` | R |
+| `foreign_uri` | RW |
+| `grants` | R |
+| `handshakes` | R |
+| `initial` | R |
+| `key` | R |
+| `kid` | R |
+| `lifetime` | RW |
+| `nonce` | RW |
+| `pending` | RW |
+| `people` | R |
+| `photo` | RW |
+| `photo_type` | RW |
+| `port` | R |
+| `received` | R |
+| `registrations` | R |
+| `requests` | R |
+| `revoked` | R |
+| `scope` | RW |
+| `tenant` | R |
+
+### ::new
+
+```ruby
+::new(tenant: TENANT, audience: AUDIENCE, scope: SCOPE)
+```
+
+### ::start
+
+```ruby
+::start(**options)
+```
+
+### #access_token
+
+```ruby
+#access_token(subject: "ada", scope: self.scope, audience: self.audience, expires_in: lifetime, **extra)
+```
+
+### #add
+
+```ruby
+#add(client_id, method: "client_secret_basic", secret: nil, jwks: nil, scope: nil)
+```
+
+### #authorize
+
+```ruby
+#authorize(target, subject: "ada", organization: nil, error: nil, state: nil, iss: nil)
+```
+
+### #count
+
+```ruby
+#count(path)
+```
+
+### #discovery
+
+```ruby
+#discovery()
+```
+
+### #handshake
+
+```ruby
+#handshake(target, error: nil, state: nil, iss: nil)
+```
+
+### #jwks
+
+```ruby
+#jwks()
+```
+
+### #last
+
+```ruby
+#last(path)
+```
+
+### #logout_token
+
+```ruby
+#logout_token(client_id, subject: "ada", sid: nil, **changes)
+```
+
+### #override
+
+```ruby
+#override(path, body)
+```
+
+### #person
+
+```ruby
+#person(subject)
+```
+
+### #public_jwk
+
+```ruby
+#public_jwk()
+```
+
+### #sign
+
+```ruby
+#sign(claims, kid: self.kid, key: self.key, typ: "JWT")
+```
+
+### #stop
+
+```ruby
+#stop()
+```
+
+### #url
+
+```ruby
+#url()
+```
+
 ## Masks::Client::Forbidden
 
 Inherits `Masks::Client::Error`.

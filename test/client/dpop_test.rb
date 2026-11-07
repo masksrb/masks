@@ -41,7 +41,7 @@ class DpopTest < ClientTest
   def test_a_bound_token_with_a_matching_proof_becomes_claims
     token = bound
 
-    assert_equal "actor-1", presented(token).subject
+    assert_equal "ada", presented(token).subject
   end
 
   def test_a_bound_token_presented_as_bearer_is_refused

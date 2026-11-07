@@ -88,6 +88,9 @@ class HandshakeTest < ClientTest
   end
 
   def test_a_backchannel_logout_uri_is_dropped_for_an_issuer_that_does_not_advertise_it
+    issuer.override("/.well-known/openid-configuration",
+                    issuer.discovery.except("backchannel_logout_supported"))
+
     held = query(backchannel_logout_uri: "#{APP}/auth/logout/backchannel")
 
     assert_nil held["backchannel_logout_uri"]
@@ -196,7 +199,7 @@ class HandshakeTest < ClientTest
       handshake.complete(returned, state: "a-state")
     end
 
-    assert_equal "not_found", error.code
+    assert_equal "invalid_token", error.code
   end
 
   def test_symbol_keys_are_the_same_callback_as_string_keys
