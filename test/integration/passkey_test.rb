@@ -82,7 +82,7 @@ module Masks
       end
 
       test "a passkey on the second factor screen trusts the device when asked to" do
-        enrol
+        add_passkey
         enable_otp(@actor, @tenant)
         reset!
         host! host_for(@tenant)
@@ -96,7 +96,7 @@ module Masks
       end
 
       test "a passkey alone trusts the device on the same terms" do
-        enrol
+        add_passkey
         reset!
         host! host_for(@tenant)
 
@@ -113,7 +113,7 @@ module Masks
       end
 
       test "a passkey on the second factor screen leaves the device untrusted without the tick" do
-        enrol
+        add_passkey
         enable_otp(@actor, @tenant)
         reset!
         host! host_for(@tenant)
@@ -127,7 +127,7 @@ module Masks
       end
 
       test "a passkey is enrolled from the account page and listed there" do
-        passkey = enrol
+        passkey = add_passkey
 
         assert_redirected_to root_path
         assert_equal "This laptop", passkey.name
@@ -144,7 +144,7 @@ module Masks
       end
 
       test "a verified passkey signs in without a password and without a second factor" do
-        enrol
+        add_passkey
         reset!
         host! host_for(@tenant)
 
@@ -155,7 +155,7 @@ module Masks
       end
 
       test "a verified passkey satisfies a second factor an authenticator would otherwise demand" do
-        enrol
+        add_passkey
         enable_otp(@actor, @tenant)
         reset!
         host! host_for(@tenant)
@@ -177,7 +177,7 @@ module Masks
       end
 
       test "the sign-in records what was used, and the id token says so" do
-        enrol
+        add_passkey
         reset!
         host! host_for(@tenant)
 
@@ -199,7 +199,7 @@ module Masks
       end
 
       test "an assertion for another tenant's passkey is refused" do
-        enrol
+        add_passkey
         reset!
 
         host! host_for(other_tenant)
@@ -213,7 +213,7 @@ module Masks
       end
 
       test "a replayed assertion is refused, because the challenge is spent" do
-        enrol
+        add_passkey
         reset!
         host! host_for(@tenant)
 
@@ -247,7 +247,7 @@ module Masks
       end
 
       test "a compromised authenticator is reported against the passkeys made with it" do
-        passkey = enrol
+        passkey = add_passkey
 
         within(@tenant) do
           Authenticator.create!(
@@ -264,7 +264,7 @@ module Masks
       end
 
       test "signing in with a passkey never reaches the metadata service" do
-        enrol
+        add_passkey
         reset!
         host! host_for(@tenant)
 
@@ -276,7 +276,7 @@ module Masks
       end
 
       test "a passkey can be removed, and stops working" do
-        passkey = enrol
+        passkey = add_passkey
 
         delete "/account/passkeys/#{passkey.id}"
         assert_redirected_to root_path
@@ -297,7 +297,7 @@ module Masks
       end
 
       test "a sign-in older than fifteen minutes signs in again before a passkey is removed" do
-        passkey = enrol
+        passkey = add_passkey
 
         travel 16.minutes do
           delete "/account/passkeys/#{passkey.id}"
@@ -308,7 +308,7 @@ module Masks
       end
 
       test "one actor cannot remove another's passkey" do
-        passkey = enrol
+        passkey = add_passkey
 
         other = create_actor(@tenant, nickname: "second", password: "password")
         reset!
