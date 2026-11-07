@@ -37,7 +37,7 @@ module Masks
 
       initializer "masks_server.tenant_setting" do
         ActiveSupport.on_load(:active_record_postgresqladapter) do
-          set_callback :checkout, :after, -> { TenantIsolation.adopt(self) }
+          set_callback :checkout, :after, -> { Tenancy.adopt(self) }
         end
       end
 

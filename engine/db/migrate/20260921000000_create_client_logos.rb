@@ -1,5 +1,5 @@
 class CreateClientLogos < ActiveRecord::Migration[8.1]
-  include Masks::Server::TenantIsolation
+  include Masks::Server::Tenancy::Migration
 
   def up
     create_table :client_logos do |t|

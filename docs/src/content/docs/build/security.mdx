@@ -55,7 +55,7 @@ masks enters a tenant before it runs any request or job.
   end
   ```
 
-Other code that works across tenants uses `Tenant.switch(tenant) { ... }`. Outside a tenant, a query
+Other code that works across tenants uses `Tenancy.switch(tenant) { ... }`. Outside a tenant, a query
 on a tenant's table returns no rows.
 
 ## Manage roles

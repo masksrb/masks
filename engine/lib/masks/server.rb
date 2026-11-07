@@ -64,7 +64,7 @@ module Masks
         secret = cookies_for(request).encrypted[:masks_session]
         return nil if secret.blank?
 
-        Tenant.switch(tenant) { Session.resume(secret)&.actor }
+        Tenancy.switch(tenant) { Session.resume(secret)&.actor }
       end
 
       def cookies_for(request)
@@ -111,7 +111,8 @@ require_relative "server/tenant_key_provider"
 require_relative "server/forwarding"
 require_relative "server/forwarded_app"
 require_relative "server/host"
-require_relative "server/tenant_isolation"
+require_relative "server/tenancy"
+require_relative "server/tenancy/migration"
 require_relative "server/tenancy/job"
 require_relative "server/tenancy/middleware"
 require_relative "server/engine"

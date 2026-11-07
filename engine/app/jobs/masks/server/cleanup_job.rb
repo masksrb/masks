@@ -11,7 +11,7 @@ module Masks
 
       def perform
         failed = Tenant.active.find_each.filter_map do |tenant|
-          Tenant.switch(tenant) { sweep(tenant) }
+          Tenancy.switch(tenant) { sweep(tenant) }
           nil
         rescue StandardError => e
           ::Rails.error.report(e, context: { tenant: tenant.subdomain })

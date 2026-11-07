@@ -72,7 +72,7 @@ module Masks
         with_mailer do
           assert set_up!(tenant: fresh)["settled"]
 
-          Tenant.switch(fresh) do
+          Tenancy.switch(fresh) do
             actor = Actor.sole
 
             assert_nil actor.email_verified_at

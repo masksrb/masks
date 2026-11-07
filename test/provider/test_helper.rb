@@ -22,7 +22,7 @@ class EngineModeTest < ActionDispatch::IntegrationTest
   end
 
   def create_actor(nickname: "ada-#{SecureRandom.hex(3)}")
-    Masks::Server::Tenant.switch(tenant) { Masks::Server::Actor.create!(nickname: nickname, password: PASSWORD) }
+    Masks::Server::Tenancy.switch(tenant) { Masks::Server::Actor.create!(nickname: nickname, password: PASSWORD) }
   end
 
   def sign_in(actor, path: "/auth")
@@ -31,5 +31,5 @@ class EngineModeTest < ActionDispatch::IntegrationTest
     JSON.parse(response.body)
   end
 
-  teardown { Masks::Server::Tenant.clear! }
+  teardown { Masks::Server::Tenancy.clear! }
 end

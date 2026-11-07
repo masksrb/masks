@@ -84,7 +84,7 @@ module Masks
               return write(Protocol.search_done(message.id, Protocol::INSUFFICIENT_ACCESS_RIGHTS, "bind with an LDAP credential to search"))
             end
 
-            Tenant.switch(@bound.tenant) { search_within(message, request) }
+            Tenancy.switch(@bound.tenant) { search_within(message, request) }
           end
 
           def search_within(message, request)

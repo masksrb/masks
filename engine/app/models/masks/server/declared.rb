@@ -26,7 +26,7 @@ module Masks
 
       def apply!
         tenants.flat_map do |tenant, declared|
-          Tenant.switch(tenant) { apply_tenant(tenant, declared) }
+          Tenancy.switch(tenant) { apply_tenant(tenant, declared) }
         end
       end
 

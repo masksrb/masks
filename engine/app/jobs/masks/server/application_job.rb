@@ -9,7 +9,7 @@ module Masks
 
         def each_tenant(scope = Tenant.active)
           failed = scope.find_each.filter_map do |tenant|
-            Tenant.switch(tenant) { yield tenant }
+            Tenancy.switch(tenant) { yield tenant }
             nil
           rescue StandardError => e
             report_tenant_failure(tenant, e)
@@ -24,7 +24,7 @@ module Masks
         def report_tenant_failure(tenant, error)
           ::Rails.error.report(error, context: { tenant: tenant.subdomain, job: self.class.name })
 
-          Tenant.switch(tenant) do
+          Tenancy.switch(tenant) do
             Event.record!(Event::JOB_FAILED, by: nil, job: self.class.name.demodulize, error: error.class.name, message: error.message.to_s[0, 200])
           end
         rescue StandardError => e

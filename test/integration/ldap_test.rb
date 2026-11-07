@@ -73,7 +73,7 @@ module Masks
 
       test "a tenant that has not turned LDAP on refuses binds like an unknown one" do
         other_tenant.update!(ldap_enabled: false)
-        theirs = Tenant.switch(other_tenant) { LdapCredential.issue!(label: "nas", by: nil) }
+        theirs = Tenancy.switch(other_tenant) { LdapCredential.issue!(label: "nas", by: nil) }
 
         assert_equal 49, connect.bind("cn=nas,ou=services,#{base(other_tenant)}", theirs.secret).code
       end
@@ -182,7 +182,7 @@ module Masks
 
       test "another tenant's credential does not bind here" do
         other_tenant.update!(ldap_enabled: true)
-        other = Tenant.switch(other_tenant) { LdapCredential.issue!(label: "jellyfin", by: nil) }
+        other = Tenancy.switch(other_tenant) { LdapCredential.issue!(label: "jellyfin", by: nil) }
 
         assert_equal 49, connect.bind("cn=jellyfin,ou=services,#{base}", other.secret).code
         assert_equal 0, connect.bind("cn=jellyfin,ou=services,#{base(other_tenant)}", other.secret).code

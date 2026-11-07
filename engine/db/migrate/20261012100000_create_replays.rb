@@ -1,5 +1,5 @@
 class CreateReplays < ActiveRecord::Migration[8.1]
-  include Masks::Server::TenantIsolation
+  include Masks::Server::Tenancy::Migration
 
   def up
     create_table :replays do |t|

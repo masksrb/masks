@@ -18,7 +18,7 @@ module Masks
       end
 
       test "profile releases the whole standard claim set it has values for" do
-        Tenant.switch(@tenant) do
+        Tenancy.switch(@tenant) do
           @actor.update!(
             given_name: "Given", family_name: "Family", middle_name: "Middle",
             profile_url: "https://example.com/p", picture_url: "https://example.com/p.png",
@@ -110,7 +110,7 @@ module Masks
         refresh(issued["refresh_token"])
         refresh(issued["refresh_token"])
 
-        replay = Tenant.switch(@tenant) { Event.where(action: Event::REFRESH_REUSED).first }
+        replay = Tenancy.switch(@tenant) { Event.where(action: Event::REFRESH_REUSED).first }
 
         assert_not_nil replay
         assert_equal @actor.id, replay.actor_id

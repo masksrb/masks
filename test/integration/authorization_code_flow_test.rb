@@ -318,7 +318,7 @@ module Masks
 
         consent! if awaiting_consent?
 
-        code = Tenant.switch(@tenant) { AuthorizationCode.order(:id).last }
+        code = Tenancy.switch(@tenant) { AuthorizationCode.order(:id).last }
 
         assert_equal %w[https://one.example https://two.example], code.audience.sort
       end

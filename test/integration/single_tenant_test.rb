@@ -104,7 +104,7 @@ module Masks
       end
 
       test "claiming is off while a tenant is pinned" do
-        [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
+        [ @tenant, other_tenant ].each { |tenant| Tenancy.switch(tenant) { tenant.destroy! } }
 
         with_pinned("fresh") do
           host! "auth.example.test"

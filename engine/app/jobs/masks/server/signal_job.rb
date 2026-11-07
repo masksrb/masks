@@ -30,7 +30,7 @@ module Masks
       def gave_up!(error)
         stream_id, = arguments
 
-        Tenant.switch(held_tenant) do
+        Tenancy.switch(held_tenant) do
           stream = SignalStream.find_by(id: stream_id)
 
           Event.record!(

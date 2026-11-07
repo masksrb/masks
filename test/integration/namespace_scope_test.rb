@@ -6,7 +6,7 @@ module Masks
       setup do
         host! host_for(@tenant)
 
-        @client = Tenant.switch(@tenant) do
+        @client = Tenancy.switch(@tenant) do
           Client.create!(
             client_id: SecureRandom.uuid,
             name: "xixo",
@@ -49,7 +49,7 @@ module Masks
       end
 
       test "what is granted is the scope asked for, never the prefix itself" do
-        Tenant.switch(@tenant) do
+        Tenancy.switch(@tenant) do
           granted = @client.permitted_scopes(%w[xixo:catalog:read xixo:settings:admin])
 
           assert_equal %w[xixo:catalog:read xixo:settings:admin], granted - Scopes::STANDARD

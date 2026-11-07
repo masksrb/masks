@@ -7,7 +7,7 @@ module Masks
         def check!
           Tenant.active.find_each do |tenant|
             tenant.pairwise_salt
-            Tenant.switch(tenant) { SigningKey.find_each(&:private_pem) }
+            Tenancy.switch(tenant) { SigningKey.find_each(&:private_pem) }
           end
         rescue ActiveRecord::Encryption::Errors::Decryption
           raise Mismatch, "this server's encryption key cannot read the database's encrypted columns. Every " \
@@ -17,7 +17,7 @@ module Masks
 
         def reencrypt!(tenants = Tenant.all)
           tenants.find_each do |tenant|
-            Tenant.switch(tenant) do
+            Tenancy.switch(tenant) do
               Tenant.transaction do
                 encrypted_models.each { |model| model.unscoped.find_each(&:encrypt) }
                 tenant.encrypt

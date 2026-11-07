@@ -46,9 +46,15 @@ module Masks
         subject_type sector_identifier_uri dpop_bound_access_tokens grant_types response_types
         authorization_details_types
       ].freeze
+      CONSOLE_ID = "masks-manage".freeze
+      CONSOLE_SCOPES = [ Scopes::OPENID, Scopes::PROFILE, Scopes::EMAIL, Scopes::MANAGE, *ManageRoles::SCOPES ].uniq.freeze
 
-      class ScopesUnavailable < StandardError; end
-      class EnrollmentRefused < StandardError; end
+      include Registration
+      include Credentials
+      include Redirects
+      include Approval
+      include SamlApplication
+      include ForwardAuth
 
       has_many :tokens, dependent: :destroy
       has_many :consents, dependent: :destroy
@@ -60,28 +66,20 @@ module Masks
                           dependent: :nullify
       has_one :logo, class_name: "ClientLogo", dependent: :delete
 
+      belongs_to :approved_by, class_name: "Actor", optional: true
+      belongs_to :enrolled_by, class_name: "Client", optional: true, inverse_of: :enrolled
+      belongs_to :sign_in_policy, optional: true
+
       validate :allowed_groups_are_named
       validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
       validates :name, presence: true
       validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
       validates :protocol, inclusion: { in: [ OIDC, SamlIdentity::PROTOCOL, FORWARD ] }
-      validates :saml_entity_id, uniqueness: { scope: :tenant_id }, allow_nil: true
       validates :subject_type, inclusion: { in: Subjects::TYPES }
-      validate :redirect_uris_are_usable
-      validate :post_logout_redirect_uris_are_usable
       validate :grant_types_are_known
-      validate :client_credentials_are_confidential
-      validate :keys_are_usable
-      validate :saml_is_described, if: :saml?
-      validate :forward_is_described, if: :forward?
-      validate :forward_auth_rules_are_usable
-      validate :backchannel_logout_uri_is_usable
       validate :sector_is_derivable
-      validate :consent_is_skipped_only_when_approved
       validate :sector_identifier_uri_is_owned, if: :sector_declared?
-      validate :metadata_uris_are_usable
       validate :authorization_details_are_declared
-      validate :resources_are_named_only_when_approved
       validates :access_token_lifetime, numericality: { only_integer: true, in: 60..1.day.to_i }, allow_nil: true
       validates :refresh_token_lifetime, numericality: { only_integer: true, in: 5.minutes.to_i..400.days.to_i }, allow_nil: true
       validates :refresh_token_absolute_lifetime, numericality: { only_integer: true, in: 5.minutes.to_i..400.days.to_i },
@@ -90,253 +88,16 @@ module Masks
                                                    less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
       normalizes :allowed_groups, with: ->(value) { Array(value).map { |group| group.to_s.strip.downcase }.compact_blank.uniq.sort }
-      normalizes :saml_entity_id, :saml_slo_url, with: ->(value) { value.to_s.strip.presence }
-      normalizes :forward_auth_rules, with: ->(value) { ForwardAuthRules.normalize(value) }
-      normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
       after_commit :refresh_logo!, on: %i[create update], if: :saved_change_to_logo_uri?
       after_update :archived!, if: -> { saved_change_to_archived_at? && archived? }
 
-      belongs_to :approved_by, class_name: "Actor", optional: true
-      belongs_to :enrolled_by, class_name: "Client", optional: true, inverse_of: :enrolled
-      belongs_to :sign_in_policy, optional: true
-
-      CONSOLE_ID = "masks-manage".freeze
-      CONSOLE_SCOPES = [ Scopes::OPENID, Scopes::PROFILE, Scopes::EMAIL, Scopes::MANAGE, *ManageRoles::SCOPES ].uniq.freeze
-
-      scope :approved, -> { where.not(approved_at: nil) }
       scope :speaking, ->(protocol) { active.where(protocol: protocol) }
 
-      attr_reader :secret, :registration_token
+      def self.authenticating(client_id, protocol: OIDC)
+        return ClientMetadataDocument.resolve(client_id.to_s) if protocol == OIDC && ClientMetadataDocument.url?(client_id)
 
-      class << self
-        def loopback?(uri)
-          host = uri.host.to_s
-
-          LOOPBACK.include?(host) || host.end_with?(".localhost")
-        end
-
-        def console!(issuer)
-          approved_for(issuer.manage_resource) || create!(
-            client_id: CONSOLE_ID,
-            name: "Manage #{Current.tenant.name}",
-            redirect_uris: [ "#{issuer.manage_resource}/callback" ],
-            post_logout_redirect_uris: [ issuer.manage_resource ],
-            resources: [ issuer.manage_resource ],
-            allowed_scopes: Scopes.join(CONSOLE_SCOPES),
-            grant_types: %w[authorization_code refresh_token],
-            response_types: [ "code" ],
-            token_endpoint_auth_method: "none",
-            client_uri: issuer.url,
-            handshake_return_to: issuer.manage_resource,
-            consent_required: false,
-            dynamic: false,
-            approved_at: Time.current
-          )
-        rescue ActiveRecord::RecordNotUnique
-          find_by!(client_id: CONSOLE_ID)
-        end
-
-        def approve!(handshake, actor:)
-          client = approved_for(handshake.resource) || new(client_id: SecureRandom.uuid)
-
-          client.assign_attributes(
-            described_by(handshake).merge(approved_at: Time.current, approved_by: actor, archived_at: nil)
-          )
-
-          client.save!
-          client
-        end
-
-        def described_by(handshake)
-          {
-            name: handshake.name,
-            redirect_uris: handshake.redirect_uris,
-            post_logout_redirect_uris: [ handshake.post_logout_redirect_uri ].compact,
-            resources: [ handshake.resource ],
-            allowed_scopes: Scopes.join(handshake.scopes),
-            grant_types: handshake.grant_types,
-            response_types: [ "code" ],
-            token_endpoint_auth_method: handshake.auth_method,
-            backchannel_logout_uri: handshake.backchannel_logout_uri,
-            client_uri: handshake.origin,
-            handshake_return_to: handshake.return_to,
-            dynamic: false
-          }
-        end
-
-        def approved_for(resource)
-          return nil if resource.blank?
-
-          active.approved.where(enrolled_by_id: nil).where("resources @> ?", [ resource.to_s ].to_json).first
-        end
-
-        def register!(metadata)
-          new(client_id: SecureRandom.uuid, **registered_attributes(metadata, name: "Unnamed client")).issue_credentials!
-        end
-
-        def metadata_attributes(metadata)
-          held = metadata.to_h.stringify_keys.compact_blank
-
-          held.slice(*METADATA_STRINGS)
-              .merge(held.slice(*METADATA_LISTS).transform_values { |value| Array(value).map(&:to_s) })
-              .merge(held.slice(*METADATA_SCOPES).transform_values { |value| Scopes.list(value) })
-              .merge(held.slice(*METADATA_FLAGS).transform_values { |value| ActiveModel::Type::Boolean.new.cast(value) })
-              .merge(held.key?("client_name") ? { "name" => held["client_name"] } : {})
-              .symbolize_keys
-        end
-
-        def registered_attributes(metadata, name:, auth_method: DEFAULT_AUTH_METHOD)
-          held = metadata_attributes(metadata)
-          asked = held[:grant_types].presence || [ "authorization_code" ]
-          grant_types = (asked & GRANT_TYPES).presence || asked
-
-          {
-            token_endpoint_auth_method: auth_method,
-            subject_type: Subjects::PUBLIC,
-            application_type: "web"
-          }.merge(held).merge(
-            name: held[:name] || name,
-            grant_types: grant_types,
-            response_types: held[:response_types].presence || response_types_for(grant_types),
-            allowed_scopes: Scopes.join(declared_scopes(metadata)),
-            dynamic: true
-          )
-        end
-
-        def enroll!(token, metadata)
-          app = token.client
-          app&.lock!
-          refusal = app&.enrollment_refusal(token.scope_list)
-
-          raise EnrollmentRefused, refusal || "the app that issued this enrollment token is gone" if app.nil? || refusal
-
-          held = metadata.to_h.stringify_keys
-
-          raise EnrollmentRefused, "jwks_uri is not accepted here; register the public keys as jwks" if held["jwks_uri"].present?
-          raise EnrollmentRefused, "jwks is required: the machine signs in with its own key" if held["jwks"].blank?
-
-          new(
-            client_id: SecureRandom.uuid,
-            name: held["client_name"].to_s.strip.presence || token.held("name") || "A machine",
-            jwks: held["jwks"],
-            token_endpoint_auth_method: PRIVATE_KEY_JWT,
-            grant_types: [ CLIENT_CREDENTIALS ],
-            response_types: [],
-            dpop_bound_access_tokens: true,
-            resources: app.resources,
-            allowed_scopes: Scopes.join(token.scope_list),
-            application_type: "native",
-            subject_type: Subjects::PUBLIC,
-            enrolled_by: app,
-            access_token_lifetime: MACHINE_ACCESS_LIFETIME.to_i,
-            approved_at: Time.current,
-            dynamic: false
-          ).issue_credentials!
-        end
-
-        def declared_scopes(metadata)
-          declared = metadata.to_h.stringify_keys["scope"]
-
-          Scopes.list(declared).empty? ? [] : bounded(declared)
-        end
-
-        def bounded(requested)
-          reserved = Scopes.reserved(requested) + Scopes.list(requested).select { |s| Scopes.prefix?(s) }
-
-          if reserved.any?
-            raise ScopesUnavailable,
-                  "#{Scopes.join(reserved.uniq)} may only be granted to an approved client"
-          end
-
-          ceiling = Current.tenant&.dynamic_client_ceiling
-          bounded = ceiling ? Scopes.granted(requested, ceiling) : Scopes.list(requested)
-
-          if bounded.empty?
-            raise ScopesUnavailable,
-                  "a dynamically registered client may not request #{Scopes.join(requested)}"
-          end
-
-          bounded
-        end
-
-        def response_types_for(grant_types)
-          (Array(grant_types) & REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : []
-        end
-
-        def authenticating(client_id, protocol: OIDC)
-          return ClientMetadataDocument.resolve(client_id.to_s) if protocol == OIDC && ClientMetadataDocument.url?(client_id)
-
-          speaking(protocol).find_by(client_id: client_id.to_s)
-        end
-
-        def forwarding_to(uri)
-          origin = Forwarded.origin(uri)
-          return nil if origin.nil?
-
-          speaking(FORWARD).approved.where("redirect_uris @> ?", [ "#{origin}#{FORWARD_CALLBACK}" ].to_json).first
-        end
-
-        def saml_for(entity_id)
-          speaking(SamlIdentity::PROTOCOL).find_by(saml_entity_id: entity_id.to_s)
-        end
-
-        def by_registration_token(token)
-          return nil if token.blank?
-
-          active.find_by(registration_token_digest: Digest::SHA256.hexdigest(token.to_s))
-        end
-      end
-
-      def enrollment_refusal(scopes)
-        return "an archived client enrolls nothing" if archived?
-        return "a public client enrolls nothing" if public?
-        return "only an approved client enrolls machines" unless approved?
-        return "a client enrolls machines only after it claims a namespace" if namespaces.empty?
-        return "a scope is required" if Scopes.list(scopes).empty?
-
-        held = namespaces.map(&:name)
-        outside = Scopes.list(scopes).select do |scope|
-          Scopes.prefix?(scope) || scope.start_with?(Scopes::NAMESPACE) || !Scopes.covered?(held, scope)
-        end
-
-        "#{Scopes.join(outside)} is outside #{Scopes.join(held)}" if outside.any?
-      end
-
-      def enrolled?
-        enrolled_by_id.present?
-      end
-
-      def unenroll!
-        transaction do
-          revoked = end_tokens!
-          update!(archived_at: Time.current) unless archived?
-          revoked
-        end
-      end
-
-      def end_tokens!
-        now = Time.current
-        tokens.where(consumed_at: nil).update_all(consumed_at: now, updated_at: now)
-      end
-
-      def public?
-        token_endpoint_auth_method == "none"
-      end
-
-      def approved_as?(handshake)
-        described = self.class.described_by(handshake)
-        candidate = self.class.new(described)
-
-        described.keys.all? { |key| public_send(key) == candidate.public_send(key) }
-      end
-
-      def asserts?
-        token_endpoint_auth_method == PRIVATE_KEY_JWT
-      end
-
-      def secret?
-        SECRET_AUTH_METHODS.include?(token_endpoint_auth_method)
+        speaking(protocol).find_by(client_id: client_id.to_s)
       end
 
       def pairwise?
@@ -347,14 +108,6 @@ module Masks
         return SectorIdentifier.host(sector_identifier_uri) if sector_identifier_uri.present?
 
         redirect_hosts.one? ? redirect_hosts.first : nil
-      end
-
-      def redirect_hosts
-        redirect_uris.filter_map { |value| SectorIdentifier.host(value) }.uniq
-      end
-
-      def approved?
-        approved_at.present?
       end
 
       def document?
@@ -375,92 +128,16 @@ module Masks
         "#{Current.origin}#{Engine.routes.url_helpers.client_logo_path(client_id, v: logo_digest, size: size)}"
       end
 
-      def link(field)
-        value = public_send(field)
-
-        value if LINKS.include?(field) && value.present? && web_uri_refusal(value).nil?
-      end
-
       def refresh_logo!
         ClientLogoJob.perform_later(id)
-      end
-
-      def issue_credentials!
-        issue_secret! if secret?
-        issue_registration_token!
-        save!
-        self
-      end
-
-      def issue_secret!
-        @secret = SecureRandom.urlsafe_base64(48)
-        self.secret_digest = BCrypt::Password.create(@secret)
-        @secret
-      end
-
-      def issue_registration_token!
-        @registration_token = SecureRandom.urlsafe_base64(48)
-        self.registration_token_digest = Digest::SHA256.hexdigest(@registration_token)
-        @registration_token
-      end
-
-      def authenticate_secret(candidate)
-        return true if public?
-
-        secret_matches?(candidate) && !secret_expired?
-      end
-
-      def secret_matches?(candidate)
-        return false unless secret?
-        return false if secret_digest.blank? || candidate.blank?
-
-        BCrypt::Password.new(secret_digest) == candidate.to_s
-      rescue BCrypt::Errors::InvalidHash
-        false
-      end
-
-      def secret_expired?
-        secret_expires_at.present? && secret_expires_at.past?
-      end
-
-      def redirect_uri?(candidate)
-        redirect_uris.include?(candidate.to_s) || redirect_uris.any? { |registered| same_loopback?(registered, candidate.to_s) }
       end
 
       def grants?(grant_type)
         grant_types.include?(grant_type.to_s)
       end
 
-      def redirects?
-        saml? || (grant_types & REDIRECTED_GRANT_TYPES).any?
-      end
-
-      def saml?
-        protocol == SamlIdentity::PROTOCOL
-      end
-
-      def forward?
-        protocol == FORWARD
-      end
-
-      def forward_origin
-        Forwarded.origin(redirect_uris.first) if forward?
-      end
-
-      def keys?
-        jwks.present? || jwks_uri.present?
-      end
-
       def default_response_types
         self.class.response_types_for(grant_types)
-      end
-
-      def saml_x509_certificate
-        return nil if saml_certificate.blank?
-
-        OpenSSL::X509::Certificate.new(OneLogin::RubySaml::Utils.format_cert(saml_certificate.to_s.strip))
-      rescue OpenSSL::X509::CertificateError
-        nil
       end
 
       def unattended_scopes
@@ -469,10 +146,6 @@ module Masks
 
       def scope_list
         Scopes.union(required_scopes, offered_scopes)
-      end
-
-      def follows_registration?
-        dynamic? && Scopes.list(allowed_scopes).empty?
       end
 
       def access_lifetime
@@ -489,10 +162,6 @@ module Masks
 
       def admits?(actor)
         allowed_groups.empty? || actor.group_labels.intersect?(allowed_groups)
-      end
-
-      def forward_rules
-        ForwardAuthRules.new(forward_auth_rules)
       end
 
       def permitted_scopes(requested)
@@ -513,38 +182,9 @@ module Masks
         Current.tenant&.dynamic_client_ceiling || DEFAULT_SCOPES
       end
 
-      def metadata
-        {
-          "protocol" => (protocol unless protocol == OIDC),
-          "client_id" => client_id,
-          "client_name" => name,
-          "redirect_uris" => redirect_uris,
-          "post_logout_redirect_uris" => post_logout_redirect_uris.presence,
-          "grant_types" => grant_types,
-          "response_types" => response_types,
-          "scope" => Scopes.join(scope_list),
-          "token_endpoint_auth_method" => token_endpoint_auth_method,
-          "subject_type" => subject_type,
-          "dpop_bound_access_tokens" => dpop_bound_access_tokens,
-          "sector_identifier_uri" => sector_identifier_uri,
-          "application_type" => application_type,
-          "client_uri" => client_uri,
-          "logo_uri" => logo_uri,
-          "tos_uri" => tos_uri,
-          "policy_uri" => policy_uri,
-          "backchannel_logout_uri" => backchannel_logout_uri,
-          "backchannel_logout_session_required" => backchannel_logout_session_required,
-          "require_pushed_authorization_requests" => require_pushed_authorization_requests,
-          "require_signed_request_object" => require_signed_request_object,
-          "jwks" => jwks.presence,
-          "jwks_uri" => jwks_uri.presence,
-          "authorization_details_types" => authorization_details_types.presence,
-          "client_id_issued_at" => created_at&.to_i
-        }.compact
-      end
-
-      def notified_on_logout?
-        backchannel_logout_uri.present?
+      def end_tokens!
+        now = Time.current
+        tokens.where(consumed_at: nil).update_all(consumed_at: now, updated_at: now)
       end
 
       private
@@ -566,52 +206,6 @@ module Masks
           errors.add(:allowed_groups, "names #{unknown.join(', ')}, which is not a group key or key:role") if unknown.any?
         end
 
-        def consent_is_skipped_only_when_approved
-          return if consent_required? || approved?
-
-          errors.add(:consent_required, "may only be switched off for an approved client")
-        end
-
-        def backchannel_logout_uri_is_usable
-          return if backchannel_logout_uri.blank?
-
-          refusal = web_uri_refusal(backchannel_logout_uri.to_s, fetched: true)
-          errors.add(:backchannel_logout_uri, refusal) if refusal
-        end
-
-        def redirect_uris_are_usable
-          if redirect_uris.blank?
-            errors.add(:redirect_uris, "must include at least one URI") if redirects?
-            return
-          end
-
-          redirect_uris.each { |value| redirect_refusal(:redirect_uris, value) }
-        end
-
-        def post_logout_redirect_uris_are_usable
-          Array(post_logout_redirect_uris).each { |value| redirect_refusal(:post_logout_redirect_uris, value) }
-        end
-
-        def redirect_refusal(attribute, value)
-          uri = URI.parse(value.to_s)
-
-          if uri.fragment.present?
-            errors.add(attribute, "must not contain a fragment: #{value}")
-          elsif uri.scheme.blank?
-            errors.add(attribute, "must be absolute: #{value}")
-          elsif SCRIPTED_SCHEMES.include?(uri.scheme.downcase)
-            errors.add(attribute, "must not use the #{uri.scheme.downcase} scheme: #{value}")
-          elsif uri.scheme.casecmp?("http") && !loopback?(uri) && !::Rails.env.local?
-            errors.add(attribute, "must use https unless it is loopback: #{value}")
-          end
-        rescue URI::InvalidURIError
-          errors.add(attribute, "is not a URI: #{value}")
-        end
-
-        def loopback?(uri)
-          self.class.loopback?(uri)
-        end
-
         def open_to_anything?
           follows_registration? && Current.tenant&.dynamic_registration == Tenant::REGISTRATION_ANYTHING
         end
@@ -620,127 +214,14 @@ module Masks
           Scopes.list(requested).reject { |scope| Scopes.prefix?(scope) || Scopes.reserved(scope).any? }
         end
 
-        def same_loopback?(registered, candidate)
-          held = URI.parse(registered)
-          asked = URI.parse(candidate)
-
-          [ held, asked ].all? { |uri| uri.instance_of?(URI::HTTP) && LOOPBACK.include?(uri.hostname) && uri.userinfo.nil? && uri.fragment.nil? } &&
-            held.hostname == asked.hostname && held.path == asked.path && held.query == asked.query
-        rescue URI::InvalidURIError
-          false
-        end
-
         def grant_types_are_known
           unknown = grant_types - GRANT_TYPES
           errors.add(:grant_types, "not supported: #{unknown.join(', ')}") if unknown.any?
         end
 
-        def forward_auth_rules_are_usable
-          held = forward_auth_rules
-
-          return errors.add(:base, "forward auth rules apply only to an app behind a proxy") if held.present? && !forward?
-
-          ForwardAuthRules.problems(held).each { |problem| errors.add(:base, problem) }
-        end
-
-        def forward_is_described
-          errors.add(:grant_types, "are not used by an app behind a proxy") if grant_types.any?
-          errors.add(:token_endpoint_auth_method, "is none for an app behind a proxy") unless public?
-
-          unless redirect_uris.one? && redirect_uris.first.to_s.end_with?(FORWARD_CALLBACK) && forward_origin
-            errors.add(:redirect_uris, "hold the app's own #{FORWARD_CALLBACK}, and nothing else")
-          end
-        end
-
-        def saml_is_described
-          errors.add(:saml_entity_id, "is required for a SAML application") if saml_entity_id.blank?
-          errors.add(:grant_types, "are not used by a SAML application") if grant_types.any?
-          errors.add(:token_endpoint_auth_method, "is none for a SAML application") unless public?
-          errors.add(:saml_certificate, "is not a certificate masks can read") if saml_certificate.present? && saml_x509_certificate.nil?
-          errors.add(:saml_certificate, "is required to check signed requests") if saml_requests_signed? && saml_certificate.blank?
-          saml_slo_url&.then { |url| web_uri_refusal(url, fetched: true) }&.then { |refusal| errors.add(:saml_slo_url, refusal) }
-
-          if saml_name_id_format.present? && !SamlIdentity::NAME_ID_FORMATS.include?(saml_name_id_format)
-            errors.add(:saml_name_id_format, "is not one masks issues")
-          end
-
-          unless saml_attributes.is_a?(Hash) && saml_attributes.all? { |name, claim| name.to_s.match?(/\A[\w:.\/-]{1,256}\z/) && claim.is_a?(String) }
-            errors.add(:saml_attributes, "map attribute names to claim names")
-          end
-        end
-
-        def client_credentials_are_confidential
-          return unless grants?(CLIENT_CREDENTIALS)
-
-          errors.add(:grant_types, "client_credentials needs a client that authenticates, not a public one") if public?
-          errors.add(:grant_types, "client_credentials may only be granted to an approved client") unless approved?
-        end
-
-        def keys_are_usable
-          errors.add(:jwks, "and jwks_uri cannot both be registered") if jwks.present? && jwks_uri.present?
-
-          if require_signed_request_object? && !keys?
-            errors.add(:require_signed_request_object, "needs jwks or a jwks_uri to check request objects against")
-          end
-
-          if asserts? && !keys?
-            errors.add(:token_endpoint_auth_method, "private_key_jwt needs jwks or a jwks_uri to check assertions against")
-          end
-
-          self.jwks = ClientKeys.check!(jwks) if jwks.present? && will_save_change_to_jwks?
-          ClientKeys.fetch(jwks_uri) if jwks_uri.present? && will_save_change_to_jwks_uri?
-        rescue ClientKeys::Refused => e
-          errors.add(jwks_uri.present? && jwks.blank? ? :jwks_uri : :jwks, e.message)
-        end
-
         def sector_declared?
           sector_identifier_uri.present? &&
             (sector_identifier_uri_changed? || redirect_uris_changed?)
-        end
-
-        def metadata_uris_are_usable
-          METADATA_URIS.each do |field|
-            value = public_send(field)
-
-            next if value.blank? || !will_save_change_to_attribute?(field)
-
-            refusal = web_uri_refusal(value, fetched: field == :logo_uri)
-            errors.add(field, refusal) if refusal
-          end
-        end
-
-        def web_uri_refusal(value, fetched: false)
-          return "must be at most #{URI_LIMIT} characters" if value.length > URI_LIMIT
-
-          uri = URI.parse(value)
-
-          if !uri.is_a?(URI::HTTP)
-            "must be an http or https URL"
-          elsif uri.host.blank?
-            "must be absolute"
-          elsif uri.userinfo.present?
-            "must not carry a username or password"
-          elsif fetched && uri.fragment.present?
-            "must not contain a fragment"
-          elsif fetched && dynamic? && !::Rails.env.local?
-            dynamic_fetch_refusal(uri)
-          elsif uri.scheme == "http" && !loopback?(uri) && !::Rails.env.local?
-            "must use https unless it is loopback"
-          end
-        rescue URI::InvalidURIError
-          "is not a URI"
-        end
-
-        def dynamic_fetch_refusal(uri)
-          return "must not point at a loopback address" if loopback?(uri)
-
-          "must use https" unless uri.scheme == "https"
-        end
-
-        def resources_are_named_only_when_approved
-          return unless dynamic? && !approved? && resources.any? && will_save_change_to_resources?
-
-          errors.add(:resources, "may only be named by an approved client, since tokens for a resource are trusted by it")
         end
 
         def authorization_details_are_declared

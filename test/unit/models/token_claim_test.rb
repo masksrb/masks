@@ -50,7 +50,7 @@ module Masks
       test "a token of another tenant cannot be claimed" do
         minted = mint
 
-        assert_nil Tenant.switch(other_tenant) { AuthorizationCode.claim(minted.secret) }
+        assert_nil Tenancy.switch(other_tenant) { AuthorizationCode.claim(minted.secret) }
         assert_not within { AuthorizationCode.find(minted.id).consumed? }
       end
 
@@ -76,7 +76,7 @@ module Masks
 
       teardown do
         [ @tenant, other_tenant ].compact.each do |tenant|
-          Tenant.switch(tenant) { SCOPED.each(&:delete_all) }
+          Tenancy.switch(tenant) { SCOPED.each(&:delete_all) }
           tenant.destroy
         end
 
@@ -84,7 +84,7 @@ module Masks
       end
 
       test "two racing claims of one code produce exactly one winner" do
-        minted = Tenant.switch(@tenant) { AuthorizationCode.mint!(actor: @actor, client: @client) }
+        minted = Tenancy.switch(@tenant) { AuthorizationCode.mint!(actor: @actor, client: @client) }
         gate = Concurrent::CountDownLatch.new(1)
 
         winners = 4.times.map do
@@ -92,7 +92,7 @@ module Masks
             gate.wait(5)
 
             ActiveRecord::Base.connection_pool.with_connection do
-              Tenant.switch(@tenant) { AuthorizationCode.claim(minted.secret) }
+              Tenancy.switch(@tenant) { AuthorizationCode.claim(minted.secret) }
             end
           end
         end

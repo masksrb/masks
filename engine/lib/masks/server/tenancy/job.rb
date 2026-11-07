@@ -13,7 +13,7 @@ module Masks
               "#{job} was reached outside any tenant. A job carries the tenant it was enqueued in so " \
               "that it reads the same rows the request did; without one it would perform against " \
               "whichever tenant its worker thread happened to hold last. Enqueue it inside " \
-              "Tenant.switch, or declare across_tenants! on it if it is maintenance meant to span " \
+              "Tenancy.switch, or declare across_tenants! on it if it is maintenance meant to span " \
               "every tenant."
             )
           end
@@ -58,7 +58,7 @@ module Masks
 
           raise Homeless, self.class.name if @tenant_held.blank?
 
-          Tenant.switch(held_tenant, &block)
+          Tenancy.switch(held_tenant, &block)
         end
 
         def held_tenant

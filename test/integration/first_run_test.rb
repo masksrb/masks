@@ -24,7 +24,7 @@ module Masks
       end
 
       def with_nothing_deployed
-        [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
+        [ @tenant, other_tenant ].each { |tenant| Tenancy.switch(tenant) { tenant.destroy! } }
 
         yield
       end

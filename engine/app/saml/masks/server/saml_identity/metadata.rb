@@ -35,7 +35,7 @@ module Masks
           attr_reader :issuer
 
           def certificates
-            Tenant.switch(issuer.tenant) { SigningKey.published.map(&:certificate) }
+            Tenancy.switch(issuer.tenant) { SigningKey.published.map(&:certificate) }
           end
       end
     end

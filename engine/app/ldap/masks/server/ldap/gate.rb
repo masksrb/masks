@@ -36,7 +36,7 @@ module Masks
 
           return decoy(password) if tenant.nil?
 
-          Tenant.switch(tenant) { bind_within(tenant, Directory.new(tenant), dn, password) }
+          Tenancy.switch(tenant) { bind_within(tenant, Directory.new(tenant), dn, password) }
         end
 
         private

@@ -54,7 +54,7 @@ module Masks
           Current.ip_address = request.remote_ip
           Current.user_agent = request.user_agent
 
-          Tenant.switch(tenant) { @app.call(env) }
+          Tenancy.switch(tenant) { @app.call(env) }
         end
 
         private

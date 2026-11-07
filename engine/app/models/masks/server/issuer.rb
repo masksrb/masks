@@ -72,7 +72,7 @@ module Masks
       end
 
       def jwks
-        @jwks ||= { "keys" => Tenant.switch(tenant) { SigningKey.published.map(&:public_jwk) } }
+        @jwks ||= { "keys" => Tenancy.switch(tenant) { SigningKey.published.map(&:public_jwk) } }
       end
 
       def half_hash(value)

@@ -23,7 +23,7 @@ module Masks
       def gave_up!(error)
         held = arguments.first.to_h.symbolize_keys
 
-        Tenant.switch(held_tenant) do
+        Tenancy.switch(held_tenant) do
           Event.record!(
             Event::LOGOUT_UNDELIVERED,
             actor: Subjects.locate(held[:actor] || held[:subject]), by: nil,

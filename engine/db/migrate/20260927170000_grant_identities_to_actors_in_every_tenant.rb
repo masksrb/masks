@@ -1,5 +1,5 @@
 class GrantIdentitiesToActorsInEveryTenant < ActiveRecord::Migration[8.1]
-  include Masks::Server::TenantIsolation
+  include Masks::Server::Tenancy::Migration
 
   def up
     across_tenants(:actors) do

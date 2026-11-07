@@ -68,9 +68,9 @@ module Masks
         within { publish(@claim) { assert @claim.check! } }
 
         other = other_tenant
-        rival = Tenant.switch(other) { DomainClaim.create!(domain: "acme.test") }
+        rival = Tenancy.switch(other) { DomainClaim.create!(domain: "acme.test") }
 
-        Tenant.switch(other) do
+        Tenancy.switch(other) do
           publish(rival) { assert_raises(DomainClaim::Taken) { rival.check! } }
         end
       end

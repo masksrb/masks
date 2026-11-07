@@ -28,10 +28,10 @@ class EngineModeTest
 
     assert_nil ActiveRecord::Base.connection.select_value("SELECT current_setting('masks.tenant_id', true)"),
                "the checkout hook named a tenant on the host app's pool"
-    assert_equal tenant.id.to_s, Masks::Server::Tenant.switch(tenant) {
+    assert_equal tenant.id.to_s, Masks::Server::Tenancy.switch(tenant) {
       Masks::Server::ApplicationRecord.connection.select_value("SELECT current_setting('masks.tenant_id', true)")
     }
-    assert_equal actor.id, Masks::Server::Tenant.switch(tenant) { Masks::Server::Actor.find(actor.id).id }
+    assert_equal actor.id, Masks::Server::Tenancy.switch(tenant) { Masks::Server::Actor.find(actor.id).id }
   end
 
   test "a host page sends a stranger to the provider's sign-in, and back" do
@@ -127,9 +127,9 @@ class EngineModeTest
 
   test "the provider encrypts each tenant's columns under that tenant's key in engine mode too" do
     scheme = Masks::Server::Actor.type_for_attribute(:otp_secret)
-    ciphertext = Masks::Server::Tenant.switch(tenant) { scheme.serialize("JBSWY3DPEHPK3PXP") }
+    ciphertext = Masks::Server::Tenancy.switch(tenant) { scheme.serialize("JBSWY3DPEHPK3PXP") }
 
-    assert_equal "JBSWY3DPEHPK3PXP", Masks::Server::Tenant.switch(tenant) { scheme.deserialize(ciphertext) }
+    assert_equal "JBSWY3DPEHPK3PXP", Masks::Server::Tenancy.switch(tenant) { scheme.deserialize(ciphertext) }
     assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
       ActiveRecord::Encryption.encryptor.decrypt(ciphertext, key_provider: Masks::Server.key_provider.shared)
     end

@@ -18,7 +18,7 @@ module Masks
       end
 
       def gave_up!(error)
-        Tenant.switch(held_tenant) do
+        Tenancy.switch(held_tenant) do
           Event.record!(Event::TEXT_UNDELIVERED, actor: nil, by: nil, device: nil, ip_address: nil, user_agent: nil,
                                                  said: error.message)
         end

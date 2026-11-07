@@ -19,7 +19,7 @@ module Masks
       end
     end
 
-    Tenant.singleton_class.prepend(PretendsToBypass)
+    Tenancy.singleton_class.prepend(PretendsToBypass)
 
     class RowLevelSecurityTest < ActiveSupport::TestCase
       setup do
@@ -91,8 +91,8 @@ module Masks
         forget_isolation
         PretendsToBypass.pretending = true
 
-        refused = assert_raises(Tenant::Exposed) do
-          Tenant.switch(@tenant) { flunk "the switch went through on a role that sees every tenant" }
+        refused = assert_raises(Tenancy::Exposed) do
+          Tenancy.switch(@tenant) { flunk "the switch went through on a role that sees every tenant" }
         end
 
         assert_match "postgres", refused.message
@@ -106,8 +106,8 @@ module Masks
         PretendsToBypass.owning = true
         PretendsToBypass.guarding = true
 
-        refused = assert_raises(Tenant::Owner) do
-          Tenant.switch(@tenant) { flunk "the switch went through on a role that can turn the policies off" }
+        refused = assert_raises(Tenancy::Owner) do
+          Tenancy.switch(@tenant) { flunk "the switch went through on a role that can turn the policies off" }
         end
 
         assert_match "MASKS_MIGRATION_USER", refused.message
@@ -122,7 +122,7 @@ module Masks
         PretendsToBypass.owning = true
         PretendsToBypass.guarding = false
 
-        assert_equal @tenant.id, Tenant.switch(@tenant) { Current.tenant.id }
+        assert_equal @tenant.id, Tenancy.switch(@tenant) { Current.tenant.id }
       ensure
         PretendsToBypass.owning = false
         PretendsToBypass.guarding = nil
@@ -130,11 +130,11 @@ module Masks
       end
 
       test "ownership goes unguarded in development and test, where one role migrates and serves" do
-        assert_not Tenant.guards_ownership?
+        assert_not Tenancy.guards_ownership?
       end
 
       test "the role privileges report whether this role owns a protected table" do
-        held = Tenant.role_privileges
+        held = Tenancy.role_privileges
 
         assert_includes held.keys, "owns"
         assert held["owns"], "the suite migrates and serves as one role, so it owns them"
@@ -143,7 +143,7 @@ module Masks
       private
 
         def forget_isolation
-          Tenant.remove_instance_variable(:@isolated) if Tenant.instance_variable_defined?(:@isolated)
+          Tenancy.recheck!
         end
 
         def carrying

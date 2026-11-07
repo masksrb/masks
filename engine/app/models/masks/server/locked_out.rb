@@ -8,7 +8,7 @@ module Masks
           subdomain, identifier = named.include?("/") ? named.split("/", 2) : [ nil, named ]
           tenants = subdomain ? Tenant.active.where(subdomain: subdomain) : Tenant.active
 
-          tenants.filter_map { |tenant| Tenant.switch(tenant) { recover_in(tenant, identifier) } }
+          tenants.filter_map { |tenant| Tenancy.switch(tenant) { recover_in(tenant, identifier) } }
         end
 
         private

@@ -44,7 +44,7 @@ module Masks
       end
 
       def prove(domain = "acme.example", tenant = @tenant)
-        Tenant.switch(tenant) { DomainClaim.create!(domain: domain).tap { |claim| claim.update_columns(verified_at: Time.current) } }
+        Tenancy.switch(tenant) { DomainClaim.create!(domain: domain).tap { |claim| claim.update_columns(verified_at: Time.current) } }
       end
 
       def with_origin(origin)

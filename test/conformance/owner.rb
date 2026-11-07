@@ -1,5 +1,5 @@
 Masks::Server::Tenant.all.each do |tenant|
-  Masks::Server::Tenant.switch(tenant) do
+  Masks::Server::Tenancy.switch(tenant) do
     actor = Masks::Server::Actor.find_or_initialize_by(nickname: ENV.fetch("OWNER", "owner"))
 
     actor.assign_attributes(

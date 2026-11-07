@@ -112,7 +112,7 @@ module Masks
           ActorMailer.email_verification(actor, "http://auth.example.test/a", journey: Journey.system).deliver_later
         end
 
-        Tenant.switch(@tenant) { @tenant.update!(archived_at: Time.current) }
+        Tenancy.switch(@tenant) { @tenant.update!(archived_at: Time.current) }
 
         assert_raises(ActiveRecord::RecordNotFound) { perform_enqueued_jobs }
       end
@@ -186,7 +186,7 @@ module Masks
 
       teardown do
         [ @tenant, other_tenant ].each do |tenant|
-          Tenant.switch(tenant) { SigningKey.delete_all }
+          Tenancy.switch(tenant) { SigningKey.delete_all }
           tenant.destroy
         end
       end
@@ -211,23 +211,24 @@ module Masks
       end
 
       test "a direct connection to Postgres is not mistaken for a transaction pooler" do
-        assert_not Tenant.pooled?
+        assert_not Tenancy.pooled?
       end
 
       test "a pooler that moves the connection between statements is refused before any tenant is entered" do
-        held = Tenant.instance_variable_get(:@isolated)
-        Tenant.instance_variable_set(:@isolated, nil)
+        Tenancy.recheck!
 
         connection = Tenant.connection
         connection.define_singleton_method(:select_value) { |*| "another connection" }
 
-        error = assert_raises(Tenant::Pooled) { Tenant.switch(@tenant) { flunk "entered a tenant on a pooled connection" } }
+        error = assert_raises(Tenancy::Pooled) { Tenancy.switch(@tenant) { flunk "entered a tenant on a pooled connection" } }
 
         assert_match "session mode", error.message
-        assert_nil Tenant.instance_variable_get(:@isolated)
+        assert_raises(Tenancy::Pooled, "a refused check must not be remembered as a pass") do
+          Tenancy.switch(@tenant) { flunk "entered a tenant on a pooled connection" }
+        end
       ensure
         connection&.singleton_class&.send(:remove_method, :select_value)
-        Tenant.instance_variable_set(:@isolated, held)
+        Tenancy.recheck!
       end
 
       test "inside a transaction the tenant is named for that transaction only" do

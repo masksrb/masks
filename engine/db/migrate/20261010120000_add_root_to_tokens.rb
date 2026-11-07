@@ -1,5 +1,5 @@
 class AddRootToTokens < ActiveRecord::Migration[8.1]
-  include Masks::Server::TenantIsolation
+  include Masks::Server::Tenancy::Migration
 
   def up
     add_reference :tokens, :root, foreign_key: { to_table: :tokens, on_delete: :nullify }, index: false

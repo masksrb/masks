@@ -1,5 +1,5 @@
 class CreateAdapters < ActiveRecord::Migration[8.1]
-  include Masks::Server::TenantIsolation
+  include Masks::Server::Tenancy::Migration
 
   SMTP = %i[mail_from smtp_address smtp_port smtp_username smtp_password
             smtp_authentication smtp_domain smtp_tls].freeze

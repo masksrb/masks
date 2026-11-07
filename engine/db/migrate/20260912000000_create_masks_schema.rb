@@ -1,5 +1,5 @@
 class CreateMasksSchema < ActiveRecord::Migration[8.1]
-  include Masks::Server::TenantIsolation
+  include Masks::Server::Tenancy::Migration
 
   ISOLATED = %w[
     signing_keys

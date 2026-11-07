@@ -37,7 +37,7 @@ class MetricsController < ActionController::Base
     private
 
       def counted(tenant)
-        Masks::Server::Tenant.switch(tenant) { counts }
+        Masks::Server::Tenancy.switch(tenant) { counts }
       rescue ActiveRecord::ActiveRecordError
         nil
       end

@@ -24,7 +24,7 @@ module Masks
       end
 
       def within(tenant = @tenant, &block)
-        Tenant.switch(tenant, &block)
+        Tenancy.switch(tenant, &block)
       end
 
       def with_mailer(from: "masks@example.com")
@@ -157,7 +157,7 @@ module Masks
       end
 
       def current_code(actor)
-        Tenant.switch(actor.tenant) do
+        Tenancy.switch(actor.tenant) do
           actor.reload.update_columns(otp_last_step: nil)
           ROTP::TOTP.new(actor.otp_secret).now
         end
@@ -295,7 +295,7 @@ module Masks
       include Deployed
 
       setup { ::Rails.cache.clear }
-      teardown { Tenant.clear! }
+      teardown { Tenancy.clear! }
     end
 
     class ActionDispatch::IntegrationTest
