@@ -1,10 +1,16 @@
-import { createServer } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import {
   calculateJwkThumbprint,
   EmbeddedJWK,
   exportJWK,
   generateKeyPair,
   importJWK,
+  type JWK,
+  type JWTPayload,
   jwtVerify,
   SignJWT,
 } from "jose";
@@ -13,32 +19,128 @@ const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
 const UPSTREAM = "urn:masks:params:oauth:token-type:upstream_access_token";
 
-export function random() {
+export type Claims = Record<string, unknown>;
+
+export interface FakeClientOptions {
+  method?: string;
+  secret?: string;
+  jwks?: { keys: JWK[] };
+  scope?: string;
+  metadata?: Claims;
+}
+
+export interface FakeClient extends FakeClientOptions {
+  refresh: Set<string>;
+}
+
+export interface AuthorizeOptions {
+  error?: string;
+  sub?: string;
+  scope?: string;
+  state?: string;
+  iss?: string;
+  sid?: string;
+}
+
+export interface ShakeOptions {
+  error?: string;
+  state?: string;
+  iss?: string;
+}
+
+export interface Refusal {
+  status: number;
+  code: string;
+}
+
+export interface Organization {
+  id: string;
+  key: string;
+  name: string;
+  role: string;
+}
+
+export interface Person extends Claims {
+  name?: string;
+  email?: string;
+  org?: Organization;
+}
+
+export interface LogoutTokenClaims extends JWTPayload {
+  sid?: string;
+  events?: Claims;
+  nonce?: string;
+}
+
+export interface Exchange
+  extends Record<string, string | string[] | undefined> {
+  dpop?: string;
+}
+
+interface Held {
+  client_id: string;
+  redirect_uri: string;
+  challenge: string;
+  nonce: string | null;
+  scope: string;
+  resource: string[];
+  organization: string | null;
+  sub: string;
+  sid: string;
+}
+
+interface Authenticated {
+  id: string;
+  client?: FakeClient;
+  ok: boolean;
+}
+
+interface Proof {
+  jkt?: string;
+  ok: boolean;
+}
+
+export function random(): string {
   return crypto.randomUUID().replaceAll("-", "");
 }
 
-export async function listen(handler) {
+type Handler = (request: IncomingMessage, response: ServerResponse) => void;
+
+async function listen(
+  handler: Handler,
+): Promise<{ url: string; close: () => Promise<void> }> {
   const server = createServer(handler);
 
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 
-  const { port } = server.address();
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
 
   return {
     url: `http://127.0.0.1:${port}`,
-    close: () => new Promise((resolve) => server.close(resolve)),
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      }),
   };
 }
 
-async function body(request) {
-  const chunks = [];
+async function body(request: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
 
-  for await (const chunk of request) chunks.push(chunk);
+  for await (const chunk of request) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
 
   return Buffer.concat(chunks).toString("utf8");
 }
 
-export function json(response, status, value, headers = {}) {
+function json(
+  response: ServerResponse,
+  status: number,
+  value: unknown,
+  headers: Record<string, string> = {},
+): void {
   response.writeHead(status, {
     "content-type": "application/json",
     ...headers,
@@ -46,7 +148,12 @@ export function json(response, status, value, headers = {}) {
   response.end(JSON.stringify(value));
 }
 
-function oauthError(response, status, code, headers = {}) {
+function oauthError(
+  response: ServerResponse,
+  status: number,
+  code: string,
+  headers: Record<string, string> = {},
+): void {
   json(
     response,
     status,
@@ -55,81 +162,125 @@ function oauthError(response, status, code, headers = {}) {
   );
 }
 
+function header(request: IncomingMessage, name: string): string {
+  const value = request.headers[name];
+
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
+
+function now(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 export class Fake {
   audience = "https://files.example";
   kid = "signing-1";
-  clients = new Map();
-  registrations = new Map();
+  clients = new Map<string, FakeClient>();
+  registrations = new Map<string, string>();
   registrationReads = 0;
-  initial = new Map();
-  assertions = new Set();
-  revoked = [];
-  enrolled = new Map();
-  described = new Map();
-  hints = [];
-  exchanges = [];
-  codes = new Map();
-  grants = new Map();
-  users = new Map();
-  handshakes = [];
+  registrationDown = false;
+  initial = new Map<string, string>();
+  assertions = new Set<string>();
+  revoked: string[] = [];
+  enrolled = new Map<string, string>();
+  described = new Map<string, Claims>();
+  hints: (string | null)[] = [];
+  exchanges: Exchange[] = [];
+  codes = new Map<string, Held>();
+  grants = new Map<string, Held>();
+  users = new Map<string, Person>();
+  handshakes: URLSearchParams[] = [];
+  enrollments: Claims[] = [];
+  tokenRequests: (string | null)[] = [];
   lifetime = 3600;
-  nonceOverride = undefined;
-  authTime = undefined;
-  refreshRefusal = undefined;
+  nonceOverride: string | undefined = undefined;
+  authTime: number | undefined = undefined;
+  refreshRefusal: Refusal | undefined = undefined;
   userinfoCalls = 0;
-  tokenRequests = [];
   upstreamAnswer = "upstream";
-  enrollments = [];
   pending = 0;
   slowed = false;
   nonce = "";
+  refusals = 0;
   foreignURI = false;
+  backchannel = true;
+  authorized: URLSearchParams | undefined = undefined;
+  avatarAsks: string[] = [];
+  avatarRedirect: string | undefined = undefined;
+  avatarType: string | undefined = undefined;
+  avatarBody: Buffer | undefined = undefined;
 
-  static async start() {
-    const fake = new Fake();
+  readonly signing: CryptoKey;
+  readonly public: JWK;
+  readonly url: string;
+  readonly close: () => Promise<void>;
+
+  private constructor(
+    signing: CryptoKey,
+    publicKey: JWK,
+    url: string,
+    close: () => Promise<void>,
+  ) {
+    this.signing = signing;
+    this.public = publicKey;
+    this.url = url;
+    this.close = close;
+  }
+
+  static async start(): Promise<Fake> {
     const { privateKey, publicKey } = await generateKeyPair("RS256", {
       extractable: true,
     });
-
-    fake.signing = privateKey;
-    fake.public = {
+    const exported: JWK = {
       ...(await exportJWK(publicKey)),
-      kid: fake.kid,
+      kid: "signing-1",
       alg: "RS256",
       use: "sig",
     };
 
-    const server = await listen((request, response) =>
-      fake.handle(request, response).catch((error) => {
+    let fake: Fake | undefined;
+
+    const server = await listen((request, response) => {
+      if (!fake) {
+        response.writeHead(503);
+        response.end();
+        return;
+      }
+
+      fake.handle(request, response).catch((error: unknown) => {
         response.writeHead(500);
         response.end(String(error));
-      }),
-    );
+      });
+    });
 
-    fake.url = server.url;
-    fake.close = server.close;
+    fake = new Fake(privateKey, exported, server.url, server.close);
 
     return fake;
   }
 
-  add(id, client) {
+  add(id: string, client: FakeClientOptions): void {
     this.clients.set(id, { refresh: new Set(), ...client });
   }
 
-  async issue(claims, typ) {
-    return new SignJWT(claims)
+  issue(claims: Claims, typ: string): Promise<string> {
+    return new SignJWT(claims as JWTPayload)
       .setProtectedHeader({ alg: "RS256", typ, kid: this.kid })
       .sign(this.signing);
   }
 
-  accessToken(id, scope, jkt, extra = {}) {
-    const now = Math.floor(Date.now() / 1000);
-    const claims = {
+  accessToken(
+    id: string,
+    scope: string,
+    jkt?: string,
+    extra: Claims = {},
+  ): Promise<string> {
+    const issued = now();
+    const claims: Claims = {
       iss: this.url,
       sub: id,
       aud: this.audience,
-      exp: now + this.lifetime,
-      iat: now,
+      exp: issued + this.lifetime,
+      iat: issued,
       jti: random(),
       client_id: id,
       scope,
@@ -141,8 +292,115 @@ export class Fake {
     return this.issue(claims, "at+jwt");
   }
 
-  async handle(request, response) {
-    const path = new URL(request.url, this.url).pathname;
+  logoutToken(
+    claims: LogoutTokenClaims = {},
+    typ = "logout+jwt",
+  ): Promise<string> {
+    const issued = now();
+
+    return this.issue(
+      {
+        iss: this.url,
+        aud: claims.aud,
+        iat: issued,
+        exp: issued + 120,
+        jti: random(),
+        events: {
+          "http://schemas.openid.net/event/backchannel-logout": {},
+        },
+        ...claims,
+      },
+      typ,
+    );
+  }
+
+  authorize(target: string, options: AuthorizeOptions = {}): string {
+    const asked = new URL(target).searchParams;
+    const redirect = new URL(asked.get("redirect_uri") ?? "");
+
+    this.authorized = asked;
+
+    if (options.error) {
+      redirect.searchParams.set("error", options.error);
+      redirect.searchParams.set("error_description", "declined in the fake");
+      redirect.searchParams.set("state", asked.get("state") ?? "");
+      return redirect.toString();
+    }
+
+    const code = random();
+    const sub = options.sub ?? "ada";
+    const scope = options.scope ?? asked.get("scope") ?? "";
+
+    this.codes.set(code, {
+      client_id: asked.get("client_id") ?? "",
+      redirect_uri: asked.get("redirect_uri") ?? "",
+      challenge: asked.get("code_challenge") ?? "",
+      nonce: asked.get("nonce"),
+      scope,
+      resource: asked.getAll("resource"),
+      organization: asked.get("organization"),
+      sub,
+      sid: options.sid ?? `sid-${random()}`,
+    });
+
+    redirect.searchParams.set("code", code);
+    redirect.searchParams.set(
+      "state",
+      options.state ?? asked.get("state") ?? "",
+    );
+    redirect.searchParams.set("iss", options.iss ?? this.url);
+
+    return redirect.toString();
+  }
+
+  shake(target: string, options: ShakeOptions = {}): string {
+    const asked = new URL(target).searchParams;
+    const back = new URL(asked.get("return_to") ?? "");
+
+    this.handshakes.push(asked);
+
+    if (options.error) {
+      back.searchParams.set("error", options.error);
+      back.searchParams.set("state", asked.get("state") ?? "");
+      return back.toString();
+    }
+
+    const token = random();
+    const id = `app-${random()}`;
+
+    this.initial.set(token, id);
+    back.searchParams.set("initial_access_token", token);
+    back.searchParams.set("iss", options.iss ?? this.url);
+    back.searchParams.set("state", options.state ?? asked.get("state") ?? "");
+
+    return back.toString();
+  }
+
+  actor(sub: string): Person {
+    return {
+      name: "Ada Lovelace",
+      preferred_username: "ada",
+      email: "ada@example.com",
+      email_verified: true,
+      tenant: { uuid: "t-1", subdomain: "acme", name: "Acme" },
+      "masks:avatars": {
+        photo: `${this.url}/avatars/${sub}`,
+        identicon: `${this.url}/avatars/${sub}/identicon`,
+      },
+      org: { id: "o-1", key: "acme", name: "Acme", role: "owner" },
+      orgs: [
+        { id: "o-1", key: "acme", name: "Acme", role: "owner" },
+        { id: "o-2", key: "globex", name: "Globex", role: "member" },
+      ],
+      ...(this.users.get(sub) ?? {}),
+    };
+  }
+
+  async handle(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
+    const path = new URL(request.url ?? "/", this.url).pathname;
     const text = await body(request);
 
     if (
@@ -162,7 +420,7 @@ export class Fake {
         userinfo_endpoint: `${this.url}/userinfo`,
         end_session_endpoint: `${this.url}/logout`,
         handshake_endpoint: `${this.url}/handshake`,
-        backchannel_logout_supported: this.backchannel ?? true,
+        backchannel_logout_supported: this.backchannel,
         authorization_response_iss_parameter_supported: true,
       });
     }
@@ -197,9 +455,10 @@ export class Fake {
       const { ok } = await this.authenticated(request, form);
       if (!ok) return oauthError(response, 401, "invalid_client");
 
-      this.revoked.push(form.get("token"));
+      this.revoked.push(form.get("token") ?? "");
       response.writeHead(200);
-      return response.end();
+      response.end();
+      return;
     }
 
     if (request.method === "GET" && path === "/userinfo") {
@@ -209,20 +468,23 @@ export class Fake {
     if (request.method === "GET" && path.startsWith("/avatars/")) {
       if (request.headers.authorization === undefined) {
         response.writeHead(401);
-        return response.end();
+        response.end();
+        return;
       }
 
-      this.avatarAsks = [...(this.avatarAsks ?? []), request.url];
+      this.avatarAsks.push(request.url ?? "");
 
       if (this.avatarRedirect) {
         response.writeHead(302, { location: this.avatarRedirect });
-        return response.end();
+        response.end();
+        return;
       }
 
       response.writeHead(200, {
         "content-type": this.avatarType ?? "image/png",
       });
-      return response.end(this.avatarBody ?? Buffer.from("png-bytes"));
+      response.end(this.avatarBody ?? Buffer.from("png-bytes"));
+      return;
     }
 
     if (request.method === "POST" && path === "/introspect") {
@@ -234,7 +496,7 @@ export class Fake {
       return json(
         response,
         200,
-        this.described.get(form.get("token")) ?? { active: false },
+        this.described.get(form.get("token") ?? "") ?? { active: false },
       );
     }
 
@@ -263,11 +525,17 @@ export class Fake {
     response.end();
   }
 
-  async authenticated(request, form) {
-    const header = request.headers.authorization ?? "";
+  async authenticated(
+    request: IncomingMessage,
+    form: URLSearchParams,
+  ): Promise<Authenticated> {
+    const authorization = header(request, "authorization");
 
-    if (header.startsWith("Basic ")) {
-      const [id, secret] = Buffer.from(header.slice(6), "base64")
+    if (authorization.startsWith("Basic ")) {
+      const [id = "", secret = ""] = Buffer.from(
+        authorization.slice(6),
+        "base64",
+      )
         .toString("utf8")
         .split(":")
         .map((part) => decodeURIComponent(part.replaceAll("+", " ")));
@@ -283,7 +551,7 @@ export class Fake {
       };
     }
 
-    const id = form.get("client_id");
+    const id = form.get("client_id") ?? "";
     const client = this.clients.get(id);
 
     if (!client) return { id, ok: false };
@@ -300,14 +568,20 @@ export class Fake {
     }
   }
 
-  async asserted(form, id, client) {
+  async asserted(
+    form: URLSearchParams,
+    id: string,
+    client: FakeClient,
+  ): Promise<boolean> {
     if (form.get("client_assertion_type") !== ASSERTION_TYPE) return false;
 
     try {
       const { payload } = await jwtVerify(
-        form.get("client_assertion"),
-        async (header) => {
-          const jwk = client.jwks.keys.find((key) => key.kid === header.kid);
+        form.get("client_assertion") ?? "",
+        async (protectedHeader) => {
+          const jwk = client.jwks?.keys.find(
+            (key) => key.kid === protectedHeader.kid,
+          );
           if (!jwk) throw new Error("unknown kid");
 
           return importJWK(jwk, "ES256");
@@ -326,7 +600,7 @@ export class Fake {
         !payload.exp
       )
         return false;
-      if (payload.exp - payload.iat > 3600) return false;
+      if (payload.exp - (payload.iat ?? 0) > 3600) return false;
       if (this.assertions.has(payload.jti)) return false;
 
       this.assertions.add(payload.jti);
@@ -337,8 +611,8 @@ export class Fake {
     }
   }
 
-  async proof(request, path) {
-    const presented = request.headers.dpop;
+  async proof(request: IncomingMessage, path: string): Promise<Proof> {
+    const presented = header(request, "dpop");
     if (!presented) return { jkt: "", ok: true };
 
     try {
@@ -360,6 +634,7 @@ export class Fake {
       }
 
       if (this.nonce && payload.nonce !== this.nonce) return { ok: false };
+      if (!protectedHeader.jwk) return { ok: false };
 
       return {
         jkt: await calculateJwkThumbprint(protectedHeader.jwk, "sha256"),
@@ -370,12 +645,16 @@ export class Fake {
     }
   }
 
-  async token(request, response, form) {
+  async token(
+    request: IncomingMessage,
+    response: ServerResponse,
+    form: URLSearchParams,
+  ): Promise<void> {
     const { jkt, ok } = await this.proof(request, "/token");
 
     if (!ok) {
       if (this.nonce) {
-        this.refusals = (this.refusals ?? 0) + 1;
+        this.refusals += 1;
         return oauthError(response, 400, "use_dpop_nonce", {
           "dpop-nonce": this.nonce,
         });
@@ -389,7 +668,9 @@ export class Fake {
       client,
       ok: authenticated,
     } = await this.authenticated(request, form);
-    if (!authenticated) return oauthError(response, 401, "invalid_client");
+    if (!authenticated || !client) {
+      return oauthError(response, 401, "invalid_client");
+    }
 
     this.tokenRequests.push(form.get("grant_type"));
 
@@ -397,20 +678,22 @@ export class Fake {
       case "client_credentials":
         break;
       case "authorization_code": {
-        const held = this.codes.get(form.get("code"));
-        this.codes.delete(form.get("code"));
+        const code = form.get("code") ?? "";
+        const held = this.codes.get(code);
+        this.codes.delete(code);
+
+        const digest = Buffer.from(
+          await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(form.get("code_verifier") ?? ""),
+          ),
+        ).toString("base64url");
 
         if (
           !held ||
           held.client_id !== id ||
           held.redirect_uri !== form.get("redirect_uri") ||
-          held.challenge !==
-            Buffer.from(
-              await crypto.subtle.digest(
-                "SHA-256",
-                new TextEncoder().encode(form.get("code_verifier") ?? ""),
-              ),
-            ).toString("base64url")
+          held.challenge !== digest
         ) {
           return oauthError(response, 400, "invalid_grant");
         }
@@ -418,9 +701,10 @@ export class Fake {
         return this.signIn(response, id, held, jkt);
       }
       case "refresh_token": {
-        const presented = form.get("refresh_token");
+        const presented = form.get("refresh_token") ?? "";
+        const held = this.grants.get(presented);
 
-        if (this.grants.has(presented)) {
+        if (held) {
           if (this.refreshRefusal) {
             return oauthError(
               response,
@@ -429,7 +713,6 @@ export class Fake {
             );
           }
 
-          const held = this.grants.get(presented);
           this.grants.delete(presented);
 
           return this.signIn(response, id, held, jkt);
@@ -454,12 +737,12 @@ export class Fake {
         }
         break;
       case "urn:ietf:params:oauth:grant-type:token-exchange": {
-        const asked = {};
+        const asked: Exchange = {};
 
         for (const [name, value] of form) {
           if (name.startsWith("client_")) continue;
-          asked[name] =
-            asked[name] === undefined ? value : [asked[name], value].flat();
+          const held = asked[name];
+          asked[name] = held === undefined ? value : [held, value].flat();
         }
 
         asked.dpop = jkt;
@@ -508,72 +791,21 @@ export class Fake {
     });
   }
 
-  authorize(target, options = {}) {
-    const asked = new URL(target).searchParams;
-    const redirect = new URL(asked.get("redirect_uri"));
-
-    this.authorized = asked;
-
-    if (options.error) {
-      redirect.searchParams.set("error", options.error);
-      redirect.searchParams.set("error_description", "declined in the fake");
-      redirect.searchParams.set("state", asked.get("state"));
-      return redirect.toString();
-    }
-
-    const code = random();
-    const sub = options.sub ?? "ada";
-    const scope = options.scope ?? asked.get("scope");
-
-    this.codes.set(code, {
-      client_id: asked.get("client_id"),
-      redirect_uri: asked.get("redirect_uri"),
-      challenge: asked.get("code_challenge"),
-      nonce: asked.get("nonce"),
-      scope,
-      resource: asked.getAll("resource"),
-      organization: asked.get("organization"),
-      sub,
-      sid: options.sid ?? `sid-${random()}`,
-    });
-
-    redirect.searchParams.set("code", code);
-    redirect.searchParams.set("state", options.state ?? asked.get("state"));
-    redirect.searchParams.set("iss", options.iss ?? this.url);
-
-    return redirect.toString();
-  }
-
-  actor(sub) {
-    return {
-      name: "Ada Lovelace",
-      preferred_username: "ada",
-      email: "ada@example.com",
-      email_verified: true,
-      tenant: { uuid: "t-1", subdomain: "acme", name: "Acme" },
-      "masks:avatars": {
-        photo: `${this.url}/avatars/${sub}`,
-        identicon: `${this.url}/avatars/${sub}/identicon`,
-      },
-      org: { id: "o-1", key: "acme", name: "Acme", role: "owner" },
-      orgs: [
-        { id: "o-1", key: "acme", name: "Acme", role: "owner" },
-        { id: "o-2", key: "globex", name: "Globex", role: "member" },
-      ],
-      ...(this.users.get(sub) ?? {}),
-    };
-  }
-
-  async signIn(response, id, held, jkt) {
-    const now = Math.floor(Date.now() / 1000);
+  async signIn(
+    response: ServerResponse,
+    id: string,
+    held: Held,
+    jkt?: string,
+  ): Promise<void> {
+    const issued = now();
     const actor = this.actor(held.sub);
-    const scopes = (held.scope ?? "").split(" ").filter(Boolean);
-    const audience = held.resource?.length ? held.resource : [this.audience];
+    const scopes = held.scope.split(" ").filter(Boolean);
+    const audience = held.resource.length ? held.resource : [this.audience];
     const refresh = random();
 
     this.grants.set(refresh, held);
 
-    const answer = {
+    const answer: Claims = {
       access_token: await this.accessToken(held.sub, held.scope, jkt, {
         aud: audience.length === 1 ? audience[0] : audience,
         client_id: id,
@@ -593,8 +825,8 @@ export class Fake {
           iss: this.url,
           sub: held.sub,
           aud: id,
-          exp: now + 300,
-          iat: now,
+          exp: issued + 300,
+          iat: issued,
           sid: held.sid,
           nonce: this.nonceOverride ?? held.nonce ?? undefined,
           auth_time: this.authTime,
@@ -625,11 +857,16 @@ export class Fake {
     return json(response, 200, answer);
   }
 
-  async userinfo(request, response) {
+  async userinfo(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
     this.userinfoCalls++;
 
-    const header = request.headers.authorization ?? "";
-    const token = header.replace(/^(Bearer|DPoP) /, "");
+    const token = header(request, "authorization").replace(
+      /^(Bearer|DPoP) /,
+      "",
+    );
 
     try {
       const { payload } = await jwtVerify(
@@ -639,56 +876,18 @@ export class Fake {
 
       return json(response, 200, {
         sub: payload.sub,
-        ...this.actor(payload.sub),
+        ...this.actor(payload.sub ?? ""),
       });
     } catch {
       return oauthError(response, 401, "invalid_token");
     }
   }
 
-  shake(target, options = {}) {
-    const asked = new URL(target).searchParams;
-    const back = new URL(asked.get("return_to"));
-
-    this.handshakes.push(asked);
-
-    if (options.error) {
-      back.searchParams.set("error", options.error);
-      back.searchParams.set("state", asked.get("state"));
-      return back.toString();
-    }
-
-    const token = random();
-    const id = `app-${random()}`;
-
-    this.initial.set(token, id);
-    back.searchParams.set("initial_access_token", token);
-    back.searchParams.set("iss", options.iss ?? this.url);
-    back.searchParams.set("state", options.state ?? asked.get("state"));
-
-    return back.toString();
-  }
-
-  logoutToken(claims = {}, typ = "logout+jwt") {
-    const now = Math.floor(Date.now() / 1000);
-
-    return this.issue(
-      {
-        iss: this.url,
-        aud: claims.aud,
-        iat: now,
-        exp: now + 120,
-        jti: random(),
-        events: {
-          "http://schemas.openid.net/event/backchannel-logout": {},
-        },
-        ...claims,
-      },
-      typ,
-    );
-  }
-
-  async enroll(request, response, form) {
+  async enroll(
+    request: IncomingMessage,
+    response: ServerResponse,
+    form: URLSearchParams,
+  ): Promise<void> {
     const { id, ok } = await this.authenticated(request, form);
     if (!ok) return oauthError(response, 401, "invalid_client");
 
@@ -707,7 +906,7 @@ export class Fake {
       scope,
       name: form.get("client_name"),
       expires_in: form.get("expires_in"),
-      dpop: request.headers.dpop,
+      dpop: header(request, "dpop") || undefined,
     });
 
     return json(response, 201, {
@@ -717,7 +916,12 @@ export class Fake {
     });
   }
 
-  async unenroll(request, response, form, machine) {
+  async unenroll(
+    request: IncomingMessage,
+    response: ServerResponse,
+    form: URLSearchParams,
+    machine: string,
+  ): Promise<void> {
     const { id, ok } = await this.authenticated(request, form);
     if (!ok) return oauthError(response, 401, "invalid_client");
 
@@ -727,33 +931,38 @@ export class Fake {
 
     this.clients.delete(machine);
     response.writeHead(204);
-    return response.end();
+    response.end();
+    return;
   }
 
-  register(request, response, text) {
-    const presented = (request.headers.authorization ?? "").replace(
-      /^Bearer /,
-      "",
-    );
+  async register(
+    request: IncomingMessage,
+    response: ServerResponse,
+    text: string,
+  ): Promise<void> {
+    const presented = header(request, "authorization").replace(/^Bearer /, "");
     const id = this.initial.get(presented);
 
     if (!id) return oauthError(response, 401, "invalid_token");
 
     this.initial.delete(presented);
 
-    const metadata = JSON.parse(text || "{}");
+    const metadata: Claims = JSON.parse(text || "{}");
     const token = random();
+    const method =
+      typeof metadata.token_endpoint_auth_method === "string"
+        ? metadata.token_endpoint_auth_method
+        : undefined;
 
     const secret =
-      metadata.token_endpoint_auth_method === "client_secret_basic" ||
-      metadata.token_endpoint_auth_method === "client_secret_post"
+      method === "client_secret_basic" || method === "client_secret_post"
         ? random()
         : undefined;
 
     this.add(id, {
-      method: metadata.token_endpoint_auth_method,
-      jwks: metadata.jwks ?? { keys: [] },
-      scope: metadata.scope,
+      method,
+      jwks: (metadata.jwks as { keys: JWK[] } | undefined) ?? { keys: [] },
+      scope: typeof metadata.scope === "string" ? metadata.scope : undefined,
       secret,
       metadata,
     });
@@ -772,13 +981,22 @@ export class Fake {
     });
   }
 
-  registration(request, response, id, text) {
+  async registration(
+    request: IncomingMessage,
+    response: ServerResponse,
+    id: string,
+    text: string,
+  ): Promise<void> {
     if (request.method === "GET") this.registrationReads += 1;
 
     const held = this.registrations.get(id);
     const client = this.clients.get(id);
 
-    if (!held || request.headers.authorization !== `Bearer ${held}`) {
+    if (
+      !held ||
+      !client ||
+      header(request, "authorization") !== `Bearer ${held}`
+    ) {
       return oauthError(response, 401, "invalid_token");
     }
 
@@ -790,12 +1008,14 @@ export class Fake {
       this.registrations.delete(id);
       this.clients.delete(id);
       response.writeHead(204);
-      return response.end();
+      response.end();
+      return;
     }
 
     if (request.method === "PUT") {
-      const metadata = JSON.parse(text || "{}");
-      client.scope = metadata.scope;
+      const metadata: Claims = JSON.parse(text || "{}");
+      client.scope =
+        typeof metadata.scope === "string" ? metadata.scope : undefined;
 
       return json(response, 200, { ...metadata, client_id: id });
     }

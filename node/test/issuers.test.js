@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, mock, test } from "node:test";
 import { IssuerCache } from "../dist/app/issuers.js";
 import { Issuer, memoryStore, Unavailable } from "../dist/index.js";
-import { Fake } from "./fake.js";
+import { Fake } from "../dist/testing.js";
 
 const closers = [];
 

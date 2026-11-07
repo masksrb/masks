@@ -4,8 +4,8 @@ import { NextRequest } from "next/server";
 import NextAuth from "next-auth";
 import { masksAuth } from "../dist/authjs.js";
 import { memoryCredentials } from "../dist/index.js";
+import { Fake } from "../dist/testing.js";
 import { APP, Browser } from "./browser.js";
-import { Fake } from "./fake.js";
 
 const closers = [];
 

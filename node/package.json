@@ -33,6 +33,10 @@
     "./authjs": {
       "types": "./dist/authjs.d.ts",
       "default": "./dist/authjs.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "files": [

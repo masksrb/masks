@@ -16,7 +16,7 @@ import {
   organizationsOf,
   pictureOf,
 } from "../dist/index.js";
-import { Fake } from "./fake.js";
+import { Fake } from "../dist/testing.js";
 
 const closers = [];
 

@@ -23,7 +23,8 @@ import {
   valid,
 } from "../dist/index.js";
 import { check } from "../dist/issuer.js";
-import { Fake, json, listen } from "./fake.js";
+import { Fake } from "../dist/testing.js";
+import { json, listen } from "./http.js";
 
 const closers = [];
 

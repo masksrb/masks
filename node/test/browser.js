@@ -1,5 +1,5 @@
 import { Masks, memoryCredentials } from "../dist/index.js";
-import { Fake } from "./fake.js";
+import { Fake } from "../dist/testing.js";
 
 export const APP = "http://app.localhost:3000";
 export const SECRET = "a-test-secret-that-is-long-enough-123456";

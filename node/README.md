@@ -34,6 +34,32 @@ app.get("/settings", requireAuth("admin"), (req, res) => res.json(req.masked));
 The first visit runs the handshake, which registers the app with masks and writes its credentials
 to `masks.json`. Keep that file out of version control.
 
+## Testing your app
+
+`@masks/server/testing` is a fake masks that runs on a local port. It signs people in, refreshes
+tokens, and mints logout tokens with its own signing key, so a test suite never reaches a real
+server.
+
+```ts
+import { Client, Issuer } from "@masks/server";
+import { Fake } from "@masks/server/testing";
+
+const fake = await Fake.start();
+fake.add("app", { method: "client_secret_basic", secret: "s3cret" });
+
+const issuer = await Issuer.discover(fake.url);
+const client = new Client({ issuer, id: "app", secret: "s3cret" });
+
+const started = await client.start({ redirectURI: "http://localhost:3000/auth/callback" });
+const signedIn = await client.complete(fake.authorize(started.url), started);
+
+await fake.close();
+```
+
+`fake.authorize` signs in as `ada` and returns the URL masks would send the browser back to. Pass
+`{ sub: "bob" }` to sign in as somebody else, or `{ error: "access_denied" }` to decline.
+`fake.logoutToken({ aud: "app", sub: "ada" })` mints a back-channel logout token.
+
 ## Documentation
 
 - [JavaScript apps](https://masks.pages.dev/reference/javascript/) covers the handshake, sessions,

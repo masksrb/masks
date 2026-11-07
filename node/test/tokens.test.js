@@ -9,7 +9,7 @@ import {
   Issuer,
   Verifier,
 } from "../dist/index.js";
-import { json, listen } from "./fake.js";
+import { json, listen } from "./http.js";
 
 const contract = JSON.parse(
   readFileSync(new URL("../../test/contract/tokens.json", import.meta.url)),

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { Masks, memoryCredentials, memoryStore } from "../dist/index.js";
+import { Fake } from "../dist/testing.js";
 import { APP, Browser, SECRET, setup, signIn } from "./browser.js";
-import { Fake } from "./fake.js";
 
 const closers = [];
 
