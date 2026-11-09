@@ -3,7 +3,7 @@ module github.com/masksrb/masks/go
 go 1.26.0
 
 require (
-	github.com/go-jose/go-jose/v4 v4.1.6
+	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/redis/go-redis/v9 v9.23.0
 )
 
