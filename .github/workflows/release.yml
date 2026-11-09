@@ -272,7 +272,7 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.python_tag }}
 
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           cache-dependency-glob: python/uv.lock
 
@@ -285,7 +285,7 @@ jobs:
         run: uv build
 
       - name: Publish
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           packages-dir: python/dist
 
