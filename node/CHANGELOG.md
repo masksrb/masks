@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/masksrb/masks/compare/node-v0.4.0...node-v0.5.0) (2026-11-07)
+
+
+### Features
+
+* **node:** @masks/server/testing exports the fake masks the package's tests run against ([4e1a5cf](https://github.com/masksrb/masks/commit/4e1a5cf1506e66f307a8625b5d27dc360074d655))
+
 ## [0.4.0](https://github.com/masksrb/masks/compare/node-v0.3.3...node-v0.4.0) (2026-11-02)
 
 

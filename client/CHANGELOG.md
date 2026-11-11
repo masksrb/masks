@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/masksrb/masks/compare/gem/v0.13.0...gem/v0.14.0) (2026-11-07)
+
+
+### Features
+
+* **client:** the gem ships Masks::Client::Fake, a fake masks for an app's tests, and the client suite runs against it ([5b487f6](https://github.com/masksrb/masks/commit/5b487f610bfb7477c261360f4ab2055a5d0103ae))
+
 ## [0.13.0](https://github.com/masksrb/masks/compare/gem/v0.12.2...gem/v0.13.0) (2026-11-02)
 
 

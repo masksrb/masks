@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/masksrb/masks/compare/python-v0.4.0...python-v0.5.0) (2026-11-07)
+
+
+### Features
+
+* **client:** the gem ships Masks::Client::Fake, a fake masks for an app's tests, and the client suite runs against it ([5b487f6](https://github.com/masksrb/masks/commit/5b487f610bfb7477c261360f4ab2055a5d0103ae))
+* **python:** masks.testing exports the fake masks the package's tests run against ([7942fbb](https://github.com/masksrb/masks/commit/7942fbb8598818284e6e890fabb6bf719bdc14da))
+
 ## [0.4.0](https://github.com/masksrb/masks/compare/python-v0.3.3...python-v0.4.0) (2026-11-02)
 
 
